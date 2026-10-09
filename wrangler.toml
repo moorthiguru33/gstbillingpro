@@ -1,0 +1,20 @@
+# Cloudflare Pages Configuration
+# This tells Cloudflare how to build and deploy the site
+
+[build]
+command = "npm install && npm run build"
+destination = "dist"
+
+[build.environment]
+NODE_VERSION = "20"
+
+# Pages Functions (serverless API routes)
+# functions/ directory is auto-detected by Cloudflare Pages
+
+# Environment variables are set in Cloudflare Dashboard
+# Settings → Environment Variables → Add:
+# RAZORPAY_KEY_ID
+# RAZORPAY_KEY_SECRET  
+# RAZORPAY_WEBHOOK_SECRET
+# SUPABASE_URL
+# SUPABASE_SERVICE_ROLE_KEY

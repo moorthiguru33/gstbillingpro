@@ -1,0 +1,96 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+    <!-- Content Security Policy — updated for Supabase + Razorpay -->
+    <meta http-equiv="Content-Security-Policy" content="
+      default-src 'self';
+      script-src  'self' 'wasm-unsafe-eval' https://accounts.google.com https://apis.google.com https://checkout.razorpay.com;
+      worker-src  'self' blob:;
+      style-src   'self' 'unsafe-inline' http://localhost:* https://fonts.googleapis.com;
+      font-src    'self' https://fonts.gstatic.com data:;
+      img-src     'self' data: blob: https://*.googleusercontent.com https://*.supabase.co;
+      connect-src 'self' http://localhost:* https://*.supabase.co https://accounts.google.com https://www.googleapis.com https://api.github.com https://api.razorpay.com https://raw.githubusercontent.com;
+      frame-src   'self' blob: https://accounts.google.com https://api.razorpay.com https://checkout.razorpay.com;
+      object-src  'none';
+      base-uri    'self';
+    " />
+
+    <!-- Primary SEO -->
+    <title>GST Billing Pro — Cloud GST Invoicing Software for India | ₹99/month</title>
+    <meta name="description" content="GST Billing Pro — India's smartest cloud billing software. Create GST invoices, generate GSTR-1/3B, track expenses, manage clients. 30-day free trial. Only ₹99/month." />
+    <meta name="author" content="GST Billing Pro" />
+    <meta name="robots" content="index, follow" />
+
+    <!-- Open Graph -->
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="GST Billing Pro" />
+    <meta property="og:title" content="GST Billing Pro — Cloud GST Invoicing for India" />
+    <meta property="og:description" content="Create GST invoices, GSTR-1/3B exports, expense tracking. Free 30-day trial. ₹99/month after." />
+    <meta property="og:image" content="/og-preview.png" />
+
+    <!-- Twitter Card -->
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="GST Billing Pro — Cloud GST Invoicing" />
+    <meta name="twitter:description" content="30-day free trial. Only ₹99/month. No setup. Works in browser." />
+
+    <!-- Favicon -->
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <link rel="apple-touch-icon" sizes="180x180" href="/icons/apple-touch-180.png" />
+    <link rel="apple-touch-icon" sizes="192x192" href="/icons/icon-192.png" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-title" content="GST Billing Pro" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+
+    <!-- PWA Manifest -->
+    <link rel="manifest" href="/manifest.webmanifest" />
+
+    <!-- Theme -->
+    <meta name="theme-color" content="#1e40af" />
+
+    <!-- Structured Data -->
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "SoftwareApplication",
+      "name": "GST Billing Pro",
+      "applicationCategory": "BusinessApplication",
+      "operatingSystem": "Web Browser",
+      "offers": {
+        "@type": "Offer",
+        "price": "99",
+        "priceCurrency": "INR",
+        "priceSpecification": {
+          "@type": "UnitPriceSpecification",
+          "price": "99",
+          "priceCurrency": "INR",
+          "unitCode": "MON"
+        }
+      },
+      "description": "Cloud GST billing software for Indian businesses. Tax invoices, GSTR-1/3B, expense tracking, multi-business support. 30-day free trial."
+    }
+    </script>
+
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+
+    <!-- Razorpay Checkout SDK -->
+    <script src="https://checkout.razorpay.com/v1/checkout.js"></script>
+  </head>
+  <body>
+    <noscript>
+      <div style="font-family:sans-serif;padding:2rem;max-width:600px;margin:2rem auto;background:#fef2f2;border:1px solid #fca5a5;border-radius:8px;color:#991b1b">
+        <h2>JavaScript is required</h2>
+        <p>GST Billing Pro needs JavaScript to run. Please enable it in your browser.</p>
+      </div>
+    </noscript>
+
+    <div id="root"></div>
+    <script type="module" src="/main.jsx"></script>
+  </body>
+</html>
