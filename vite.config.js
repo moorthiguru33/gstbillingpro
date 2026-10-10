@@ -63,21 +63,18 @@ export default defineConfig({
         maximumFileSizeToCacheInBytes: 6 * 1024 * 1024,
         navigateFallback: '/index.html',
         // Don't cache Supabase API calls
-        navigateFallbackDenylist: [/^\/api\//, /^https:\/\/.*\.supabase\.co\//],
+        navigateFallbackDenylist: [/^\/api\//, /^\/files\//, /^\/(terms|privacy|refund|contact)(\.html)?$/],
         skipWaiting: true,
         clientsClaim: true,
         cleanupOutdatedCaches: true,
         runtimeCaching: [
+          // NOTE: Supabase (auth / REST / storage) responses are deliberately
+          // NOT cached by the service worker. Caching them served stale
+          // subscription status and could leak one user's data to the next
+          // person who signs in on a shared shop counter PC.
           {
-            // Cache Supabase REST API responses (GET only)
-            urlPattern: ({ url }) => url.hostname.includes('supabase.co'),
-            handler: 'NetworkFirst',
-            options: {
-              cacheName: 'supabase-cache',
-              networkTimeoutSeconds: 5,
-              expiration: { maxEntries: 100, maxAgeSeconds: 60 * 5 }, // 5 min
-              cacheableResponse: { statuses: [0, 200] },
-            },
+            urlPattern: ({ url }) => url.hostname.endsWith('supabase.co'),
+            handler: 'NetworkOnly',
           },
           {
             urlPattern: /\/assets\/(pdf|qr|index\.es)-[A-Za-z0-9]+\.js$/,
@@ -92,7 +89,7 @@ export default defineConfig({
             handler: 'CacheFirst',
             options: {
               cacheName: 'google-fonts-cache',
-              expiration: { maxEntries: 10, maxAgeSeconds: 60 * 60 * 24 * 365 },
+              expiration: { maxEntries: 30, maxAgeSeconds: 60 * 60 * 24 * 365 },
               cacheableResponse: { statuses: [0, 200] },
             },
           },
@@ -101,12 +98,13 @@ export default defineConfig({
             handler: 'CacheFirst',
             options: {
               cacheName: 'gstatic-fonts-cache',
-              expiration: { maxEntries: 10, maxAgeSeconds: 60 * 60 * 24 * 365 },
+              expiration: { maxEntries: 60, maxAgeSeconds: 60 * 60 * 24 * 365 },
               cacheableResponse: { statuses: [0, 200] },
             },
           },
           {
-            urlPattern: /\.(?:png|jpg|jpeg|svg|gif|webp|ico)$/i,
+            // Same-origin static images only (never user logos from storage)
+            urlPattern: ({ url, sameOrigin }) => sameOrigin && /\.(?:png|jpg|jpeg|svg|gif|webp|ico)$/i.test(url.pathname),
             handler: 'CacheFirst',
             options: {
               cacheName: 'images-cache',
