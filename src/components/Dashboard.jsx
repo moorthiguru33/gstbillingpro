@@ -2,7 +2,7 @@ import { useState, useEffect, useMemo } from 'react';
 import { FileText, Trash2, Plus, IndianRupee, Receipt, Edit3, TrendingUp, Search, Copy, X, CheckCircle, Clock, AlertTriangle, MessageCircle, Mail, StickyNote, Send, Package, Download, Printer, Ban, Zap } from 'lucide-react';
 import HelpButton from './HelpButton';
 import { getAllBills, saveBill, deleteBill, getAllProducts, applyStockChanges, getProfile, getAllClients, getStockAlertSettings, saveReceipt, deleteReceipt, getAllReceipts } from '../store';
-import { formatCurrency, INVOICE_TYPES, getFYOptions, numberToWords, belongsToProfile, salesSign, isCancelledBill, markPaidPatch, stockEffect, appliedStock, stockDelta, SALES_INVOICE_TYPES } from '../utils';
+import { formatCurrency, INVOICE_TYPES, getFYOptions, numberToWords, belongsToProfile, salesSign, isCancelledBill, markPaidPatch, stockEffect, appliedStock, stockDelta, SALES_INVOICE_TYPES, localDateISO } from '../utils';
 import { shareOnWhatsApp } from '../utils/share';
 import PageHeader from './PageHeader';
 import SupportNudge from './SupportNudge';
@@ -312,7 +312,7 @@ export default function Dashboard({ onNew, onEdit, onDuplicate, onConvert, onOpe
   const loadBills = async () => {
     try {
       const data = await getAllBills();
-      const today = new Date().toISOString().split('T')[0];
+      const today = localDateISO();
 
       // v1.10.41 — Orphaned-payment reconciliation. Reported: user
       // recorded a payment in an older version — the receipt file
@@ -543,7 +543,7 @@ export default function Dashboard({ onNew, onEdit, onDuplicate, onConvert, onOpe
 
   const openPaymentModal = (bill) => {
     setPaymentModal(bill);
-    setPaymentInput({ amount: '', date: new Date().toISOString().split('T')[0], mode: 'bank-transfer', note: '' });
+    setPaymentInput({ amount: '', date: localDateISO(), mode: 'bank-transfer', note: '' });
   };
 
   const recordPayment = async () => {
@@ -666,7 +666,7 @@ export default function Dashboard({ onNew, onEdit, onDuplicate, onConvert, onOpe
       bill, idx,
       form: {
         amount: String(target.amount || ''),
-        date: target.date || new Date().toISOString().split('T')[0],
+        date: target.date || localDateISO(),
         mode: target.mode || 'bank-transfer',
         note: target.note || '',
       },
@@ -824,7 +824,7 @@ export default function Dashboard({ onNew, onEdit, onDuplicate, onConvert, onOpe
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `freegstbill-bills-${sel.length}-${new Date().toISOString().split('T')[0]}.json`;
+    a.download = `freegstbill-bills-${sel.length}-${localDateISO()}.json`;
     a.click();
     URL.revokeObjectURL(url);
     toast(`Exported ${sel.length} invoice${sel.length !== 1 ? 's' : ''} as JSON`, 'success');
@@ -917,7 +917,7 @@ export default function Dashboard({ onNew, onEdit, onDuplicate, onConvert, onOpe
       if (window.__fgsbBulkAbort) { toast(`Aborted after ${ok} of ${sel.length}`, 'warning'); }
       window.__fgsbBulkAbort = false;
       if (ok === 0) { toast('Could not generate any PDFs', 'error'); return; }
-      const filename = `freegstbill-invoices-${ok}-${new Date().toISOString().split('T')[0]}.pdf`;
+      const filename = `freegstbill-invoices-${ok}-${localDateISO()}.pdf`;
       doc.save(filename);
       toast(`Exported ${ok} of ${sel.length} invoices`, 'success');
     } catch (e) {

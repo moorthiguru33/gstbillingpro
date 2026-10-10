@@ -7,7 +7,7 @@ import {
   Volume2, VolumeX, Percent, Tag, Copy, Sparkles, ChevronDown, Share2
 } from 'lucide-react';
 import { getAllProducts, saveBill, getNextInvoiceNumber, getProfile, getAllBills, getAllClients, deleteBill, saveProfile } from '../store';
-import { formatCurrency, getPaperSize, computeInvoiceTotals } from '../utils';
+import { formatCurrency, getPaperSize, computeInvoiceTotals, localDateISO } from '../utils';
 import { getPrintSettings, savePrintSettings } from '../utils/printSettings';
 import { shareOnWhatsApp } from '../utils/share';
 import { promptAction } from './ConfirmModal';
@@ -162,7 +162,7 @@ export default function QuickPOS({ onBackToDashboard, onPrintInvoice }) {
   const [todayBills, setTodayBills] = useState([]);
   const [counterExpenses, setCounterExpenses] = useState(() => {
     try {
-      const saved = localStorage.getItem('counter_expenses_' + new Date().toISOString().split('T')[0]);
+      const saved = localStorage.getItem('counter_expenses_' + localDateISO());
       return saved ? JSON.parse(saved) : [];
     } catch {
       return [];
@@ -181,7 +181,7 @@ export default function QuickPOS({ onBackToDashboard, onPrintInvoice }) {
     getAllBills().then((bills) => {
       const validBills = Array.isArray(bills) ? bills.filter(Boolean) : [];
       setAllBillsList(validBills);
-      const todayStr = new Date().toISOString().split('T')[0];
+      const todayStr = localDateISO();
       const todayOnly = validBills.filter((b) => b && (b.invoiceDate === todayStr || b.date === todayStr));
       setTodayBills(todayOnly);
     }).catch(() => {});
@@ -597,7 +597,7 @@ export default function QuickPOS({ onBackToDashboard, onPrintInvoice }) {
           invoiceNo = await getNextInvoiceNumber(override || 'INV', { explicitPrefix: !!override });
         }
       }
-      const today = new Date().toISOString().split('T')[0];
+      const today = localDateISO();
 
       const clientObj = {
         name: customerName.trim() || (billType === 'non-gst' ? 'Cash Customer (Non-GST)' : 'Cash Customer'),
@@ -905,7 +905,7 @@ export default function QuickPOS({ onBackToDashboard, onPrintInvoice }) {
     const updated = [exp, ...counterExpenses];
     setCounterExpenses(updated);
     try {
-      localStorage.setItem('counter_expenses_' + new Date().toISOString().split('T')[0], JSON.stringify(updated));
+      localStorage.setItem('counter_expenses_' + localDateISO(), JSON.stringify(updated));
     } catch {}
 
     setNewExpenseTitle('');

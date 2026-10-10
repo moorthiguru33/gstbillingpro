@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef, useMemo, lazy, Suspense } from 'react';
 import { Home, FileText, Settings, Plus, Users, Package, BarChart3, Wallet, RefreshCw, Receipt, BookOpen, Moon, Sun, Download, X, ShoppingCart, ChevronDown, Building2, Pencil, HelpCircle, Search, Command, Bell, Calculator, Menu, Heart, LogOut, Zap } from 'lucide-react';
 import { getAllProfiles, saveProfile, getProfile, getEnabledModules, getAllBills, getAllProducts, getStockAlertSettings, getAllClients, runUpdateNow, setDemoMode, isDemoModeActive, getMetaValue, processDueRecurring } from './store';
-import { isModuleEnabled, getUpcomingFilings, isCancelledBill, DOCS_URL } from './utils';
+import { isModuleEnabled, getUpcomingFilings, isCancelledBill, DOCS_URL, localDateISO } from './utils';
 // SaaS Auth + Subscription
 import { supabase, signOut } from './lib/supabase.js';
 import AuthPage from './components/AuthPage.jsx';
@@ -209,7 +209,7 @@ function BillingApp({ authUser, onSignOut, isDemoMode, onExitDemo }) {
           getStockAlertSettings().catch(() => ({ enabled: true, threshold: 5 })),
         ]);
         if (cancelled) return;
-        const today = new Date().toISOString().split('T')[0];
+        const today = localDateISO();
         const tomorrow = new Date(); tomorrow.setDate(tomorrow.getDate() + 3);
         const tomorrowStr = tomorrow.toISOString().split('T')[0];
         // v1.10.67 (#66 item 12) — never chase payment for a cancelled invoice.

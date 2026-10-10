@@ -693,6 +693,12 @@ export const markPaidPatch = (bill, note = 'Marked paid') => {
 // The online documentation. Help buttons link straight to the section for
 // their screen, and the sidebar User Guide opens the start (v1.10.75). The
 // build of docs-site checks that every doc="page#section" used in src exists.
+// Today's LOCAL date as YYYY-MM-DD. new Date().toISOString() is UTC, so
+// between 00:00 and 05:30 IST it gave YESTERDAY: bills, payments and
+// receipts made after midnight were dated the previous day.
+export const localDateISO = (d = new Date()) =>
+  `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+
 // GST Billing Pro: the upstream docs site is not ours, so every help link
 // opens the in-app Help & Support screen for now.
 export const DOCS_URL = '/?view=support';

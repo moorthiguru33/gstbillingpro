@@ -4,6 +4,8 @@
 // PrintSettings.jsx (as the UI form state).
 // ============================================================================
 
+const localDateISO = (d = new Date()) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`; // local date, not UTC
+
 export const DEFAULT_PRINT_SETTINGS = {
   // ==== Thermal-only ====
   // Typography
@@ -566,7 +568,7 @@ export const buildSampleInvoice = (profile) => ({
     country: 'India',
   },
   client: { name: 'SAMPLE CUSTOMER', phone: '+91-9876543210', gstin: '', country: 'India' },
-  details: { invoiceNumber: 'TEST/PRINT/0001', invoiceDate: new Date().toISOString().split('T')[0], placeOfSupply: '' },
+  details: { invoiceNumber: 'TEST/PRINT/0001', invoiceDate: localDateISO(), placeOfSupply: '' },
   items: [
     { name: 'Sample Product One', hsn: '4820', quantity: 2, unit: 'Pcs', rate: 100, taxPercent: 18, discount: 0, cessPercent: 0 },
     { name: 'Sample Product Two', hsn: '9987', quantity: 1, unit: 'Nos', rate: 250, taxPercent: 12, discount: 0, cessPercent: 0 },

@@ -2,7 +2,7 @@
 // normalisation, recurring invoice generation, demo data shape.
 // Run: node scripts/store-helpers-test.mjs
 import { normalizeProduct, productSellingPrice, productTaxPercent, defaultTaxRateFor, findNewCatalogItems } from '../src/utils/products.js';
-import { computeInvoiceTotals } from '../src/utils.js';
+import { computeInvoiceTotals, localDateISO } from '../src/utils.js';
 import { sanitizeWhatsAppPhone, whatsAppUrl } from '../src/utils/share.js';
 import { normalizeBill } from '../src/utils/bills.js';
 import { advanceDate, templateHasEnded, isTemplateDue, buildBillFromTemplate, prefixForInvoiceType, profileForTemplate } from '../src/utils/recurring.js';
@@ -111,6 +111,9 @@ eq(sanitizeWhatsAppPhone('12345'), '', 'too short → ask');
 eq(sanitizeWhatsAppPhone(''), '', 'empty');
 eq(whatsAppUrl('9876543210', 'Hi *A*'), 'https://wa.me/919876543210?text=Hi%20*A*', 'wa.me link');
 eq(whatsAppUrl('', 'x'), 'https://wa.me/?text=x', 'no phone → contact picker');
+
+console.log('local dates');
+eq(localDateISO(new Date(2026, 9, 11, 1, 20)), '2026-10-11', 'just after midnight is still today (not UTC yesterday)');
 
 console.log(`\n${passed} passed, ${failed} failed`);
 process.exit(failed ? 1 : 0);

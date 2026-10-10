@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo } from 'react';
 import { Calculator, Landmark, FileText, TrendingUp, Upload, Info, Check, X, ChevronRight, Briefcase, Clock, Download } from 'lucide-react';
 import { getAllBills, getAllExpenses, getAllPurchases, getProfile } from '../store';
-import { formatCurrency } from '../utils';
+import { formatCurrency, localDateISO } from '../utils';
 import { getPrintSettings } from '../utils/printSettings';
 import HelpButton from './HelpButton';
 
@@ -483,7 +483,7 @@ function AdvanceTaxTab({ advanceInputs, setAdvanceInputs, schedule, totalTax, re
   const set = (patch) => setAdvanceInputs(prev => ({ ...prev, ...patch }));
 
   const addPayment = () => {
-    const today = new Date().toISOString().split('T')[0];
+    const today = localDateISO();
     set({ payments: [...(advanceInputs.payments || []), { date: today, amount: 0 }] });
   };
   const updatePayment = (idx, patch) => {

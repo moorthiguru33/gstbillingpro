@@ -3,7 +3,7 @@ import { ArrowLeft, Plus, Trash2, Download, UserPlus, Pencil, Settings, ChevronU
 import { jsPDF } from 'jspdf';
 import html2canvas from 'html2canvas';
 import { saveBill, applyStockChanges, getNextInvoiceNumber, getTermsTemplates, getAllClients, saveClient, getProfile, getAllProducts, getInvoiceDisplayOptions, saveInvoiceDisplayOptions, getAllProfiles, getRegionMode, saveRecurring, getAllBills, saveProductsBatch } from '../store';
-import { INVOICE_TYPES, COUNTRIES, printedSubtotal, stockEffect, appliedStock, stockDelta, generateEWayBillJSON, formatCurrency, getCountryConfig, getStatesForCountry, getAllUnits, addCustomUnit, removeCustomUnit, getCountriesForRegion, TDS_SECTIONS, TCS_SECTIONS, REMOVED_TCS_SECTIONS, TERMS_PRESETS, getActiveAccounts, getDefaultAccount, getAccountById, getDefaultUnitForMode, filterUnitsByMode, PAPER_SIZES, getPaperSize, computeInvoiceTotals, clientYearToDate, htmlHasText, ORDER_DETAIL_FIELDS, invoiceOptionOn, DEFAULT_DECLARATION, decodeGstin, safePageBoundaries } from '../utils';
+import { INVOICE_TYPES, COUNTRIES, printedSubtotal, stockEffect, appliedStock, stockDelta, generateEWayBillJSON, formatCurrency, getCountryConfig, getStatesForCountry, getAllUnits, addCustomUnit, removeCustomUnit, getCountriesForRegion, TDS_SECTIONS, TCS_SECTIONS, REMOVED_TCS_SECTIONS, TERMS_PRESETS, getActiveAccounts, getDefaultAccount, getAccountById, getDefaultUnitForMode, filterUnitsByMode, PAPER_SIZES, getPaperSize, computeInvoiceTotals, clientYearToDate, htmlHasText, ORDER_DETAIL_FIELDS, invoiceOptionOn, DEFAULT_DECLARATION, decodeGstin, safePageBoundaries, localDateISO } from '../utils';
 import { getPrintSettings, savePrintSettings } from '../utils/printSettings';
 import { shareOnWhatsApp } from '../utils/share';
 import { confirmAction, promptAction } from './ConfirmModal';
@@ -574,7 +574,7 @@ export default function InvoiceGenerator({ onBack, profile: profileProp, editing
   }, [previewCollapsed]);
   const [details, setDetails] = useState(draft?.details || {
     invoiceNumber: '',
-    invoiceDate: new Date().toISOString().split('T')[0],
+    invoiceDate: localDateISO(),
     dueDate: '',
     placeOfSupply: '',
     originalInvoiceRef: '',
@@ -1103,7 +1103,7 @@ export default function InvoiceGenerator({ onBack, profile: profileProp, editing
         const overridePrefix = rawOverride && rawOverride.trim();
         const prefix = overridePrefix || INVOICE_TYPES[type]?.prefix || 'INV';
         getNextInvoiceNumber(prefix, { peek: true, explicitPrefix: !!overridePrefix }).then(num => {
-          setDetails({ ...d.details, invoiceNumber: num, invoiceDate: new Date().toISOString().split('T')[0] });
+          setDetails({ ...d.details, invoiceNumber: num, invoiceDate: localDateISO() });
           numberReserved.current = false;
         });
       } else {
