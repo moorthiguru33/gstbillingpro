@@ -3347,3 +3347,11 @@ html:not([data-theme="dark"]) .profile-switcher-manage { border-top-color: var(-
 html:not([data-theme="dark"]) .server-status { background: rgba(15, 23, 42, 0.04); color: #64748b; }
 html:not([data-theme="dark"]) .mobile-topbar { background: #ffffff; color: #0f172a; box-shadow: 0 1px 4px rgba(15, 23, 42, 0.12); }
 html:not([data-theme="dark"]) .mobile-topbar-btn { background: rgba(15, 23, 42, 0.06); color: #0f172a; }
+
+/* Phase 2 i18n: Indic scripts fall back to the matching Noto family
+   (loaded in index.html; Google Fonts serves only the needed unicode-range). */
+body {
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto,
+    'Noto Sans Devanagari', 'Noto Sans Tamil', 'Noto Sans Telugu', 'Noto Sans Kannada',
+    'Noto Sans Malayalam', 'Noto Sans Bengali', 'Noto Sans Gujarati', sans-serif;
+}

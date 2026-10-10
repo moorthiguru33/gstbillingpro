@@ -18,6 +18,7 @@ import { getClientCredit, planCreditApplication } from '../utils/clientCredit';
 import ClientModal from './ClientModal';
 import { toast } from './Toast';
 import BarcodeScannerModal from './BarcodeScannerModal';
+import { t as tr } from '../i18n';
 
 // Rich text editor component that works with contentEditable properly
 function RichEditor({ value, onChange, placeholder, toolbar = false }) {
@@ -3834,7 +3835,7 @@ export default function InvoiceGenerator({ onBack, profile: profileProp, editing
           {/* Client Details */}
           <div className="glass-panel p-6 mb-6">
             <div className="flex justify-between items-center mb-4">
-              <h3 className="section-title" style={{ margin: 0 }}>Billed To</h3>
+              <h3 className="section-title" style={{ margin: 0 }}>{tr('invoice.billedTo')}</h3>
             </div>
 
             {/* v1.10.24 — Client credit banner. Shows when the picked
@@ -4036,7 +4037,7 @@ export default function InvoiceGenerator({ onBack, profile: profileProp, editing
 
           {/* Invoice Details */}
           <div className="glass-panel p-6 mb-6">
-            <h3 className="section-title">Invoice Details</h3>
+            <h3 className="section-title">{tr('invoice.invoiceDetails')}</h3>
             <div className="grid grid-cols-2 gap-4">
               <div className="form-group">
                 <label className="form-label">Invoice Number</label>
@@ -4165,7 +4166,7 @@ export default function InvoiceGenerator({ onBack, profile: profileProp, editing
           {/* Line Items */}
           <div className="glass-panel p-6 mb-6">
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.75rem' }}>
-              <h3 className="section-title" style={{ margin: 0 }}>Line Items</h3>
+              <h3 className="section-title" style={{ margin: 0 }}>{tr('invoice.lineItems')}</h3>
               {showGST && (
                 <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.82rem', cursor: 'pointer', userSelect: 'none' }}>
                   <input type="checkbox" checked={taxInclusive} onChange={e => setTaxInclusive(e.target.checked)}

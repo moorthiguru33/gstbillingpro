@@ -63,7 +63,7 @@ export default defineConfig({
         maximumFileSizeToCacheInBytes: 6 * 1024 * 1024,
         navigateFallback: '/index.html',
         // Don't cache Supabase API calls
-        navigateFallbackDenylist: [/^\/api\//, /^\/files\//, /^\/(terms|privacy|refund|contact)(\.html)?$/],
+        navigateFallbackDenylist: [/^\/api\//, /^\/files\//, /^\/(terms|privacy|refund|contact|kirana|medical-shop|printing-press|textile|hardware|restaurant|vyapar-alternative|mybillbook-alternative)(\.html)?$/, /^\/(sitemap\.xml|robots\.txt)$/],
         skipWaiting: true,
         clientsClaim: true,
         cleanupOutdatedCaches: true,

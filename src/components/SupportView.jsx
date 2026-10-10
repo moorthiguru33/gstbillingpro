@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { HelpCircle, Mail, MessageSquare, Zap, BookOpen, Shield, CheckCircle, Keyboard, FileText, Smartphone } from 'lucide-react';
 import { COMPANY, LEGAL_LINKS } from '../../shared/company.js';
+import { t as tr } from '../i18n';
 
 export default function SupportView() {
   const [copied, setCopied] = useState(false);
@@ -60,7 +61,7 @@ export default function SupportView() {
               <MessageSquare size={20} />
             </div>
             <div>
-              <h3 style={{ margin: 0, fontSize: '1.05rem', fontWeight: 700 }}>WhatsApp Support</h3>
+              <h3 style={{ margin: 0, fontSize: '1.05rem', fontWeight: 700 }}>{tr('support.whatsapp')}</h3>
               <p style={{ margin: 0, fontSize: '0.8rem', color: 'var(--text-muted)' }}>Quick assistance & onboarding</p>
             </div>
           </div>
@@ -84,7 +85,7 @@ export default function SupportView() {
               <Mail size={20} />
             </div>
             <div>
-              <h3 style={{ margin: 0, fontSize: '1.05rem', fontWeight: 700 }}>Email Helpdesk</h3>
+              <h3 style={{ margin: 0, fontSize: '1.05rem', fontWeight: 700 }}>{tr('support.emailDesk')}</h3>
               <p style={{ margin: 0, fontSize: '0.8rem', color: 'var(--text-muted)' }}>Detailed inquiries & feature requests</p>
             </div>
           </div>
@@ -129,7 +130,7 @@ export default function SupportView() {
       <div className="card" style={{ padding: '1.5rem', borderRadius: 14, border: '1px solid var(--border-color)', background: 'var(--card-bg)' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '1.25rem' }}>
           <BookOpen size={20} color="#059669" />
-          <h2 style={{ fontSize: '1.15rem', fontWeight: 700, margin: 0 }}>Frequently Asked Questions</h2>
+          <h2 style={{ fontSize: '1.15rem', fontWeight: 700, margin: 0 }}>{tr('support.faq')}</h2>
         </div>
         <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
           {faqs.map(({ q, a }) => (

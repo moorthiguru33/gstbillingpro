@@ -8,6 +8,7 @@ import PageHeader from './PageHeader';
 import SupportNudge from './SupportNudge';
 import { toast } from './Toast';
 import { confirmAction, promptAction } from './ConfirmModal';
+import { t as tr, hasChosenLanguage } from '../i18n';
 
 // v1.10.13 — `bg` values switched from opaque tints (#fffbeb / #f5f3ff /
 // etc.) to translucent alpha versions of the accent color. Reason:
@@ -1147,17 +1148,23 @@ export default function Dashboard({ onNew, onEdit, onDuplicate, onConvert, onOpe
     const hasBank = !!(profile.paymentAccounts?.length || profile.upiId || profile.accountNumber);
     const steps = [
       { key: 'business', done: !!profile.businessName?.trim(),
-        title: 'Add your business details', hint: 'Name, address and GSTIN - these print on every invoice',
-        cta: 'Open Settings', go: onOpenSettings },
+        title: tr('checklist.profile'), hint: tr('checklist.profileHint'),
+        cta: tr('checklist.openSettings'), go: onOpenSettings },
       { key: 'invoice', done: allBills.length > 0,
-        title: 'Make your first invoice', hint: 'Client, what you sold, and the GST is worked out for you',
-        cta: 'Start', go: onNew },
+        title: tr('checklist.invoice'), hint: tr('checklist.invoiceHint'),
+        cta: tr('checklist.start'), go: onNew },
       { key: 'products', done: productCount > 0,
-        title: 'Add your products or services', hint: 'Saves typing - pick them from a list on every invoice',
-        cta: 'Open', go: onOpenProducts },
+        title: tr('checklist.products'), hint: tr('checklist.productsHint'),
+        cta: tr('checklist.open'), go: onOpenProducts },
       { key: 'bank', done: hasBank,
-        title: 'Add bank details or UPI', hint: 'So clients can pay you, with a UPI QR on the invoice',
-        cta: 'Open Settings', go: onOpenSettings },
+        title: tr('checklist.bank'), hint: tr('checklist.bankHint'),
+        cta: tr('checklist.openSettings'), go: onOpenSettings },
+      { key: 'logo', done: !!profile.logo,
+        title: tr('checklist.logo'), hint: tr('checklist.logoHint'),
+        cta: tr('checklist.openSettings'), go: onOpenSettings },
+      { key: 'language', done: hasChosenLanguage(),
+        title: tr('checklist.language'), hint: tr('checklist.languageHint'),
+        cta: tr('checklist.openSettings'), go: onOpenSettings },
     ];
     return steps.every(s => s.done) ? null : steps;
   }, [guideDismissed, productCount, profile, allBills.length, onNew, onOpenProducts, onOpenSettings]);
@@ -1166,9 +1173,9 @@ export default function Dashboard({ onNew, onEdit, onDuplicate, onConvert, onOpe
     <div className="dashboard-container">
       <PageHeader
         icon="📊"
-        title="Dashboard"
-        subtitle="Overview of your invoices"
-        meta={`${bills.length} invoice${bills.length === 1 ? '' : 's'}`}>
+        title={tr('dashboard.title')}
+        subtitle={tr('dashboard.subtitle')}
+        meta={tr('dashboard.invoiceCount', { count: bills.length })}>
         <HelpButton title="Dashboard — how to use" doc="dashboard">
           <ul style={{ paddingLeft: '1.1rem', margin: 0 }}>
             <li><strong>New Invoice</strong> — start a fresh tax invoice / proforma / credit note / bill of supply / delivery challan.</li>
@@ -1193,7 +1200,7 @@ export default function Dashboard({ onNew, onEdit, onDuplicate, onConvert, onOpe
             <Zap size={16} color="#2563eb" fill="#2563eb" /> ⚡ Quick POS
           </button>
         )}
-        <button className="btn btn-primary" onClick={onNew}><Plus size={18} /> New Invoice</button>
+        <button className="btn btn-primary" onClick={onNew}><Plus size={18} /> {tr('nav.newInvoice')}</button>
       </PageHeader>
 
       {/* v1.10.69 - a new user used to land here on "No invoices yet." and
@@ -1206,11 +1213,11 @@ export default function Dashboard({ onNew, onEdit, onDuplicate, onConvert, onOpe
         <div className="glass-panel p-6 mb-6">
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', marginBottom: '0.9rem' }}>
             <span style={{ fontSize: '1.15rem' }}>👋</span>
-            <h3 className="section-title" style={{ margin: 0, flex: 1 }}>Getting started</h3>
+            <h3 className="section-title" style={{ margin: 0, flex: 1 }}>{tr('checklist.title')}</h3>
             <span style={{ fontSize: '0.78rem', color: 'var(--text-muted)' }}>
-              {startedSteps.filter(s => s.done).length} of {startedSteps.length} done
+              {tr('checklist.progress', { done: startedSteps.filter(s => s.done).length, total: startedSteps.length })}
             </span>
-            <button type="button" className="btn-link" title="Hide this"
+            <button type="button" className="btn-link" title={tr('checklist.hide')}
               onClick={() => { try { localStorage.setItem('freegstbill_startedDismissed', '1'); } catch { /* private mode */ } setGuideDismissed(true); }}
               style={{ background: 'none', border: 0, color: 'var(--text-muted)', cursor: 'pointer', padding: '0 0.25rem', lineHeight: 1 }}>
               <X size={16} />
@@ -1233,10 +1240,10 @@ export default function Dashboard({ onNew, onEdit, onDuplicate, onConvert, onOpe
             </div>
           ))}
           <div style={{ marginTop: '0.9rem', fontSize: '0.78rem', color: 'var(--text-muted)' }}>
-            New to this?{' '}
+            {tr('checklist.newHere')}{' '}
             <button type="button" onClick={onOpenGuide}
               style={{ background: 'none', border: 0, padding: 0, font: 'inherit', color: 'var(--primary)', textDecoration: 'underline', cursor: 'pointer' }}>
-              Read the 5-minute guide
+              {tr('checklist.readGuide')}
             </button>
           </div>
         </div>
