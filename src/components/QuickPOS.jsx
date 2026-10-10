@@ -584,8 +584,19 @@ export default function QuickPOS({ onBackToDashboard, onPrintInvoice }) {
 
     setSaving(true);
     try {
-      const prefix = billType === 'non-gst' ? 'EST' : 'INV';
-      const invoiceNo = editingBillId || (await getNextInvoiceNumber(prefix, { explicitPrefix: true }));
+      // Same numbering as the invoice editor: a GST bill continues the
+      // tax-invoice series (custom prefix from Print Settings, else the
+      // brand prefix from Invoice Numbers), instead of a separate "INV"
+      // counter that clashed with / skipped the editor's numbers.
+      let invoiceNo = editingBillId;
+      if (!invoiceNo) {
+        if (billType === 'non-gst') {
+          invoiceNo = await getNextInvoiceNumber('EST', { explicitPrefix: true });
+        } else {
+          const override = (getPrintSettings().customPrefixes?.['tax-invoice'] || '').trim();
+          invoiceNo = await getNextInvoiceNumber(override || 'INV', { explicitPrefix: !!override });
+        }
+      }
       const today = new Date().toISOString().split('T')[0];
 
       const clientObj = {
