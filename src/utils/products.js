@@ -39,3 +39,51 @@ export function normalizeProduct(p) {
   if (mrp !== undefined) out.mrp = mrp;
   return out;
 }
+
+const nameKey = (s) => String(s || '').trim().replace(/\s+/g, ' ').toLowerCase();
+
+/**
+ * Default GST % for a NEW line item / product. Uses the business's own
+ * setting (profile.defaultTaxRate, Settings > Tax) when set, otherwise 18%
+ * where the country uses it, otherwise the second-highest rate.
+ */
+export function defaultTaxRateFor(profile, countryRates = [0, 5, 12, 18, 28, 40]) {
+  const own = num(profile?.defaultTaxRate);
+  if (own !== undefined && own >= 0 && own <= 100) return own;
+  if (countryRates.includes(18)) return 18;
+  return countryRates[countryRates.length - 2] ?? 0;
+}
+
+/**
+ * Line items typed by hand on an invoice that are not in the product
+ * catalogue yet (no productId and no product with the same name), as
+ * product records ready for saveProductsBatch(). Duplicates within the
+ * invoice are collapsed; blank / zero-rate rows are skipped.
+ */
+export function findNewCatalogItems(items = [], products = [], skipNames = new Set()) {
+  const known = new Set(products.map((p) => nameKey(p?.name)).filter(Boolean));
+  const ids = new Set(products.map((p) => p?.id).filter(Boolean));
+  const seen = new Set();
+  const out = [];
+  for (const it of items) {
+    const key = nameKey(it?.name);
+    if (!key || key.length < 2) continue;
+    if (it.productId && ids.has(it.productId)) continue;
+    if (known.has(key) || seen.has(key) || skipNames.has(key)) continue;
+    const rate = num(it.rate);
+    if (!(rate > 0)) continue;
+    seen.add(key);
+    out.push(normalizeProduct({
+      name: String(it.name).trim().replace(/\s+/g, ' '),
+      hsn: it.hsn || '',
+      unit: it.unit || 'Nos',
+      sellingPrice: rate,
+      ...(num(it.taxPercent) !== undefined ? { taxPercent: num(it.taxPercent) } : {}),
+      ...(num(it.mrp) > 0 ? { mrp: num(it.mrp) } : {}),
+      source: 'invoice',
+    }));
+  }
+  return out;
+}
+
+export { nameKey as productNameKey };

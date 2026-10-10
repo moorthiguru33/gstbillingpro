@@ -1165,6 +1165,18 @@ export default function SettingsView({ onSaved }) {
                 {taxIdWarning && <small style={{ color: '#d97706', fontSize: '0.7rem', display: 'block', marginTop: '0.2rem' }}>⚠ {taxIdWarning}</small>}
               </div>
               <div className="form-group">
+                <label className="form-label">Default {cc.taxLabel || 'GST'} rate for new items</label>
+                <select name="defaultTaxRate" className="form-input"
+                  value={profile.defaultTaxRate === undefined || profile.defaultTaxRate === null || profile.defaultTaxRate === '' ? '' : String(profile.defaultTaxRate)}
+                  onChange={(e) => setProfile(prev => ({ ...prev, defaultTaxRate: e.target.value === '' ? '' : Number(e.target.value) }))}>
+                  <option value="">Automatic{(cc.taxRates || []).includes(18) ? ' (18%)' : ''}</option>
+                  {(cc.taxRates || [0, 5, 12, 18, 28]).map(r => <option key={r} value={String(r)}>{r}%</option>)}
+                </select>
+                <small style={{ color: 'var(--text-muted)', fontSize: '0.7rem', display: 'block', marginTop: '0.2rem' }}>
+                  Used for new invoice rows. Typing an HSN/SAC code still fills its suggested rate.
+                </small>
+              </div>
+              <div className="form-group">
                 <label className="form-label">Email</label>
                 <input type="email" name="email" className="form-input" value={profile.email} onChange={handleChange} />
               </div>
