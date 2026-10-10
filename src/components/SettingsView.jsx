@@ -12,6 +12,7 @@ import { getCountryConfig, getStatesForCountry, validateTaxId, getCountriesForRe
 import { Save, Upload, Download, Plus, Trash2, Edit3, Image as ImageIcon, PenTool, Cloud, CloudOff, Building2, Hash, RefreshCw, Save as SaveIcon } from 'lucide-react';
 import { initGoogleDrive, isConnected, disconnect } from '../services/googleDrive';
 import { toast } from './Toast';
+import { authFetch } from '../lib/supabase.js';
 import { confirmAction } from './ConfirmModal';
 import PrintSettings from './PrintSettings';
 import HelpButton from './HelpButton';
@@ -414,7 +415,7 @@ export default function SettingsView({ onSaved }) {
       setProfile(prev => ({ ...prev, [field]: dataUrl }));
 
       // Upload to Cloudflare R2 in background
-      fetch('/api/upload-logo', {
+      authFetch('/api/upload-logo', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ data: dataUrl }),
