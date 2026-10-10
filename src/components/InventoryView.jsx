@@ -8,6 +8,7 @@ import QuickStockModal from './QuickStockModal';
 import { toast } from './Toast';
 import { confirmAction } from './ConfirmModal';
 import HelpButton from './HelpButton';
+import { productSellingPrice, productTaxPercent } from '../utils/products.js';
 
 // v1.10.29 — reported: "here purchase price and selling price need".
 // Product now carries BOTH: `purchasePrice` (what we paid the supplier) and
@@ -104,8 +105,8 @@ export default function InventoryView() {
       hsn: product.hsn || '',
       barcode: product.barcode || '',
       purchasePrice: product.purchasePrice ?? '',
-      sellingPrice: product.sellingPrice ?? product.rate ?? '',
-      taxPercent: product.taxPercent || '',
+      sellingPrice: product.sellingPrice ?? product.rate ?? product.price ?? '',
+      taxPercent: productTaxPercent(product) ?? '',
       unit: product.unit || 'Nos',
       stock: product.stock ?? '', // v1.10.74 - was `|| ''`, which blanked a stock of 0
       description: product.description || '',
@@ -220,7 +221,9 @@ export default function InventoryView() {
         await saveProduct({
           name,
           hsn: row.hsn || row['hsn code'] || row['sac'] || '',
-          rate: row.rate || row.price ? parseFloat(row.rate || row.price) || 0 : 0,
+          sellingPrice: parseFloat(row.sellingprice || row['selling price'] || row.rate || row.price || row.mrp) || 0,
+          purchasePrice: parseFloat(row.purchaseprice || row['purchase price'] || row.cost) || undefined,
+          barcode: row.barcode || row.ean || '',
           taxPercent: row.taxpercent || row['tax%'] || row['gst%'] || row['tax'] ? parseFloat(row.taxpercent || row['tax%'] || row['gst%'] || row['tax']) || 0 : 0,
           unit: row.unit || 'Nos',
           stock: row.stock || row.quantity ? parseFloat(row.stock || row.quantity) || 0 : 0,
@@ -396,8 +399,8 @@ export default function InventoryView() {
                   <tr key={product.id}>
                     <td className="font-medium" title={product.description || ''}>{product.name}</td>
                     <td className="text-muted">{product.hsn || '-'}</td>
-                    <td className="font-bold">{product.rate ? formatCurrency(product.rate, profileCurrency) : '-'}</td>
-                    <td>{product.taxPercent ? `${product.taxPercent}%` : '-'}</td>
+                    <td className="font-bold">{productSellingPrice(product) ? formatCurrency(productSellingPrice(product), profileCurrency) : '-'}</td>
+                    <td>{productTaxPercent(product) !== undefined ? `${productTaxPercent(product)}%` : '-'}</td>
                     <td className="text-muted">{product.unit || 'Nos'}</td>
                     <td>
                       {(product.stock ?? 0) <= 0 ? (

@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useMemo, lazy, Suspense } from 'react';
 import { Home, FileText, Settings, Plus, Users, Package, BarChart3, Wallet, RefreshCw, Receipt, BookOpen, Moon, Sun, Download, X, ShoppingCart, ChevronDown, Building2, Pencil, HelpCircle, Search, Command, Bell, Calculator, Menu, Heart, LogOut, Zap } from 'lucide-react';
-import { getAllProfiles, saveProfile, getProfile, getEnabledModules, getAllBills, getAllProducts, getStockAlertSettings, getAllClients, runUpdateNow, setDemoMode, isDemoModeActive } from './store';
+import { getAllProfiles, saveProfile, getProfile, getEnabledModules, getAllBills, getAllProducts, getStockAlertSettings, getAllClients, runUpdateNow, setDemoMode, isDemoModeActive, getMetaValue, processDueRecurring } from './store';
 import { isModuleEnabled, getUpcomingFilings, isCancelledBill, DOCS_URL } from './utils';
 // SaaS Auth + Subscription
 import { supabase, signOut } from './lib/supabase.js';
@@ -41,6 +41,7 @@ const PurchaseBills = lazy(() => import('./components/PurchaseBills'));
 const ControlPanel = lazy(() => import('./components/ControlPanel'));
 // The hosted SaaS build never shows desktop-only tools (Control Panel).
 const IS_DESKTOP_BUILD = import.meta.env.VITE_DESKTOP_BUILD === '1';
+let recurringAutoFireDone = false;
 const SupportView = lazy(() => import('./components/SupportView'));
 import StarBanner from './components/StarBanner';
 import AppFooter from './components/AppFooter';
@@ -193,6 +194,15 @@ function BillingApp({ authUser, onSignOut, isDemoMode, onExitDemo }) {
     let cancelled = false;
     const compute = async () => {
       try {
+        // Recurring invoices that fell due since the last visit are created
+        // once per browser session (the desktop app did this on boot).
+        if (!recurringAutoFireDone) {
+          recurringAutoFireDone = true;
+          const fired = await processDueRecurring().catch(() => null);
+          if (fired?.count > 0) {
+            toast(`Created ${fired.count} recurring invoice${fired.count > 1 ? 's' : ''}: ${fired.invoiceNumbers.join(', ')}`, 'success', 8000);
+          }
+        }
         const [bills, products, stockAlertCfg] = await Promise.all([
           getAllBills().catch(() => []),
           getAllProducts().catch(() => []),
@@ -224,11 +234,10 @@ function BillingApp({ authUser, onSignOut, isDemoMode, onExitDemo }) {
         // would otherwise stay sticky forever.
         let autoFire = null;
         try {
-          const r = await fetch('/api/meta/lastRecurringAutoFire');
-          if (r.ok) {
-            const j = await r.json();
-            if (j.value && j.value.date === today && j.value.count > 0) autoFire = j.value;
-          }
+          // (was fetch('/api/meta/…') — a desktop-server route that does not
+          // exist on Cloudflare, so the SPA's index.html came back instead)
+          const v = await getMetaValue('lastRecurringAutoFire');
+          if (v && v.date === today && v.count > 0) autoFire = v;
         } catch { /* fine */ }
         setNotifications({ overdue, dueSoon, lowStock, filings, autoFire });
       } catch { /* offline / server down — leave previous counts */ }

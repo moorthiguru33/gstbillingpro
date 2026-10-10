@@ -1,6 +1,17 @@
 import { supabase } from './lib/supabase.js';
 import { getFinancialYearLabel } from './utils.js';
-import { DEMO_PROFILE, DEMO_CLIENTS, DEMO_PRODUCTS, DEMO_BILLS, DEMO_EXPENSES } from './data/demoData.js';
+import { DEMO_PROFILE, DEMO_CLIENTS, DEMO_PRODUCTS, DEMO_BILLS, DEMO_EXPENSES, DEMO_LAST_INVOICE_SEQ } from './data/demoData.js';
+import { normalizeProduct } from './utils/products.js';
+import { normalizeBill } from './utils/bills.js';
+import {
+  localToday, isTemplateDue, templateHasEnded, prefixForInvoiceType, profileForTemplate, buildBillFromTemplate,
+} from './utils/recurring.js';
+
+// Supabase query builders are lazy "thenables": the request is only sent
+// when awaited / .then() is called, and they have NO .catch(). The old
+// `supabase.from(...).upsert(...).catch(() => {})` therefore threw a
+// TypeError and never sent the request. Use this for fire-and-forget writes.
+const quietly = (builder) => Promise.resolve(builder).then(() => {}, () => {});
 
 // ============================================================
 // Demo Mode Support (Explore live app without signup)
@@ -47,13 +58,14 @@ const setDemoItem = (key, val) => {
 };
 
 // ---- Get current user ID ----
+// Reads the locally cached session (no network round-trip per query —
+// getUser() hit the Auth server on EVERY store call). The database still
+// enforces ownership with RLS, so this is only used to build the queries.
 const getUserId = async () => {
   if (_demoMode) return 'demo-guest';
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) {
-    if (_demoMode) return 'demo-guest';
-    throw new Error('Not authenticated');
-  }
+  const { data: { session } } = await supabase.auth.getSession();
+  const user = session?.user;
+  if (!user) throw new Error('Not authenticated');
   return user.id;
 };
 
@@ -163,14 +175,13 @@ export const setRegionMode = (mode) => {
   if (!['india', 'international', 'both'].includes(mode)) return;
   try { localStorage.setItem(REGION_KEY, mode); } catch {}
   // Also save to meta table async
-  getUserId().then(userId => {
-    supabase.from('meta').upsert({
-      user_id: userId,
-      key: 'regionMode',
-      value: mode,
-      updated_at: new Date().toISOString(),
-    }, { onConflict: 'user_id,key' }).catch(() => {});
-  }).catch(() => {});
+  if (_demoMode) return;
+  getUserId().then(userId => quietly(supabase.from('meta').upsert({
+    user_id: userId,
+    key: 'regionMode',
+    value: mode,
+    updated_at: new Date().toISOString(),
+  }, { onConflict: 'user_id,key' }))).catch(() => {});
 };
 
 // ---- Enabled Modules ----
@@ -183,24 +194,41 @@ export const getEnabledModules = () => {
 };
 export const setEnabledModules = (map) => {
   try { localStorage.setItem(MODULES_KEY, JSON.stringify(map || {})); } catch {}
-  getUserId().then(userId => {
-    supabase.from('meta').upsert({
-      user_id: userId,
-      key: 'enabledModules',
-      value: map || {},
-      updated_at: new Date().toISOString(),
-    }, { onConflict: 'user_id,key' }).catch(() => {});
-  }).catch(() => {});
+  if (_demoMode) return;
+  getUserId().then(userId => quietly(supabase.from('meta').upsert({
+    user_id: userId,
+    key: 'enabledModules',
+    value: map || {},
+    updated_at: new Date().toISOString(),
+  }, { onConflict: 'user_id,key' }))).catch(() => {});
+};
+
+// ---- Invoice Counter (Atomic via DB function with separate GST vs Non-GST sequences) ----
+// Formats a sequence number exactly like the invoice screen expects:
+// branded = <prefix><sep><FY><sep><0001>  (e.g. INV/2026-27/0005)
+export const formatInvoiceNumber = (pfx, next, settings = DEFAULT_INV_SETTINGS, date = new Date()) => {
+  if (settings.format === 'random') {
+    const rand = Math.random().toString(36).substring(2, 8).toUpperCase();
+    return `${pfx}${settings.separator || '-'}${rand}`;
+  }
+  const sep = settings.separator || '-';
+  const padded = String(next).padStart(settings.padDigits || 4, '0');
+  if (settings.showFinYear) return `${pfx}${sep}${getFinancialYearLabel(date)}${sep}${padded}`;
+  return `${pfx}${sep}${padded}`;
 };
 
 // ---- Invoice Counter (Atomic via DB function with separate GST vs Non-GST sequences) ----
 export const getNextInvoiceNumber = async (prefix = 'INV', { peek = false, explicitPrefix = false } = {}) => {
   if (_demoMode) {
-    const currentNum = Number(getDemoItem('counter', 2)) || 2;
-    const next = peek ? currentNum + 1 : currentNum + 1;
-    if (!peek) setDemoItem('counter', next);
-    const pfx = explicitPrefix ? prefix : (prefix === 'EST' ? 'EST' : 'INV');
-    return `${pfx}-${String(next).padStart(4, '0')}`;
+    // Same format as a real account (INV/2026-27/0005), continuing after the
+    // sample invoices — it used to produce "INV-0003", clashing with them.
+    const settings = { ...DEFAULT_INV_SETTINGS, ...getDemoItem('invoiceNumberSettings', {}) };
+    const pfx = explicitPrefix ? prefix : (prefix === 'EST' ? 'EST' : (settings.brandPrefix || prefix));
+    const counters = getDemoItem('counters', {});
+    const current = Number(counters[pfx] ?? (pfx === 'INV' ? DEMO_LAST_INVOICE_SEQ : 0)) || 0;
+    const next = current + 1;
+    if (!peek) setDemoItem('counters', { ...counters, [pfx]: next });
+    return formatInvoiceNumber(pfx, next, settings);
   }
   const userId = await getUserId();
   const settings = await getInvoiceNumberSettings();
@@ -214,7 +242,7 @@ export const getNextInvoiceNumber = async (prefix = 'INV', { peek = false, expli
       .select('value')
       .eq('user_id', userId)
       .eq('key', key)
-      .single();
+      .maybeSingle();
     const currentNum = Number(data?.value?.count) || (settings.startNumber || 1) - 1;
     next = currentNum + 1;
   } else {
@@ -227,39 +255,26 @@ export const getNextInvoiceNumber = async (prefix = 'INV', { peek = false, expli
     if (!error && data !== null && data !== undefined) {
       next = data;
     } else {
-      // Robust fallback if RPC function not defined
+      // Fallback if the RPC is missing (older database)
       const { data: current } = await supabase
         .from('meta')
         .select('value')
         .eq('user_id', userId)
         .eq('key', key)
-        .single();
+        .maybeSingle();
       const currentNum = Number(current?.value?.count) || (settings.startNumber || 1) - 1;
       next = currentNum + 1;
-      await supabase.from('meta').upsert({
+      const { error: upErr } = await supabase.from('meta').upsert({
         user_id: userId,
         key,
         value: { count: next },
         updated_at: new Date().toISOString(),
-      }, { onConflict: 'user_id,key' }).catch(() => {});
+      }, { onConflict: 'user_id,key' });
+      if (upErr) console.warn('Invoice counter update failed:', upErr.message);
     }
   }
 
-  const pfx = actualPrefix;
-
-  if (settings.format === 'random') {
-    const rand = Math.random().toString(36).substring(2, 8).toUpperCase();
-    return `${pfx}${settings.separator || '-'}${rand}`;
-  }
-
-  const sep = settings.separator || '-';
-  const padded = String(next).padStart(settings.padDigits || 4, '0');
-
-  if (settings.showFinYear) {
-    return `${pfx}${sep}${getFinancialYearLabel()}${sep}${padded}`;
-  }
-
-  return `${pfx}${sep}${padded}`;
+  return formatInvoiceNumber(actualPrefix, next, settings);
 };
 
 // ---- Bills ----
@@ -296,10 +311,12 @@ export const saveBill = async (bill, { overwrite = false } = {}) => {
     invoice_number: bill.invoiceNumber,
     invoice_date: bill.invoiceDate,
     client_name: bill.clientName,
-    client_gstin: bill.clientGstin,
     status: bill.status || 'unpaid',
     invoice_type: bill.invoiceType,
-    total: bill.total || 0,
+    client_gstin: bill.clientGstin || bill.data?.client?.gstin || '',
+    // Bills carry `totalAmount`; `total` only existed on the old demo data,
+    // so the column was always 0 for real invoices.
+    total: Number(bill.totalAmount ?? bill.total ?? bill.data?.totals?.total) || 0,
     data: bill,
     updated_at: new Date().toISOString(),
   };
@@ -310,7 +327,7 @@ export const saveBill = async (bill, { overwrite = false } = {}) => {
 };
 
 export const getAllBills = async () => {
-  if (_demoMode) return getDemoItem('bills', DEMO_BILLS);
+  if (_demoMode) return getDemoItem('bills', DEMO_BILLS).map(normalizeBill);
   const userId = await getUserId();
   const { data, error } = await supabase
     .from('bills')
@@ -318,7 +335,7 @@ export const getAllBills = async () => {
     .eq('user_id', userId)
     .order('invoice_date', { ascending: false });
   if (error) throw error;
-  return (data || []).map(r => r.data).filter(Boolean);
+  return (data || []).map(r => r.data).filter(Boolean).map(normalizeBill);
 };
 
 export const deleteBill = async (id) => {
@@ -340,7 +357,7 @@ export const deleteBill = async (id) => {
     await supabase.from('trash').upsert({
       id,
       user_id: userId,
-      data: bill.data,
+      data: { ...bill.data, _trashedAt: new Date().toISOString() },
       deleted_at: new Date().toISOString(),
     }, { onConflict: 'id,user_id' });
   }
@@ -423,7 +440,11 @@ export const saveProfile = async (profile) => {
 };
 
 export const getProfile = async () => {
-  if (_demoMode) return getDemoItem('profile', DEMO_PROFILE);
+  if (_demoMode) {
+    const p = getDemoItem('profile', DEMO_PROFILE);
+    // Older demo sessions stored the business name as `name`.
+    return p && !p.businessName && p.name ? { ...p, businessName: p.name } : p;
+  }
   const userId = await getUserId();
   const { data, error } = await supabase
     .from('profiles')
@@ -532,7 +553,7 @@ export const deleteTermsTemplate = async (id) => {
 
 // ---- Products ----
 export const getAllProducts = async () => {
-  if (_demoMode) return getDemoItem('products', DEMO_PRODUCTS);
+  if (_demoMode) return getDemoItem('products', DEMO_PRODUCTS).map(normalizeProduct);
   const userId = await getUserId();
   const { data, error } = await supabase
     .from('products')
@@ -540,10 +561,11 @@ export const getAllProducts = async () => {
     .eq('user_id', userId)
     .order('name');
   if (error) throw error;
-  return (data || []).map(r => r.data).filter(Boolean);
+  return (data || []).map(r => r.data).filter(Boolean).map(normalizeProduct);
 };
 
-export const saveProduct = async (product) => {
+export const saveProduct = async (rawProduct) => {
+  const product = normalizeProduct(rawProduct);
   if (_demoMode) {
     const products = getDemoItem('products', DEMO_PRODUCTS);
     const id = product.id || `prod_demo_${Date.now()}`;
@@ -561,9 +583,9 @@ export const saveProduct = async (product) => {
     user_id: userId,
     name: product.name || '',
     hsn: product.hsn || '',
-    price: product.price || 0,
-    tax_rate: product.taxRate || 0,
-    stock: product.stock ?? null,
+    price: product.sellingPrice || 0,
+    tax_rate: product.taxPercent ?? 0,
+    stock: product.stock === '' ? null : (product.stock ?? null),
     unit: product.unit || 'NOS',
     data: product,
     updated_at: new Date().toISOString(),
@@ -583,44 +605,43 @@ export const deleteProduct = async (id) => {
   return { success: true };
 };
 
-export const saveProductsBatch = async (products = []) => {
+export const saveProductsBatch = async (rawProducts = []) => {
+  const products = rawProducts.map(normalizeProduct);
   if (_demoMode) {
     const existing = getDemoItem('products', DEMO_PRODUCTS);
-    const combined = [...existing, ...products];
+    const ids = new Set(products.map(p => p.id).filter(Boolean));
+    const combined = [...existing.filter(p => !ids.has(p.id)), ...products];
     setDemoItem('products', combined);
     return { success: true, count: products.length };
   }
   const userId = await getUserId();
   const rows = products.map((p, i) => {
     const id = p.id || `prod_${Date.now()}_${i}`;
-    const taxRate = Number(p.taxRate ?? p.tax_rate ?? 0);
-    const price = Number(p.price || 0);
     return {
       id,
       user_id: userId,
       name: p.name || '',
       hsn: p.hsn || '',
-      price,
-      tax_rate: taxRate,
+      price: p.sellingPrice || 0,
+      tax_rate: p.taxPercent ?? 0,
       stock: p.stock ?? null,
       unit: p.unit || 'PCS',
-      data: {
-        ...p,
-        id,
-        price,
-        taxRate,
-      },
+      data: { ...p, id },
       updated_at: new Date().toISOString(),
     };
   });
 
   // Insert in batches of 100 for maximum reliability
+  let saved = 0;
+  let firstError = null;
   for (let i = 0; i < rows.length; i += 100) {
     const chunk = rows.slice(i, i + 100);
     const { error } = await supabase.from('products').upsert(chunk, { onConflict: 'id,user_id' });
-    if (error) console.error('Batch product insert error:', error);
+    if (error) { console.error('Batch product insert error:', error); firstError = firstError || error; }
+    else saved += chunk.length;
   }
-  return { success: true, count: rows.length };
+  if (!saved && firstError) throw firstError;
+  return { success: true, count: saved, failed: rows.length - saved };
 };
 
 // ---- Expenses ----
@@ -739,7 +760,8 @@ export const saveRecurring = async (item) => {
     const recurring = getDemoItem('recurring', []);
     const id = item.id || `rec_demo_${Date.now()}`;
     const newRec = { ...item, id };
-    recurring.unshift(newRec);
+    const at = recurring.findIndex(r => r.id === id);
+    if (at >= 0) recurring[at] = newRec; else recurring.unshift(newRec);
     setDemoItem('recurring', recurring);
     return newRec;
   }
@@ -769,8 +791,58 @@ export const deleteRecurring = async (id) => {
   return { success: true };
 };
 
-export const generateRecurringNow = async () => {
-  return { invoiceNumber: 'Generated' };
+// Makes ONE invoice from a template now and moves the template on.
+// (Was a stub that returned { invoiceNumber: 'Generated' } and created
+// nothing.) Same maths as the desktop server: computeInvoiceTotals with
+// CGST/SGST/IGST split, cess, TCS/TDS YTD, end conditions.
+const generateFromTemplate = async (tpl, today, cache = {}) => {
+  const bills = cache.bills || await getAllBills();
+  const [profiles, activeProfile] = cache.profiles
+    ? [cache.profiles, cache.activeProfile]
+    : await Promise.all([getAllProfiles().catch(() => []), getProfile().catch(() => ({}))]);
+  const profile = profileForTemplate(tpl, profiles, activeProfile);
+  const prefix = prefixForInvoiceType(tpl.invoiceType);
+  const taken = new Set(bills.map(b => b.id));
+  let invoiceNumber = await getNextInvoiceNumber(prefix);
+  // Never overwrite an existing invoice if the counter lags behind.
+  for (let i = 0; i < 50 && taken.has(invoiceNumber); i++) invoiceNumber = await getNextInvoiceNumber(prefix);
+  const { bill, nextTemplate } = buildBillFromTemplate({ tpl, profile, invoiceNumber, today, bills });
+  await saveBill(bill);
+  await saveRecurring(nextTemplate);
+  bills.unshift(bill);
+  return invoiceNumber;
+};
+
+export const generateRecurringNow = async (id) => {
+  const templates = await getAllRecurring();
+  const tpl = templates.find(t => t && t.id === id);
+  if (!tpl) throw new Error('Recurring template not found');
+  const today = localToday();
+  if (templateHasEnded(tpl, today)) throw new Error('This template has reached its end date or number of invoices');
+  const invoiceNumber = await generateFromTemplate(tpl, today);
+  return { success: true, invoiceNumber };
+};
+
+// Auto-fire: when the app opens, create one invoice for every active
+// template whose next date has arrived (the desktop app did this on boot).
+// Records a breadcrumb so the notification bell can say what happened.
+export const processDueRecurring = async () => {
+  const today = localToday();
+  const templates = (await getAllRecurring().catch(() => [])).filter(t => isTemplateDue(t, today));
+  if (!templates.length) return { count: 0, invoiceNumbers: [] };
+  const [bills, profiles, activeProfile] = await Promise.all([
+    getAllBills(), getAllProfiles().catch(() => []), getProfile().catch(() => ({})),
+  ]);
+  const cache = { bills, profiles, activeProfile };
+  const invoiceNumbers = [];
+  for (const tpl of templates) {
+    try { invoiceNumbers.push(await generateFromTemplate(tpl, today, cache)); }
+    catch (err) { console.warn('Recurring auto-generate failed for', tpl.id, err); }
+  }
+  if (invoiceNumbers.length && !_demoMode) {
+    await quietly(setMetaValue('lastRecurringAutoFire', { date: today, count: invoiceNumbers.length, invoiceNumbers, at: new Date().toISOString() }));
+  }
+  return { count: invoiceNumbers.length, invoiceNumbers };
 };
 
 // ---- Receipts ----
@@ -858,17 +930,19 @@ export const deleteBusinessProfile = async (id) => {
 
 // ---- Meta ----
 export const getMetaValue = async (key) => {
+  if (_demoMode) return getDemoItem(`meta_${key}`, null);
   const userId = await getUserId();
   const { data } = await supabase
     .from('meta')
     .select('value')
     .eq('user_id', userId)
     .eq('key', key)
-    .single();
+    .maybeSingle();
   return data?.value ?? null;
 };
 
 export const setMetaValue = async (key, value) => {
+  if (_demoMode) { setDemoItem(`meta_${key}`, value); return; }
   const userId = await getUserId();
   await supabase.from('meta').upsert({
     user_id: userId,
@@ -970,7 +1044,9 @@ export const runUpdateNow = async () => {
 export const savePdfToStorage = async (pdfBlob, fileName, clientName) => {
   if (_demoMode) return { saved: true, relPath: `demo/${fileName}` };
   const userId = await getUserId();
-  const path = `${userId}/${clientName}/${fileName}`;
+  // First folder MUST be the user id (storage policy); strip slashes etc.
+  const safe = (v, fb) => String(v || fb).replace(/[\\/#?%*:|"<>]+/g, '_').replace(/^\.+/, '_').slice(0, 120) || fb;
+  const path = `${userId}/${safe(clientName, 'client')}/${safe(fileName, 'invoice.pdf')}`;
   const { error } = await supabase.storage
     .from('invoices')
     .upload(path, pdfBlob, { contentType: 'application/pdf', upsert: true });

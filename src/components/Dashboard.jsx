@@ -155,6 +155,38 @@ function ReceiptModal({ target, onClose }) {
   );
 }
 
+// Type badge text. Unknown / legacy types (e.g. 'regular' from old demo
+// data or POS bills) used to render an empty badge.
+const LEGACY_TYPE_ALIASES = { regular: 'tax-invoice', invoice: 'tax-invoice', 'tax_invoice': 'tax-invoice', pos: 'tax-invoice', estimate: 'proforma' };
+const invoiceTypeLabel = (type) => {
+  const key = type || 'tax-invoice';
+  return INVOICE_TYPES[key]?.label
+    || INVOICE_TYPES[LEGACY_TYPE_ALIASES[key]]?.label
+    || String(key).replace(/[-_]+/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
+};
+
+// The status a row actually shows: 'overdue' is never stored, it is an
+// unpaid/partial sale past its due date; a bill whose payments cover the
+// total counts as paid even if its stored status lagged behind.
+const effectiveStatus = (b) => {
+  const stored = b.status || 'unpaid';
+  if (stored === 'cancelled' || stored === 'paid') return stored;
+  const total = Number(b.totalAmount) || 0;
+  const paid = Number(b.paidAmount) || 0;
+  if (total > 0 && paid >= total - 0.005) return 'paid';
+  return paid > 0 ? 'partial' : stored;
+};
+const isOverdueBill = (b) => {
+  const st = effectiveStatus(b);
+  const due = b.data?.details?.dueDate;
+  return SALES_INVOICE_TYPES.includes(b.invoiceType || 'tax-invoice')
+    && st !== 'paid' && st !== 'cancelled' && !!due && new Date(due) < new Date();
+};
+const statusMatchesFilter = (b, filter) => {
+  if (filter === 'overdue') return isOverdueBill(b) || (b.status || '') === 'overdue';
+  return effectiveStatus(b) === filter;
+};
+
 export default function Dashboard({ onNew, onEdit, onDuplicate, onConvert, onOpenProducts, onOpenSettings, onOpenGuide, onOpenSupport, activeProfile, onOpenPOS }) {
   // v1.10.64 — requested (#55, @sangwanmail-eng): "An invoice belonging to one
   // company should not appear under the other."
@@ -414,7 +446,7 @@ export default function Dashboard({ onNew, onEdit, onDuplicate, onConvert, onOpe
       result = result.filter(b => b.billType === 'non-gst' || b.isNonGst || b.invoiceType === 'estimate');
     }
     if (typeFilter !== 'all') result = result.filter(b => (b.invoiceType || 'tax-invoice') === typeFilter);
-    if (statusFilter !== 'all') result = result.filter(b => (b.status || 'unpaid') === statusFilter);
+    if (statusFilter !== 'all') result = result.filter(b => statusMatchesFilter(b, statusFilter));
     if (fyFilter !== 'all') {
       const fy = fyOptions.find(f => f.value === fyFilter);
       if (fy) result = result.filter(b => b.invoiceDate >= fy.from && b.invoiceDate <= fy.to);
@@ -1586,7 +1618,7 @@ export default function Dashboard({ onNew, onEdit, onDuplicate, onConvert, onOpe
               </thead>
               <tbody>
                 {filtered.map(bill => {
-                  const status = bill.status || 'unpaid';
+                  const status = effectiveStatus(bill);
                   const sc = STATUS_CONFIG[status] || STATUS_CONFIG.unpaid;
                   // v1.10.76 (#83) - only real sales get paid, so only they get the
                   // Paid / Unpaid / Partial menu (and can be overdue).
@@ -1603,7 +1635,7 @@ export default function Dashboard({ onNew, onEdit, onDuplicate, onConvert, onOpe
                       </td>
                       {visibleColumns.date && <td className="text-muted">{new Date(bill.invoiceDate).toLocaleDateString('en-IN')}</td>}
                       {visibleColumns.invoice && <td><span className="invoice-badge">{bill.invoiceNumber}</span></td>}
-                      {visibleColumns.type && <td><span className="type-badge">{(INVOICE_TYPES[bill.invoiceType || 'tax-invoice'])?.label}</span></td>}
+                      {visibleColumns.type && <td><span className="type-badge">{invoiceTypeLabel(bill.invoiceType)}</span></td>}
                       {visibleColumns.client && <td className="font-medium td-client" title={bill.clientName}>
                         {bill.clientName}
                         {bill.data?.internalNote && (

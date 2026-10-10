@@ -16,7 +16,7 @@ import { authFetch } from '../lib/supabase.js';
 import { confirmAction } from './ConfirmModal';
 import PrintSettings from './PrintSettings';
 import HelpButton from './HelpButton';
-import { getBackupsList, restoreBackup, triggerBackup, deleteBackup, getTrashedBills, restoreTrashedBill, purgeTrashedBill } from '../store';
+import { getTrashedBills, restoreTrashedBill, purgeTrashedBill } from '../store';
 
 // v1.10.36 — Section order for the jump-nav pill bar. Keeping this at
 // module scope so the scroll-spy effect below can reference it without
@@ -835,7 +835,7 @@ export default function SettingsView({ onSaved }) {
               <li><strong>Payment Accounts</strong> — add multiple bank / UPI accounts; ⭐ marks the default. Every inline change (add / edit / ⭐ / reorder / delete) auto-saves.</li>
               <li><strong>Invoice Number Settings</strong> — brand prefix, financial-year suffix, padding. Live preview at the bottom.</li>
               <li><strong>Print Settings</strong> — templates, colors, watermark, thermal font size, per-type prefix overrides.</li>
-              <li><strong>Backup Management</strong> — daily auto-backups kept 30 days. Restore any date, or Delete to reclaim disk. Trash bin keeps deleted invoices for 30 days.</li>
+              <li><strong>Backups</strong> — your data is saved to the cloud automatically; use Download backup now for your own copy. The Trash bin keeps deleted invoices until you restore or delete them.</li>
               <li><strong>Google Drive</strong> — easiest: install Google Drive for Desktop and sync the Saved Invoices folder. Advanced: connect your own Google Client ID to upload each downloaded invoice PDF.</li>
               <li><strong>Data Management</strong> — export all or part of your data to one backup file, and import it here or on another computer. Clients and products import from CSV on their own screens.</li>
             </ul>
@@ -2011,39 +2011,41 @@ function EditIcon({ size }) {
 // v1.9.5 — Backup Management + Trash Bin
 // ============================================================
 function BackupAndTrashPanel() {
-  const [backups, setBackups] = useState([]);
+  // Hosted version: the desktop app's "daily snapshot on this PC" backups
+  // do not exist in the cloud (Supabase keeps the live data), so that list
+  // and its fake "Backup now" were removed. "Download backup now" saves a
+  // real, restorable JSON file (same format as Export Backup).
   const [trash, setTrash] = useState([]);
   const [loading, setLoading] = useState(false);
+  const [downloading, setDownloading] = useState(false);
 
   const loadAll = async () => {
     setLoading(true);
     try {
-      const [b, t] = await Promise.all([
-        getBackupsList().catch(() => []),
-        getTrashedBills().catch(() => []),
-      ]);
-      setBackups(b);
-      setTrash(t);
+      setTrash(await getTrashedBills().catch(() => []));
     } catch { /* ignore */ }
     setLoading(false);
   };
 
   useEffect(() => { loadAll(); }, []);
 
-  const handleRestoreBackup = async (date) => {
-    if (!await confirmAction({
-      title: `Restore all data from backup ${date}?`,
-      message: 'This OVERWRITES your current data. A snapshot of the current state will be taken first — if the restore looks wrong, you can roll back.',
-      confirmLabel: 'Restore backup',
-      tone: 'warning',
-    })) return;
+  const handleDownloadBackup = async () => {
+    setDownloading(true);
     try {
-      await triggerBackup();
-      await restoreBackup(date);
-      toast('Backup restored — please reload the page to see the data', 'success');
+      const json = await exportAllData();
+      const blob = new Blob([json], { type: 'application/json' });
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = `gst-billing-pro-backup-${new Date().toISOString().split('T')[0]}.json`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      setTimeout(() => URL.revokeObjectURL(a.href), 5000);
+      toast('Backup downloaded — keep it somewhere safe (Drive, e-mail, USB).', 'success');
     } catch (err) {
-      toast('Restore failed: ' + err.message, 'error');
+      toast('Backup failed: ' + (err?.message || 'unknown error'), 'error');
     }
+    setDownloading(false);
   };
 
   const handleRestoreTrash = async (id) => {
@@ -2059,7 +2061,7 @@ function BackupAndTrashPanel() {
   const handlePurgeTrash = async (id) => {
     if (!await confirmAction({
       title: 'Permanently delete this invoice?',
-      message: 'This bypasses the 30-day Trash grace period. The invoice and its PDF are gone for good.',
+      message: 'The invoice is removed from the trash for good. This cannot be undone.',
       confirmLabel: 'Delete permanently',
       tone: 'danger',
     })) return;
@@ -2072,89 +2074,29 @@ function BackupAndTrashPanel() {
     }
   };
 
-  // v1.10.22 — reported: "add here delete option i know u added 30 days
-  // auto delete but manual delete also u add". Individual backup delete.
-  const handleDeleteBackup = async (date) => {
-    if (!await confirmAction({
-      title: `Delete backup ${date}?`,
-      message: 'Auto-backups still run daily, so future data will be safe. This just removes the archived snapshot.',
-      confirmLabel: 'Delete backup',
-      tone: 'danger',
-    })) return;
-    try {
-      await deleteBackup(date);
-      toast(`Backup ${date} deleted`, 'info');
-      loadAll();
-    } catch (err) {
-      toast('Delete failed: ' + err.message, 'error');
-    }
-  };
-
   return (
     <div className="glass-panel p-6 mb-6">
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '1rem', marginBottom: '0.75rem' }}>
         <div>
           <h3 className="section-title" style={{ marginTop: 0, marginBottom: '0.25rem' }}>
-            💾 Backup Management + 🗑 Trash Bin
+            💾 Backups + 🗑 Trash Bin
           </h3>
           <p style={{ fontSize: '0.82rem', color: 'var(--text-muted)', margin: 0 }}>
-            Automatic daily snapshots kept for 30 days · Deleted invoices stay in the trash for 30 days.
+            Your data is saved to the cloud as you work. Download a backup file any time for your own records ·
+            Deleted invoices stay in the trash until you restore or delete them.
           </p>
         </div>
-        <button className="btn btn-secondary" style={{ fontSize: '0.82rem' }}
-          onClick={async () => {
-            // v1.10.74 - show an error instead of failing silently
-            try {
-              await triggerBackup();
-              toast('Manual backup triggered', 'success');
-              loadAll();
-            } catch (err) {
-              toast('Backup failed: ' + (err.message || 'unknown error'), 'error');
-            }
-          }}>
-          <SaveIcon size={14} /> Backup now
+        <button className="btn btn-secondary" style={{ fontSize: '0.82rem' }} disabled={downloading} onClick={handleDownloadBackup}>
+          <SaveIcon size={14} /> {downloading ? 'Preparing…' : 'Download backup now'}
         </button>
       </div>
 
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '1rem', marginTop: '1rem' }}>
-        {/* Backups list */}
-        <div style={{ padding: '0.85rem', background: 'var(--bg-secondary)', borderRadius: 8 }}>
-          <h4 style={{ margin: '0 0 0.5rem', fontSize: '0.9rem' }}>📅 Daily backups ({backups.length})</h4>
-          {loading && backups.length === 0 && <p style={{ fontSize: '0.82rem', color: 'var(--text-muted)' }}>Loading…</p>}
-          {!loading && backups.length === 0 && <p style={{ fontSize: '0.82rem', color: 'var(--text-muted)' }}>No backups yet — the first will be created at midnight or click "Backup now" above.</p>}
-          <div style={{ maxHeight: 260, overflowY: 'auto' }}>
-            {backups.map(b => (
-              <div key={b.date} style={{
-                display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-                padding: '0.4rem 0.6rem', marginBottom: '0.25rem',
-                background: 'var(--card)', borderRadius: 4, fontSize: '0.82rem',
-              }}>
-                <div>
-                  <strong>{b.date}</strong>
-                  <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>
-                    {b.createdAt ? new Date(b.createdAt).toLocaleTimeString('en-IN') : ''}
-                  </div>
-                </div>
-                <div style={{ display: 'flex', gap: '0.25rem' }}>
-                  <button className="btn btn-secondary" style={{ fontSize: '0.72rem', padding: '0.2rem 0.5rem' }}
-                    onClick={() => handleRestoreBackup(b.date)}>
-                    Restore
-                  </button>
-                  <button className="btn btn-secondary" style={{ fontSize: '0.72rem', padding: '0.2rem 0.5rem', color: '#dc2626', borderColor: '#fca5a5' }}
-                    onClick={() => handleDeleteBackup(b.date)} title="Delete this backup">
-                    Delete
-                  </button>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-
         {/* Trash bin */}
         <div style={{ padding: '0.85rem', background: 'var(--bg-secondary)', borderRadius: 8 }}>
           <h4 style={{ margin: '0 0 0.5rem', fontSize: '0.9rem' }}>🗑 Trash bin ({trash.length})</h4>
           {loading && trash.length === 0 && <p style={{ fontSize: '0.82rem', color: 'var(--text-muted)' }}>Loading…</p>}
-          {!loading && trash.length === 0 && <p style={{ fontSize: '0.82rem', color: 'var(--text-muted)' }}>No deleted invoices. Anything you delete lands here for 30 days.</p>}
+          {!loading && trash.length === 0 && <p style={{ fontSize: '0.82rem', color: 'var(--text-muted)' }}>No deleted invoices. Anything you delete lands here first.</p>}
           <div style={{ maxHeight: 260, overflowY: 'auto' }}>
             {trash.map(bill => (
               <div key={bill.id} style={{
