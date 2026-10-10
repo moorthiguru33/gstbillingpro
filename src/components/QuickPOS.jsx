@@ -7,9 +7,10 @@ import {
   Volume2, VolumeX, Percent, Tag, Copy, Sparkles, ChevronDown, Share2
 } from 'lucide-react';
 import { getAllProducts, saveBill, getNextInvoiceNumber, getProfile, getAllBills, getAllClients, deleteBill, saveProfile } from '../store';
-import { formatCurrency, getPaperSize } from '../utils';
+import { formatCurrency, getPaperSize, computeInvoiceTotals, localDateISO } from '../utils';
 import { getPrintSettings, savePrintSettings } from '../utils/printSettings';
-import { openWhatsAppShare } from '../utils/share';
+import { shareOnWhatsApp } from '../utils/share';
+import { promptAction } from './ConfirmModal';
 import { toast } from './Toast';
 import BarcodeScannerModal from './BarcodeScannerModal';
 import QuickStockModal from './QuickStockModal';
@@ -161,7 +162,7 @@ export default function QuickPOS({ onBackToDashboard, onPrintInvoice }) {
   const [todayBills, setTodayBills] = useState([]);
   const [counterExpenses, setCounterExpenses] = useState(() => {
     try {
-      const saved = localStorage.getItem('counter_expenses_' + new Date().toISOString().split('T')[0]);
+      const saved = localStorage.getItem('counter_expenses_' + localDateISO());
       return saved ? JSON.parse(saved) : [];
     } catch {
       return [];
@@ -180,7 +181,7 @@ export default function QuickPOS({ onBackToDashboard, onPrintInvoice }) {
     getAllBills().then((bills) => {
       const validBills = Array.isArray(bills) ? bills.filter(Boolean) : [];
       setAllBillsList(validBills);
-      const todayStr = new Date().toISOString().split('T')[0];
+      const todayStr = localDateISO();
       const todayOnly = validBills.filter((b) => b && (b.invoiceDate === todayStr || b.date === todayStr));
       setTodayBills(todayOnly);
     }).catch(() => {});
@@ -444,53 +445,62 @@ export default function QuickPOS({ onBackToDashboard, onPrintInvoice }) {
     searchInputRef.current?.focus();
   };
 
-  // Bill totals calculation (respects GST vs Non-GST and MRP/Discounts)
+  // Bill totals calculation (respects GST vs Non-GST and MRP/Discounts).
+  // Uses the same computeInvoiceTotals() as the invoice editor and the
+  // printed receipt so the screen, the saved bill and the receipt agree.
+  // MRP savings (MRP - selling price) are INFORMATIONAL ONLY: the selling
+  // price is already the charged price, so they are never subtracted
+  // again. Only the bill-level discount reduces the total.
   const totals = useMemo(() => {
-    let subtotal = 0;
-    let taxAmount = 0;
-    let totalMrp = 0;
-    let lineDiscounts = 0;
+    const isNonGst = billType === 'non-gst';
+    const items = cart.map((item) => {
+      const qty = Number(item.qty) || 0;
+      const price = Number(item.price) || 0;
+      return {
+        quantity: qty,
+        rate: price,
+        mrp: Number(item.mrp) || price,
+        taxPercent: isNonGst ? 0 : Number(item.taxRate) || 0,
+        discount: Number(item.discount) || 0,
+      };
+    });
+    const totalMrp = items.reduce((sum, it) => sum + it.quantity * it.mrp, 0);
+    const mrpSavings = Math.round(items.reduce(
+      (sum, it) => sum + (it.mrp > it.rate ? (it.mrp - it.rate) * it.quantity : 0), 0,
+    ) * 100) / 100;
 
-    cart.forEach((item) => {
-      const lineNet = item.qty * item.price;
-      const lineMrp = item.qty * (item.mrp || item.price);
-      totalMrp += lineMrp;
+    const preview = computeInvoiceTotals({ items, profile, showGST: !isNonGst });
+    const discValue = parseFloat(billDiscountValue) || 0;
+    // Percent discount keeps its historical meaning: % of the item value
+    // (before GST). Converted to a fixed amount for computeInvoiceTotals.
+    const billDiscAmount = billDiscountType === 'percent'
+      ? (preview.subtotal * Math.min(Math.max(discValue, 0), 100)) / 100
+      : Math.max(discValue, 0);
 
-      if (item.mrp > item.price) {
-        lineDiscounts += (item.mrp - item.price) * item.qty;
-      }
-
-      const lineTax = billType === 'non-gst' ? 0 : (lineNet * (item.taxRate || 0)) / 100;
-      subtotal += lineNet;
-      taxAmount += lineTax;
+    const full = computeInvoiceTotals({
+      items,
+      profile,
+      showGST: !isNonGst,
+      invoiceOptions: {
+        invoiceDiscountType: 'fixed',
+        invoiceDiscountValue: Math.min(billDiscAmount, preview.subtotal),
+        showRoundOff: true,
+      },
     });
 
-    // Overall Bill Discount
-    let billDisc = 0;
-    if (billDiscountType === 'percent') {
-      billDisc = (subtotal * (parseFloat(billDiscountValue) || 0)) / 100;
-    } else {
-      billDisc = parseFloat(billDiscountValue) || 0;
-    }
-    billDisc = Math.min(billDisc, subtotal);
-
-    const netTaxable = Math.max(0, subtotal - billDisc);
-    const rawTotal = netTaxable + taxAmount;
-    const roundedTotal = Math.round(rawTotal);
-    const roundDiff = +(roundedTotal - rawTotal).toFixed(2);
-    const totalSavings = lineDiscounts + billDisc;
-
     return {
-      subtotal,
+      subtotal: full.subtotal,
       totalMrp,
-      taxAmount,
-      billDiscount: billDisc,
-      totalDiscount: totalSavings,
-      total: roundedTotal,
-      roundDiff,
-      totalSavings,
+      taxAmount: full.totalTaxAmount,
+      billDiscount: full.invoiceDiscountAmount,
+      lineDiscount: full.totalDiscount,
+      mrpSavings,
+      total: full.total,
+      roundDiff: full.roundOff,
+      totalSavings: mrpSavings + full.totalDiscount + full.invoiceDiscountAmount,
+      full,
     };
-  }, [cart, billType, billDiscountType, billDiscountValue]);
+  }, [cart, billType, billDiscountType, billDiscountValue, profile]);
 
   // Vector HTML Thermal & Sheet Direct Print via hidden iframe
   const printDirectly = async (billToPrint) => {
@@ -523,7 +533,7 @@ export default function QuickPOS({ onBackToDashboard, onPrintInvoice }) {
   <title>Print Bill - ${billToPrint.invoiceNumber}</title>
   <style>
     @page {
-      size: ${isThermal ? `${widthMm}mm auto` : paperCfg.jsPdfOrientation === 'landscape' ? 'A5 landscape' : 'A4 portrait'};
+      size: ${isThermal ? `${widthMm}mm auto` : `${paperCfg.widthMm || 210}mm ${paperCfg.heightMm || 297}mm`};
       margin: ${isThermal ? '0' : '8mm'};
     }
     html, body {
@@ -574,9 +584,20 @@ export default function QuickPOS({ onBackToDashboard, onPrintInvoice }) {
 
     setSaving(true);
     try {
-      const prefix = billType === 'non-gst' ? 'EST' : 'INV';
-      const invoiceNo = editingBillId || (await getNextInvoiceNumber(prefix, { explicitPrefix: true }));
-      const today = new Date().toISOString().split('T')[0];
+      // Same numbering as the invoice editor: a GST bill continues the
+      // tax-invoice series (custom prefix from Print Settings, else the
+      // brand prefix from Invoice Numbers), instead of a separate "INV"
+      // counter that clashed with / skipped the editor's numbers.
+      let invoiceNo = editingBillId;
+      if (!invoiceNo) {
+        if (billType === 'non-gst') {
+          invoiceNo = await getNextInvoiceNumber('EST', { explicitPrefix: true });
+        } else {
+          const override = (getPrintSettings().customPrefixes?.['tax-invoice'] || '').trim();
+          invoiceNo = await getNextInvoiceNumber(override || 'INV', { explicitPrefix: !!override });
+        }
+      }
+      const today = localDateISO();
 
       const clientObj = {
         name: customerName.trim() || (billType === 'non-gst' ? 'Cash Customer (Non-GST)' : 'Cash Customer'),
@@ -608,15 +629,13 @@ export default function QuickPOS({ onBackToDashboard, onPrintInvoice }) {
         discount: item.discount || 0,
       }));
 
+      // Full computeInvoiceTotals() result so the receipt/PDF prints
+      // Subtotal - discounts + GST + round-off = Total exactly. MRP savings
+      // ride along separately for the "You saved" info line.
       const computedTotals = {
-        subtotal: totals.subtotal,
+        ...totals.full,
         taxAmount: totals.taxAmount,
-        total: totals.total,
-        cgst: billType === 'non-gst' ? 0 : +(totals.taxAmount / 2).toFixed(2),
-        sgst: billType === 'non-gst' ? 0 : +(totals.taxAmount / 2).toFixed(2),
-        igst: 0,
-        roundOff: totals.roundDiff,
-        totalDiscount: totals.totalDiscount,
+        mrpSavings: totals.mrpSavings,
       };
 
       const fullBillData = {
@@ -639,6 +658,7 @@ export default function QuickPOS({ onBackToDashboard, onPrintInvoice }) {
           date: today,
           amount: totals.total,
           method: paymentMode,
+          mode: paymentMode,
           notes: paymentMode === 'card'
             ? `Card ${cardDetails.cardType} **** ${cardDetails.last4}`
             : paymentMode === 'upi' ? `UPI Ref: ${upiDetails.utr || 'Digital'}` : 'Cash',
@@ -668,6 +688,9 @@ export default function QuickPOS({ onBackToDashboard, onPrintInvoice }) {
             showUPI: true,
             showBankDetails: true,
             showAmountWords: true,
+            showRoundOff: true,
+            invoiceDiscountType: 'fixed',
+            invoiceDiscountValue: totals.billDiscount,
           },
         },
       };
@@ -682,8 +705,10 @@ export default function QuickPOS({ onBackToDashboard, onPrintInvoice }) {
       setEditingBillId(null);
       loadData();
 
-      // Trigger auto-print directly
-      if (printSettings.autoPrintOnSave) {
+      // Auto-print only on thermal receipt printers. On A4/A5/Letter the
+      // receipt modal opens and the user prints from there, instead of a
+      // browser print dialog popping up after every sale.
+      if (printSettings.autoPrintOnSave && getPaperSize(paperSize).kind === 'thermal') {
         setTimeout(() => printDirectly(fullBillData), 200);
       }
     } catch (err) {
@@ -700,7 +725,7 @@ export default function QuickPOS({ onBackToDashboard, onPrintInvoice }) {
     const cur = 'INR';
     const total = formatCurrency(Number(bill.total || bill.totalAmount) || 0, cur);
     const dateStr = bill.invoiceDate ? new Date(bill.invoiceDate).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) : '';
-    const businessName = profile?.businessName || '';
+    const businessName = profile?.businessName || profile?.tradeName || profile?.name || '';
     const clientName = bill.client?.name || customerName || 'Valued Customer';
     const itemCount = (bill.items || []).length;
     const upiId = profile?.upiId || (profile?.paymentAccounts && profile.paymentAccounts[0]?.upiId) || '';
@@ -723,7 +748,7 @@ export default function QuickPOS({ onBackToDashboard, onPrintInvoice }) {
       if (profile?.phone) lines.push(`📞 Contact: ${profile.phone}`);
     }
 
-    openWhatsAppShare(phone, lines.join('\n'));
+    shareOnWhatsApp({ phone, message: lines.join('\n'), ask: promptAction, customerName: bill.client?.name || customerName }).catch(() => {});
   };
 
   // Start fresh sale
@@ -880,7 +905,7 @@ export default function QuickPOS({ onBackToDashboard, onPrintInvoice }) {
     const updated = [exp, ...counterExpenses];
     setCounterExpenses(updated);
     try {
-      localStorage.setItem('counter_expenses_' + new Date().toISOString().split('T')[0], JSON.stringify(updated));
+      localStorage.setItem('counter_expenses_' + localDateISO(), JSON.stringify(updated));
     } catch {}
 
     setNewExpenseTitle('');
@@ -1840,7 +1865,9 @@ export default function QuickPOS({ onBackToDashboard, onPrintInvoice }) {
             items={completedBill.items}
             totals={completedBill.totals}
             invoiceType={completedBill.invoiceType}
-            options={completedBill.data?.invoiceOptions || { paperSize }}
+            // Always the CURRENTLY selected paper size, so switching the pill
+            // in the receipt modal changes what actually gets printed.
+            options={{ ...(completedBill.data?.invoiceOptions || {}), paperSize }}
           />
         )}
       </div>

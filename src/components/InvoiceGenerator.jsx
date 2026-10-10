@@ -2,16 +2,17 @@ import { useState, useEffect, useRef, useCallback, useMemo, memo } from 'react';
 import { ArrowLeft, Plus, Trash2, Download, UserPlus, Pencil, Settings, ChevronUp, ChevronDown, MessageCircle, Check, Loader, Truck, Printer, Eye, EyeOff, Camera, Barcode } from 'lucide-react';
 import { jsPDF } from 'jspdf';
 import html2canvas from 'html2canvas';
-import { saveBill, applyStockChanges, getNextInvoiceNumber, getTermsTemplates, getAllClients, saveClient, getProfile, getAllProducts, getInvoiceDisplayOptions, saveInvoiceDisplayOptions, getAllProfiles, getRegionMode, saveRecurring, getAllBills } from '../store';
-import { INVOICE_TYPES, COUNTRIES, printedSubtotal, stockEffect, appliedStock, stockDelta, generateEWayBillJSON, formatCurrency, getCountryConfig, getStatesForCountry, getAllUnits, addCustomUnit, removeCustomUnit, getCountriesForRegion, TDS_SECTIONS, TCS_SECTIONS, REMOVED_TCS_SECTIONS, TERMS_PRESETS, getActiveAccounts, getDefaultAccount, getAccountById, getDefaultUnitForMode, filterUnitsByMode, PAPER_SIZES, getPaperSize, computeInvoiceTotals, clientYearToDate, htmlHasText, ORDER_DETAIL_FIELDS, invoiceOptionOn, DEFAULT_DECLARATION, decodeGstin, safePageBoundaries } from '../utils';
+import { saveBill, applyStockChanges, getNextInvoiceNumber, getTermsTemplates, getAllClients, saveClient, getProfile, getAllProducts, getInvoiceDisplayOptions, saveInvoiceDisplayOptions, getAllProfiles, getRegionMode, saveRecurring, getAllBills, saveProductsBatch } from '../store';
+import { INVOICE_TYPES, COUNTRIES, printedSubtotal, stockEffect, appliedStock, stockDelta, generateEWayBillJSON, formatCurrency, getCountryConfig, getStatesForCountry, getAllUnits, addCustomUnit, removeCustomUnit, getCountriesForRegion, TDS_SECTIONS, TCS_SECTIONS, REMOVED_TCS_SECTIONS, TERMS_PRESETS, getActiveAccounts, getDefaultAccount, getAccountById, getDefaultUnitForMode, filterUnitsByMode, PAPER_SIZES, getPaperSize, computeInvoiceTotals, clientYearToDate, htmlHasText, ORDER_DETAIL_FIELDS, invoiceOptionOn, DEFAULT_DECLARATION, decodeGstin, safePageBoundaries, localDateISO } from '../utils';
 import { getPrintSettings, savePrintSettings } from '../utils/printSettings';
-import { openWhatsAppShare } from '../utils/share';
+import { shareOnWhatsApp } from '../utils/share';
 import { confirmAction, promptAction } from './ConfirmModal';
 import PrintPreviewModal from './PrintPreviewModal';
 import { ensureToken, findOrCreateFolder, uploadPDF } from '../services/googleDrive';
 import DOMPurify from 'dompurify';
 import InvoicePreview from './InvoicePreview';
 import { suggestGstRate } from '../utils/hsnRates';
+import { defaultTaxRateFor, findNewCatalogItems, productNameKey } from '../utils/products';
 import HelpButton from './HelpButton';
 import { getClientCredit, planCreditApplication } from '../utils/clientCredit';
 import ClientModal from './ClientModal';
@@ -305,7 +306,9 @@ const LineItem = memo(function LineItem({
   };
   return (
     <div className="line-item-row" data-item-id={item.id} onKeyDown={handleRowKeyDown}>
-      <div className="line-item-field" style={{ flex: 2.5, position: 'relative' }}>
+      {/* Item name gets a real minimum width; on a narrow editor pane the
+          row wraps instead of squeezing the name to a few characters. */}
+      <div className="line-item-field line-item-name" style={{ flex: '3 1 240px', minWidth: 180, position: 'relative' }}>
         {/* v1.10.74 - was "Description", which clashed with "+ Add description" below. */}
         <label className="form-label">Item</label>
         {/* v1.10.37 — Keyboard nav on product suggestions. Reported:
@@ -331,10 +334,10 @@ const LineItem = memo(function LineItem({
               const val = e.target.value;
               onFieldChange(item.id, 'hsn', val);
               // v1.10.22 — Suggest GST rate from a curated HSN/SAC table.
-              // Only overwrites the tax rate when the user has NOT already
-              // typed a custom rate (default 18 is treated as "unset").
+              // Only overwrites the tax rate when the user has NOT picked a
+              // rate by hand on this row (taxManual), whatever the default is.
               const suggested = suggestGstRate(val);
-              if (suggested && (item.taxPercent === undefined || item.taxPercent === 18 || item.taxPercent === 0)) {
+              if (suggested && !item.taxManual) {
                 onFieldChange(item.id, 'taxPercent', suggested.rate);
               }
             }} />
@@ -453,8 +456,10 @@ const LineItem = memo(function LineItem({
                 const n = parseFloat(raw);
                 if (!isFinite(n) || n < 0 || n > 100) { toast('Tax rate must be between 0 and 100', 'warning'); return; }
                 onFieldChange(item.id, 'taxPercent', n);
+                onFieldChange(item.id, 'taxManual', true);
               } else {
                 onFieldChange(item.id, 'taxPercent', parseFloat(e.target.value) || 0);
+                onFieldChange(item.id, 'taxManual', true);
               }
             }}>
             {countryTaxRates.map(r => (
@@ -569,7 +574,7 @@ export default function InvoiceGenerator({ onBack, profile: profileProp, editing
   }, [previewCollapsed]);
   const [details, setDetails] = useState(draft?.details || {
     invoiceNumber: '',
-    invoiceDate: new Date().toISOString().split('T')[0],
+    invoiceDate: localDateISO(),
     dueDate: '',
     placeOfSupply: '',
     originalInvoiceRef: '',
@@ -583,7 +588,7 @@ export default function InvoiceGenerator({ onBack, profile: profileProp, editing
   });
 
   const [items, setItems] = useState(draft?.items || [
-    { id: Date.now().toString(), name: '', hsn: '', quantity: 1, unit: 'Nos', rate: 0, discount: 0, taxPercent: 18, cessPercent: 0 }
+    { id: Date.now().toString(), name: '', hsn: '', quantity: 1, unit: 'Nos', rate: 0, discount: 0, taxPercent: defaultTaxRateFor(profileProp), cessPercent: 0 }
   ]);
   // v1.10.24 — Client credit balance state. Loaded once on mount + refreshed
   // when the client name changes. `creditToApply` is what the user chose to
@@ -734,7 +739,8 @@ export default function InvoiceGenerator({ onBack, profile: profileProp, editing
   // Rate for a new row: 18% where it exists (India's standard rate), else the
   // second-highest rate. Was always second-highest, which turns into 28% once
   // 40% is in the list.
-  const defaultTaxRate = countryTaxRates.includes(18) ? 18 : (countryTaxRates[countryTaxRates.length - 2] ?? 0);
+  // Settings > Tax > "Default GST rate" (profile.defaultTaxRate) wins.
+  const defaultTaxRate = defaultTaxRateFor(profile, countryTaxRates);
   const taxLabel = sellerCountryConfig.taxLabel || 'GST';
 
   // Clamp a numeric input to non-negative (and finite). Used for qty/rate/discount.
@@ -1097,7 +1103,7 @@ export default function InvoiceGenerator({ onBack, profile: profileProp, editing
         const overridePrefix = rawOverride && rawOverride.trim();
         const prefix = overridePrefix || INVOICE_TYPES[type]?.prefix || 'INV';
         getNextInvoiceNumber(prefix, { peek: true, explicitPrefix: !!overridePrefix }).then(num => {
-          setDetails({ ...d.details, invoiceNumber: num, invoiceDate: new Date().toISOString().split('T')[0] });
+          setDetails({ ...d.details, invoiceNumber: num, invoiceDate: localDateISO() });
           numberReserved.current = false;
         });
       } else {
@@ -1305,11 +1311,14 @@ export default function InvoiceGenerator({ onBack, profile: profileProp, editing
       hsn: product.hsn || '',
       rate: salePrice,
       unit: product.unit || item.unit || 'Nos',
-      taxPercent: product.taxPercent ?? defaultTaxRate,
+      // Catalogue rate, else the rate suggested by the product's HSN code,
+      // else the business default.
+      taxPercent: product.taxPercent ?? product.taxRate ?? suggestGstRate(product.hsn)?.rate ?? defaultTaxRate,
+      taxManual: false,
       productId: product.id,
     } : item));
     setProductSearch({ itemId: null, query: '' });
-  }, [countryTaxRates]);
+  }, [defaultTaxRate]);
 
   const getProductSuggestions = useCallback((itemId) => {
     if (productSearch.itemId !== itemId || !productSearch.query.trim()) return [];
@@ -1353,7 +1362,7 @@ export default function InvoiceGenerator({ onBack, profile: profileProp, editing
 
     if (match) {
       const salePrice = match.sellingPrice ?? match.rate ?? 0;
-      const taxRate = match.taxRate != null ? match.taxRate : (match.taxPercent ?? (showGST ? defaultTaxRate : 0));
+      const taxRate = match.taxRate != null ? match.taxRate : (match.taxPercent ?? suggestGstRate(match.hsn)?.rate ?? (showGST ? defaultTaxRate : 0));
       const newItem = {
         id: Date.now().toString(),
         name: match.name,
@@ -1555,6 +1564,32 @@ export default function InvoiceGenerator({ onBack, profile: profileProp, editing
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
+
+  // Names the user said "Not now" to in this session — don't ask again.
+  const declinedCatalogNames = useRef(new Set());
+  const offerToCatalogueNewItems = (savedItems) => {
+    const fresh = findNewCatalogItems(savedItems, products, declinedCatalogNames.current);
+    if (!fresh.length) return;
+    const list = fresh.slice(0, 5).map((p) => `• ${p.name}`).join('\n') + (fresh.length > 5 ? `\n…and ${fresh.length - 5} more` : '');
+    confirmAction({
+      title: fresh.length === 1 ? 'Add this item to Products?' : `Add ${fresh.length} new items to Products?`,
+      message: `These items are not in your product list yet:\n${list}\n\nSave them with their rate, HSN and GST % so you can pick them next time.`,
+      confirmLabel: 'Add to Products',
+      cancelLabel: 'Not now',
+    }).then(async (ok) => {
+      if (!ok) {
+        fresh.forEach((p) => declinedCatalogNames.current.add(productNameKey(p.name)));
+        return;
+      }
+      try {
+        await saveProductsBatch(fresh);
+        setProducts(await getAllProducts());
+        toast(fresh.length === 1 ? `"${fresh[0].name}" added to Products` : `${fresh.length} items added to Products`, 'success');
+      } catch (err) {
+        toast('Could not add items to Products: ' + (err?.message || err), 'error');
+      }
+    }).catch(() => {});
+  };
 
   const saveInvoiceToDBNow = async (skipStockDeduction = false, extraPatch = {}) => {
     // Lazy counter reservation: if this is a NEW bill (no editingBill) and
@@ -1904,6 +1939,12 @@ export default function InvoiceGenerator({ onBack, profile: profileProp, editing
     // proformas do nothing). Editing 10 -> 15 takes 5 more; saving again moves
     // nothing. Saves run one at a time (saveInvoiceToDB), so two can never
     // start from the same record.
+    // Items typed by hand (not picked from Products) are offered for the
+    // catalogue after a manual save, so they can be picked next time.
+    // Never on auto-save (skipStockDeduction) — half-typed names would land
+    // in the catalogue. Non-blocking: the save is already done.
+    if (!skipStockDeduction) offerToCatalogueNewItems(items);
+
     const changes = stockDelta(stockFrom, bill.data.stockApplied);
     const moved = await applyStockChanges(changes);
     if (moved.length) {
@@ -3002,7 +3043,7 @@ export default function InvoiceGenerator({ onBack, profile: profileProp, editing
     const total = formatCurrency(Number(totals.total) || 0, cur);
     const subtotal = formatCurrency(printedSubtotal(totals), cur);
     const dateStr = details.invoiceDate ? new Date(details.invoiceDate).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) : '';
-    const businessName = profile?.businessName || '';
+    const businessName = profile?.businessName || profile?.tradeName || profile?.name || '';
     const clientName = client?.name || 'Valued Customer';
     const totalTax = (Number(totals.cgst) || 0) + (Number(totals.sgst) || 0) + (Number(totals.igst) || 0);
     const validItems = (items || []).filter(i => (i.name || '').trim());
@@ -3035,7 +3076,12 @@ export default function InvoiceGenerator({ onBack, profile: profileProp, editing
       if (profile?.phone) lines.push(`📞 Contact: ${profile.phone}`);
     }
 
-    openWhatsAppShare(client?.phone, lines.join('\n'));
+    shareOnWhatsApp({ phone: client?.phone, message: lines.join('\n'), ask: promptAction, customerName: client?.name })
+      .then((used) => {
+        // Remember a number typed in the prompt on this invoice's client.
+        if (used && !client?.phone) setClient((prev) => ({ ...prev, phone: used.startsWith('91') && used.length === 12 ? used.slice(2) : used }));
+      })
+      .catch(() => {});
   };
 
   const exportEWayBill = () => {

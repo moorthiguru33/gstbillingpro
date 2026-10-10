@@ -4,6 +4,8 @@
 // PrintSettings.jsx (as the UI form state).
 // ============================================================================
 
+const localDateISO = (d = new Date()) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`; // local date, not UTC
+
 export const DEFAULT_PRINT_SETTINGS = {
   // ==== Thermal-only ====
   // Typography
@@ -468,7 +470,8 @@ export function formatDate(dateStr, settings) {
 export const BUSINESS_PRESETS = {
   retail_shop: {
     label: '🛒 Retail Shop / Kirana',
-    hint: 'Small retail counter · thermal receipt · quick print',
+    hint: 'Small retail counter · 80mm thermal receipt · quick print',
+    paper: 'thermal80',
     patch: {
       pdfTemplate: 'modern',
       fontSize: 'medium', fontWeight: 'bold', allCaps: true,
@@ -482,6 +485,7 @@ export const BUSINESS_PRESETS = {
   freelancer: {
     label: '💻 Freelancer / Consultant',
     hint: 'A4 PDF · monthly retainer · professional feel',
+    paper: 'a4',
     patch: {
       pdfTemplate: 'minimalist',
       showHSN: true, showAmountWords: true, showRateLine: true,
@@ -494,6 +498,7 @@ export const BUSINESS_PRESETS = {
   restaurant: {
     label: '🍽 Restaurant / Cafe / Bar',
     hint: '80mm thermal · compact receipt · UPI QR prominent',
+    paper: 'thermal80',
     patch: {
       pdfTemplate: 'modern',
       fontSize: 'medium', fontWeight: 'bold', allCaps: false,
@@ -507,6 +512,7 @@ export const BUSINESS_PRESETS = {
   wholesale: {
     label: '📦 Wholesale / Trading',
     hint: 'A5 landscape · multi-copy · GST rule 48 compliant',
+    paper: 'a5Landscape',
     patch: {
       pdfTemplate: 'classic',
       multiCopyEnabled: true, multiCopyCount: 3,
@@ -519,6 +525,7 @@ export const BUSINESS_PRESETS = {
   manufacturer: {
     label: '🏭 Manufacturing',
     hint: 'A4 · detailed items · e-Way Bill ready · multi-page headers',
+    paper: 'a4',
     patch: {
       pdfTemplate: 'corporate',
       showHSN: true, showAmountWords: true, showRateLine: true,
@@ -530,6 +537,7 @@ export const BUSINESS_PRESETS = {
   service: {
     label: '🛠 Service / Repair Shop',
     hint: 'A5 portrait · single copy · signature line prominent',
+    paper: 'a5',
     patch: {
       pdfTemplate: 'classic',
       showHSN: false, showAmountWords: true,
@@ -543,7 +551,9 @@ export const BUSINESS_PRESETS = {
 export function applyBusinessPreset(currentSettings, presetKey) {
   const preset = BUSINESS_PRESETS[presetKey];
   if (!preset) return currentSettings;
-  return { ...currentSettings, ...preset.patch };
+  // `paper` is the preset's paper size: it becomes the POS default here;
+  // callers also write it to the invoice defaults (utils/paperDefaults.js).
+  return { ...currentSettings, ...preset.patch, ...(preset.paper ? { defaultPaperSize: preset.paper, paperSize: preset.paper } : {}) };
 }
 
 // Sample invoice for the Test Print button — uses the user's real business
@@ -558,7 +568,7 @@ export const buildSampleInvoice = (profile) => ({
     country: 'India',
   },
   client: { name: 'SAMPLE CUSTOMER', phone: '+91-9876543210', gstin: '', country: 'India' },
-  details: { invoiceNumber: 'TEST/PRINT/0001', invoiceDate: new Date().toISOString().split('T')[0], placeOfSupply: '' },
+  details: { invoiceNumber: 'TEST/PRINT/0001', invoiceDate: localDateISO(), placeOfSupply: '' },
   items: [
     { name: 'Sample Product One', hsn: '4820', quantity: 2, unit: 'Pcs', rate: 100, taxPercent: 18, discount: 0, cessPercent: 0 },
     { name: 'Sample Product Two', hsn: '9987', quantity: 1, unit: 'Nos', rate: 250, taxPercent: 12, discount: 0, cessPercent: 0 },

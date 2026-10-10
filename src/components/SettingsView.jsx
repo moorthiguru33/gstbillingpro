@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { getProfile, saveProfile, exportAllData, importData, inspectBackup, getTermsTemplates, saveTermsTemplate, deleteTermsTemplate, getAllProfiles, saveBusinessProfile, deleteBusinessProfile, getInvoiceNumberSettings, saveInvoiceNumberSettings, getRegionMode, setRegionMode, getEnabledModules, setEnabledModules, getStockAlertSettings, saveStockAlertSettings, getInvoiceDisplayOptions, saveInvoiceDisplayOptions } from '../store';
 import { ensureToken, findOrCreateFolder, uploadJSON } from '../services/googleDrive';
-import { getCountryConfig, getStatesForCountry, validateTaxId, getCountriesForRegion, FEATURE_GROUPS, isModuleEnabled, getPaymentAccounts, createEmptyAccount, maskAccountNumber, reorderAccounts, setDefaultAccount, isValidUpiId, getFinancialYearLabel } from '../utils';
+import { getCountryConfig, getStatesForCountry, validateTaxId, getCountriesForRegion, FEATURE_GROUPS, isModuleEnabled, getPaymentAccounts, createEmptyAccount, maskAccountNumber, reorderAccounts, setDefaultAccount, isValidUpiId, getFinancialYearLabel, localDateISO } from '../utils';
 // v1.10.36 — lucide's `Image` icon was imported as `Image`, which
 // SHADOWED the browser's `HTMLImageElement` constructor. Reported:
 // "Uncaught TypeError: et is not a constructor at onChange" on logo
@@ -12,10 +12,11 @@ import { getCountryConfig, getStatesForCountry, validateTaxId, getCountriesForRe
 import { Save, Upload, Download, Plus, Trash2, Edit3, Image as ImageIcon, PenTool, Cloud, CloudOff, Building2, Hash, RefreshCw, Save as SaveIcon } from 'lucide-react';
 import { initGoogleDrive, isConnected, disconnect } from '../services/googleDrive';
 import { toast } from './Toast';
+import { authFetch } from '../lib/supabase.js';
 import { confirmAction } from './ConfirmModal';
 import PrintSettings from './PrintSettings';
 import HelpButton from './HelpButton';
-import { getBackupsList, restoreBackup, triggerBackup, deleteBackup, getTrashedBills, restoreTrashedBill, purgeTrashedBill, runUpdateNow } from '../store';
+import { getTrashedBills, restoreTrashedBill, purgeTrashedBill } from '../store';
 
 // v1.10.36 — Section order for the jump-nav pill bar. Keeping this at
 // module scope so the scroll-spy effect below can reference it without
@@ -119,6 +120,29 @@ export default function SettingsView({ onSaved }) {
   // saving, and any future drift in the dirty check turns straight into a
   // popup on every exit. The sticky bar already makes unsaved work visible
   // without interrupting anyone.
+  // Jump-nav: scroll the page's real scroll container (.main-content, not
+  // the window) so the chosen section starts just below the sticky bar.
+  // scrollIntoView() on the flex-`order`ed sections often stopped short or
+  // was undone when async sections (Print, Backups) finished loading above
+  // the target, so the position is corrected once more after they settle.
+  const scrollToSection = (id) => {
+    const el = document.getElementById(id);
+    if (!el) return;
+    setActiveSection(id);
+    const scroller = el.closest('.main-content') || document.scrollingElement || document.documentElement;
+    const target = () => {
+      const bar = saveBarRef.current?.getBoundingClientRect().height || saveBarH;
+      const base = scroller === document.scrollingElement || scroller === document.documentElement
+        ? 0 : scroller.getBoundingClientRect().top;
+      return Math.max(0, el.getBoundingClientRect().top - base + scroller.scrollTop - bar - 12);
+    };
+    scroller.scrollTo({ top: target(), behavior: 'smooth' });
+    setTimeout(() => {
+      const t = target();
+      if (Math.abs(scroller.scrollTop - t) > 4) scroller.scrollTo({ top: t, behavior: 'auto' });
+    }, 700);
+  };
+
   useEffect(() => {
     const els = JUMP_NAV_SECTIONS
       .map(([id]) => document.getElementById(id))
@@ -152,19 +176,7 @@ export default function SettingsView({ onSaved }) {
     format: 'branded', brandPrefix: '', separator: '/', showFinYear: true, startNumber: 1, padDigits: 4,
   });
   const [invNumSaving, setInvNumSaving] = useState(false);
-  const [updateInfo, setUpdateInfo] = useState(null);
   const [checkingUpdate, setCheckingUpdate] = useState(false);
-  // v1.10.69 - see runUpdateNow() in store.js: this used to be a link to a URL
-  // protocol that no current install registers, so it did nothing at all.
-  const [updatingNow, setUpdatingNow] = useState(false);
-  const handleSettingsUpdateNow = async () => {
-    setUpdatingNow(true);
-    toast('Updating… your data is backed up first. This takes about a minute.', 'info', 8000);
-    const result = await runUpdateNow();
-    setUpdatingNow(false);
-    toast(result.ok ? 'Update finished. Reload the page to use the new version.' : `Update failed — ${result.error}`,
-      result.ok ? 'success' : 'error', 10000);
-  };
   const [regionMode, setRegionModeState] = useState(getRegionMode());
   const [enabledModules, setEnabledModulesState] = useState(getEnabledModules());
   const [stockAlerts, setStockAlerts] = useState({ enabled: true, threshold: 5 });
@@ -405,8 +417,13 @@ export default function SettingsView({ onSaved }) {
       ctx.imageSmoothingQuality = 'high';
       // Fill white for JPEG so transparent PNGs don't come out with black
       // backgrounds on printers that can't render alpha.
-      ctx.fillStyle = '#ffffff';
-      ctx.fillRect(0, 0, width, height);
+      // (`preservesAlpha` was referenced here but never defined, so every
+      // PNG/JPG logo upload threw a ReferenceError and silently failed.)
+      const preservesAlpha = /^image\/(png|webp|gif)$/i.test(file.type || '');
+      if (!preservesAlpha) {
+        ctx.fillStyle = '#ffffff';
+        ctx.fillRect(0, 0, width, height);
+      }
       ctx.drawImage(img, 0, 0, width, height);
       // Keep PNG for images that had alpha (so signature on transparent
       // stays transparent when placed on invoice), JPEG otherwise.
@@ -414,7 +431,7 @@ export default function SettingsView({ onSaved }) {
       setProfile(prev => ({ ...prev, [field]: dataUrl }));
 
       // Upload to Cloudflare R2 in background
-      fetch('/api/upload-logo', {
+      authFetch('/api/upload-logo', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ data: dataUrl }),
@@ -583,7 +600,7 @@ export default function SettingsView({ onSaved }) {
   const runExport = async () => {
     try {
       const json = await exportAllData(exportSel);
-      const fileName = `freegstbill-backup-${new Date().toISOString().split('T')[0]}.json`;
+      const fileName = `freegstbill-backup-${localDateISO()}.json`;
 
       // Local download (always)
       const blob = new Blob([json], { type: 'application/json' });
@@ -625,7 +642,7 @@ export default function SettingsView({ onSaved }) {
     try {
       const text = await file.text();
       const inspection = inspectBackup(text);
-      if (!inspection.valid) { toast("This file doesn't look like a Free GST Billing backup.", 'error'); return; }
+      if (!inspection.valid) { toast("This file doesn't look like a GST Billing Pro backup.", 'error'); return; }
       setImportInspection(inspection);
       setImportJsonText(text);
       // Auto-tick only the parts that actually have data in the file
@@ -841,7 +858,7 @@ export default function SettingsView({ onSaved }) {
               <li><strong>Payment Accounts</strong> — add multiple bank / UPI accounts; ⭐ marks the default. Every inline change (add / edit / ⭐ / reorder / delete) auto-saves.</li>
               <li><strong>Invoice Number Settings</strong> — brand prefix, financial-year suffix, padding. Live preview at the bottom.</li>
               <li><strong>Print Settings</strong> — templates, colors, watermark, thermal font size, per-type prefix overrides.</li>
-              <li><strong>Backup Management</strong> — daily auto-backups kept 30 days. Restore any date, or Delete to reclaim disk. Trash bin keeps deleted invoices for 30 days.</li>
+              <li><strong>Backups</strong> — your data is saved to the cloud automatically; use Download backup now for your own copy. The Trash bin keeps deleted invoices until you restore or delete them.</li>
               <li><strong>Google Drive</strong> — easiest: install Google Drive for Desktop and sync the Saved Invoices folder. Advanced: connect your own Google Client ID to upload each downloaded invoice PDF.</li>
               <li><strong>Data Management</strong> — export all or part of your data to one backup file, and import it here or on another computer. Clients and products import from CSV on their own screens.</li>
             </ul>
@@ -876,13 +893,7 @@ export default function SettingsView({ onSaved }) {
               <a key={id} href={`#${id}`}
                 onClick={(e) => {
                   e.preventDefault();
-                  const el = document.getElementById(id);
-                  // Stop below the sticky bar, not underneath it.
-                  if (el) {
-                    const offset = saveBarH + 20;
-                    el.style.scrollMarginTop = `${offset}px`;
-                    el.scrollIntoView({ behavior: 'smooth', block: 'start' });
-                  }
+                  scrollToSection(id);
                 }}
                 style={{
                   fontSize: '0.76rem',
@@ -1169,6 +1180,18 @@ export default function SettingsView({ onSaved }) {
                   onBlur={handleTaxIdBlur}
                   placeholder={cc.taxIdPlaceholder} maxLength={20} />
                 {taxIdWarning && <small style={{ color: '#d97706', fontSize: '0.7rem', display: 'block', marginTop: '0.2rem' }}>⚠ {taxIdWarning}</small>}
+              </div>
+              <div className="form-group">
+                <label className="form-label">Default {cc.taxLabel || 'GST'} rate for new items</label>
+                <select name="defaultTaxRate" className="form-input"
+                  value={profile.defaultTaxRate === undefined || profile.defaultTaxRate === null || profile.defaultTaxRate === '' ? '' : String(profile.defaultTaxRate)}
+                  onChange={(e) => setProfile(prev => ({ ...prev, defaultTaxRate: e.target.value === '' ? '' : Number(e.target.value) }))}>
+                  <option value="">Automatic{(cc.taxRates || []).includes(18) ? ' (18%)' : ''}</option>
+                  {(cc.taxRates || [0, 5, 12, 18, 28]).map(r => <option key={r} value={String(r)}>{r}%</option>)}
+                </select>
+                <small style={{ color: 'var(--text-muted)', fontSize: '0.7rem', display: 'block', marginTop: '0.2rem' }}>
+                  Used for new invoice rows. Typing an HSN/SAC code still fills its suggested rate.
+                </small>
               </div>
               <div className="form-group">
                 <label className="form-label">Email</label>
@@ -1823,45 +1846,35 @@ export default function SettingsView({ onSaved }) {
            Profiles" still lands somewhere sensible. */}
 
       {/* ---- App Updates ---- */}
+      {/* Hosted PWA: the service worker fetches every new deploy; this
+          button just asks it to check now (no desktop downloader). */}
       <div id="section-updates" className="glass-panel p-6 mb-6" style={{ order: 11 }}>
         <h3 className="section-title">App Updates</h3>
-        <p className="page-subtitle mb-4">Check if a newer version is available.</p>
+        <p className="page-subtitle mb-4">GST Billing Pro updates itself automatically. You can also check now.</p>
         <div className="flex gap-4 items-center">
           <button type="button" className="btn btn-secondary" disabled={checkingUpdate} onClick={async () => {
             setCheckingUpdate(true);
             try {
-              const res = await fetch('/api/check-update');
-              const data = await res.json();
-              setUpdateInfo(data);
-              if (data.updateAvailable) {
-                toast(`Update available: v${data.latest}`, 'info');
-              } else if (data.error) {
-                toast('Could not check for updates. Check internet connection.', 'warning');
+              const reg = await navigator.serviceWorker?.getRegistration?.();
+              if (!reg) {
+                toast('You are on the latest version.', 'success');
               } else {
-                toast('You are on the latest version!', 'success');
+                await reg.update();
+                if (reg.waiting || reg.installing || window.__fgsbSwUpdateReady) {
+                  toast('A new version was downloaded — it will apply in a few seconds (or reload the page).', 'info', 8000);
+                  setTimeout(() => window.__fgsbApplyUpdate?.(), 1500);
+                } else {
+                  toast('You are on the latest version!', 'success');
+                }
               }
             } catch {
-              toast('Could not check for updates.', 'error');
+              toast('Could not check for updates. Check your internet connection.', 'warning');
             }
             setCheckingUpdate(false);
           }}>
             <RefreshCw size={18} className={checkingUpdate ? 'spin' : ''} /> {checkingUpdate ? 'Checking...' : 'Check for Updates'}
           </button>
-          {updateInfo && (
-            <span style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>
-              Current: v{updateInfo.current}{updateInfo.latest ? ` | Latest: v${updateInfo.latest}` : ''}
-            </span>
-          )}
         </div>
-        {updateInfo?.updateAvailable && (
-          <div className="update-available-box">
-            <p><strong>New version v{updateInfo.latest} is available!</strong></p>
-            <p>Your data is backed up first and is not affected. Click below to update:</p>
-            <button type="button" className="btn btn-primary" disabled={updatingNow} onClick={handleSettingsUpdateNow} style={{ marginTop: '0.5rem', display: 'inline-flex' }}>
-              <Download size={18} /> {updatingNow ? 'Updating…' : 'Update Now'}
-            </button>
-          </div>
-        )}
       </div>
 
       <div id="section-data" className="glass-panel p-6 mb-6" style={{ order: 10 }}>
@@ -1871,12 +1884,12 @@ export default function SettingsView({ onSaved }) {
         <div className="notice notice-info" style={{ marginBottom: '1rem' }}>
           <span className="notice-icon">🔒</span>
           <div>
-            <strong>Your data is on this computer only.</strong> Nothing is uploaded to
-            us, our servers, or any third party — not invoices, not clients, not
-            settings. The only time anything leaves your machine is if you explicitly
-            click <em>Save to Drive</em> below (uploads to <strong>your own</strong>
-            Google Drive account).
-            Files live under <code>data/</code> and <code>Saved Invoices/</code> next to the app.
+            <strong>Your data is stored securely in your GST Billing Pro cloud account.</strong>{' '}
+            It is encrypted in transit and isolated so only you can see it, and it syncs
+            to every device you sign in on. We never sell or share it — see our{' '}
+            <a href="/privacy.html" target="_blank" rel="noopener">Privacy Policy</a>.
+            Use <em>Export Backup</em> below any time to keep your own copy (or <em>Save to Drive</em> to
+            upload it to <strong>your own</strong> Google Drive).
           </div>
         </div>
 
@@ -2027,39 +2040,41 @@ function EditIcon({ size }) {
 // v1.9.5 — Backup Management + Trash Bin
 // ============================================================
 function BackupAndTrashPanel() {
-  const [backups, setBackups] = useState([]);
+  // Hosted version: the desktop app's "daily snapshot on this PC" backups
+  // do not exist in the cloud (Supabase keeps the live data), so that list
+  // and its fake "Backup now" were removed. "Download backup now" saves a
+  // real, restorable JSON file (same format as Export Backup).
   const [trash, setTrash] = useState([]);
   const [loading, setLoading] = useState(false);
+  const [downloading, setDownloading] = useState(false);
 
   const loadAll = async () => {
     setLoading(true);
     try {
-      const [b, t] = await Promise.all([
-        getBackupsList().catch(() => []),
-        getTrashedBills().catch(() => []),
-      ]);
-      setBackups(b);
-      setTrash(t);
+      setTrash(await getTrashedBills().catch(() => []));
     } catch { /* ignore */ }
     setLoading(false);
   };
 
   useEffect(() => { loadAll(); }, []);
 
-  const handleRestoreBackup = async (date) => {
-    if (!await confirmAction({
-      title: `Restore all data from backup ${date}?`,
-      message: 'This OVERWRITES your current data. A snapshot of the current state will be taken first — if the restore looks wrong, you can roll back.',
-      confirmLabel: 'Restore backup',
-      tone: 'warning',
-    })) return;
+  const handleDownloadBackup = async () => {
+    setDownloading(true);
     try {
-      await triggerBackup();
-      await restoreBackup(date);
-      toast('Backup restored — please reload the page to see the data', 'success');
+      const json = await exportAllData();
+      const blob = new Blob([json], { type: 'application/json' });
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = `gst-billing-pro-backup-${localDateISO()}.json`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      setTimeout(() => URL.revokeObjectURL(a.href), 5000);
+      toast('Backup downloaded — keep it somewhere safe (Drive, e-mail, USB).', 'success');
     } catch (err) {
-      toast('Restore failed: ' + err.message, 'error');
+      toast('Backup failed: ' + (err?.message || 'unknown error'), 'error');
     }
+    setDownloading(false);
   };
 
   const handleRestoreTrash = async (id) => {
@@ -2075,7 +2090,7 @@ function BackupAndTrashPanel() {
   const handlePurgeTrash = async (id) => {
     if (!await confirmAction({
       title: 'Permanently delete this invoice?',
-      message: 'This bypasses the 30-day Trash grace period. The invoice and its PDF are gone for good.',
+      message: 'The invoice is removed from the trash for good. This cannot be undone.',
       confirmLabel: 'Delete permanently',
       tone: 'danger',
     })) return;
@@ -2088,89 +2103,29 @@ function BackupAndTrashPanel() {
     }
   };
 
-  // v1.10.22 — reported: "add here delete option i know u added 30 days
-  // auto delete but manual delete also u add". Individual backup delete.
-  const handleDeleteBackup = async (date) => {
-    if (!await confirmAction({
-      title: `Delete backup ${date}?`,
-      message: 'Auto-backups still run daily, so future data will be safe. This just removes the archived snapshot.',
-      confirmLabel: 'Delete backup',
-      tone: 'danger',
-    })) return;
-    try {
-      await deleteBackup(date);
-      toast(`Backup ${date} deleted`, 'info');
-      loadAll();
-    } catch (err) {
-      toast('Delete failed: ' + err.message, 'error');
-    }
-  };
-
   return (
     <div className="glass-panel p-6 mb-6">
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '1rem', marginBottom: '0.75rem' }}>
         <div>
           <h3 className="section-title" style={{ marginTop: 0, marginBottom: '0.25rem' }}>
-            💾 Backup Management + 🗑 Trash Bin
+            💾 Backups + 🗑 Trash Bin
           </h3>
           <p style={{ fontSize: '0.82rem', color: 'var(--text-muted)', margin: 0 }}>
-            Automatic daily snapshots kept for 30 days · Deleted invoices stay in the trash for 30 days.
+            Your data is saved to the cloud as you work. Download a backup file any time for your own records ·
+            Deleted invoices stay in the trash until you restore or delete them.
           </p>
         </div>
-        <button className="btn btn-secondary" style={{ fontSize: '0.82rem' }}
-          onClick={async () => {
-            // v1.10.74 - show an error instead of failing silently
-            try {
-              await triggerBackup();
-              toast('Manual backup triggered', 'success');
-              loadAll();
-            } catch (err) {
-              toast('Backup failed: ' + (err.message || 'unknown error'), 'error');
-            }
-          }}>
-          <SaveIcon size={14} /> Backup now
+        <button className="btn btn-secondary" style={{ fontSize: '0.82rem' }} disabled={downloading} onClick={handleDownloadBackup}>
+          <SaveIcon size={14} /> {downloading ? 'Preparing…' : 'Download backup now'}
         </button>
       </div>
 
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '1rem', marginTop: '1rem' }}>
-        {/* Backups list */}
-        <div style={{ padding: '0.85rem', background: 'var(--bg-secondary)', borderRadius: 8 }}>
-          <h4 style={{ margin: '0 0 0.5rem', fontSize: '0.9rem' }}>📅 Daily backups ({backups.length})</h4>
-          {loading && backups.length === 0 && <p style={{ fontSize: '0.82rem', color: 'var(--text-muted)' }}>Loading…</p>}
-          {!loading && backups.length === 0 && <p style={{ fontSize: '0.82rem', color: 'var(--text-muted)' }}>No backups yet — the first will be created at midnight or click "Backup now" above.</p>}
-          <div style={{ maxHeight: 260, overflowY: 'auto' }}>
-            {backups.map(b => (
-              <div key={b.date} style={{
-                display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-                padding: '0.4rem 0.6rem', marginBottom: '0.25rem',
-                background: 'var(--card)', borderRadius: 4, fontSize: '0.82rem',
-              }}>
-                <div>
-                  <strong>{b.date}</strong>
-                  <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>
-                    {b.createdAt ? new Date(b.createdAt).toLocaleTimeString('en-IN') : ''}
-                  </div>
-                </div>
-                <div style={{ display: 'flex', gap: '0.25rem' }}>
-                  <button className="btn btn-secondary" style={{ fontSize: '0.72rem', padding: '0.2rem 0.5rem' }}
-                    onClick={() => handleRestoreBackup(b.date)}>
-                    Restore
-                  </button>
-                  <button className="btn btn-secondary" style={{ fontSize: '0.72rem', padding: '0.2rem 0.5rem', color: '#dc2626', borderColor: '#fca5a5' }}
-                    onClick={() => handleDeleteBackup(b.date)} title="Delete this backup">
-                    Delete
-                  </button>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-
         {/* Trash bin */}
         <div style={{ padding: '0.85rem', background: 'var(--bg-secondary)', borderRadius: 8 }}>
           <h4 style={{ margin: '0 0 0.5rem', fontSize: '0.9rem' }}>🗑 Trash bin ({trash.length})</h4>
           {loading && trash.length === 0 && <p style={{ fontSize: '0.82rem', color: 'var(--text-muted)' }}>Loading…</p>}
-          {!loading && trash.length === 0 && <p style={{ fontSize: '0.82rem', color: 'var(--text-muted)' }}>No deleted invoices. Anything you delete lands here for 30 days.</p>}
+          {!loading && trash.length === 0 && <p style={{ fontSize: '0.82rem', color: 'var(--text-muted)' }}>No deleted invoices. Anything you delete lands here first.</p>}
           <div style={{ maxHeight: 260, overflowY: 'auto' }}>
             {trash.map(bill => (
               <div key={bill.id} style={{

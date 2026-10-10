@@ -693,10 +693,16 @@ export const markPaidPatch = (bill, note = 'Marked paid') => {
 // The online documentation. Help buttons link straight to the section for
 // their screen, and the sidebar User Guide opens the start (v1.10.75). The
 // build of docs-site checks that every doc="page#section" used in src exists.
+// Today's LOCAL date as YYYY-MM-DD. new Date().toISOString() is UTC, so
+// between 00:00 and 05:30 IST it gave YESTERDAY: bills, payments and
+// receipts made after midnight were dated the previous day.
+export const localDateISO = (d = new Date()) =>
+  `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+
+// GST Billing Pro: the upstream docs site is not ours, so every help link
+// opens the in-app Help & Support screen for now.
 export const DOCS_URL = '/?view=support';
-export const docsLink = (doc = '') => {
-  return '/?view=support';
-};
+export const docsLink = () => DOCS_URL;
 
 // GSTR-1 B2C Large: an inter-state sale to an unregistered buyer above this
 // invoice value is reported invoice by invoice. The limit fell from ₹2.5 lakh
@@ -1554,7 +1560,15 @@ export const removeCustomUnit = (label) => {
 export const getAllUnits = () => [...BUILTIN_UNITS, ...getCustomUnits()];
 
 export const getUnitUQC = (label) => {
-  const u = getAllUnits().find(x => x.label === label);
+  // Case-insensitive, and accepts the UQC itself: catalogue / CSV / POS
+  // items carry 'NOS', 'pcs', 'KGS' … which used to fall through to 'OTH'
+  // and split one HSN into several Table 12 rows.
+  const key = String(label ?? '').trim().toLowerCase();
+  if (!key) return 'OTH';
+  const units = getAllUnits();
+  const u = units.find(x => x.label === label)
+    || units.find(x => String(x.label).toLowerCase() === key)
+    || units.find(x => String(x.uqc || '').toLowerCase() === key);
   return u?.uqc || 'OTH';
 };
 

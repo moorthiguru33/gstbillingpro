@@ -1,119 +1,87 @@
 // ============================================================
-// Cloudflare Pages Function: /api/upload-logo
-// Uploads business logo to Cloudflare R2 bucket
+// POST /api/upload-logo
+// Headers: Authorization: Bearer <Supabase access token>
+// Body:    multipart/form-data (field "file" or "logo")
+//          or JSON { data: "data:image/png;base64,..." }
+//
+// Signed-in users only, same-origin only, PNG/JPEG/WebP/GIF only
+// (no SVG — it can carry script), max 512 KB, content sniffed from the
+// file bytes rather than trusting the declared type.
 // ============================================================
+import {
+  HttpError, json, errorResponse, preflight, corsHeaders, assertOrigin,
+  requireEnv, getServiceClient, authenticate,
+} from '../../shared/server.js';
+import { MAX_LOGO_BYTES, LOGO_TYPES as TYPES, sniffImageType } from '../../shared/images.js';
 
-export async function onRequestPost(context) {
-  const { request, env } = context;
+async function readUpload(request) {
+  const declaredLength = Number(request.headers.get('content-length') || 0);
+  // base64 inflates by ~4/3; allow a little multipart overhead.
+  if (declaredLength > MAX_LOGO_BYTES * 1.4 + 8192) throw new HttpError(413, 'Logo must be 512 KB or smaller.');
 
-  // Set CORS headers
-  const corsHeaders = {
-    'Access-Control-Allow-Origin': '*',
-    'Access-Control-Allow-Methods': 'POST, OPTIONS',
-    'Access-Control-Allow-Headers': 'Content-Type, Authorization',
-  };
+  const contentType = request.headers.get('content-type') || '';
+  if (contentType.includes('multipart/form-data')) {
+    const form = await request.formData();
+    const file = form.get('file') || form.get('logo');
+    if (!file || typeof file === 'string') throw new HttpError(400, 'No image file found in form data');
+    if (file.size > MAX_LOGO_BYTES) throw new HttpError(413, 'Logo must be 512 KB or smaller.');
+    return new Uint8Array(await file.arrayBuffer());
+  }
+  let body;
+  try { body = await request.json(); } catch { throw new HttpError(400, 'Invalid request body'); }
+  const m = typeof body?.data === 'string' && body.data.match(/^data:image\/[a-z.+-]+;base64,([A-Za-z0-9+/=]+)$/i);
+  if (!m) throw new HttpError(400, 'Missing or invalid base64 image data');
+  if (m[1].length > Math.ceil(MAX_LOGO_BYTES / 3) * 4 + 4) throw new HttpError(413, 'Logo must be 512 KB or smaller.');
+  const bin = atob(m[1]);
+  const bytes = new Uint8Array(bin.length);
+  for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+  return bytes;
+}
 
+function toBase64(bytes) {
+  let s = '';
+  const CHUNK = 0x8000;
+  for (let i = 0; i < bytes.length; i += CHUNK) s += String.fromCharCode.apply(null, bytes.subarray(i, i + CHUNK));
+  return btoa(s);
+}
+
+export async function onRequestPost({ request, env }) {
+  const cors = corsHeaders(request, env);
   try {
-    const contentType = request.headers.get('content-type') || '';
-    let fileBuffer;
-    let mimeType = 'image/png';
-    let originalName = 'logo.png';
-    let userId = 'user';
+    assertOrigin(request, env);
+    requireEnv(env, ['SUPABASE_URL', 'SUPABASE_SERVICE_ROLE_KEY']);
+    const user = await authenticate(request, getServiceClient(env));
 
-    const authHeader = request.headers.get('Authorization');
-    if (authHeader) {
-      userId = authHeader.replace(/^Bearer\s+/i, '').slice(0, 24);
-    }
+    const bytes = await readUpload(request);
+    if (bytes.length === 0) throw new HttpError(400, 'Empty file');
+    if (bytes.length > MAX_LOGO_BYTES) throw new HttpError(413, 'Logo must be 512 KB or smaller.');
+    const mimeType = sniffImageType(bytes);
+    if (!mimeType || !TYPES[mimeType]) throw new HttpError(415, 'Only PNG, JPG, WebP or GIF images are allowed.');
 
-    if (contentType.includes('multipart/form-data')) {
-      const formData = await request.formData();
-      const file = formData.get('file') || formData.get('logo');
-      if (!file) {
-        return new Response(JSON.stringify({ error: 'No image file found in form data' }), {
-          status: 400,
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        });
-      }
-      originalName = file.name || 'logo.png';
-      mimeType = file.type || 'image/png';
-      fileBuffer = await file.arrayBuffer();
-    } else {
-      // JSON with base64
-      const body = await request.json();
-      if (!body.data) {
-        return new Response(JSON.stringify({ error: 'Missing base64 data' }), {
-          status: 400,
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        });
-      }
-      const match = body.data.match(/^data:([^;]+);base64,(.+)$/);
-      if (match) {
-        mimeType = match[1];
-        const binaryStr = atob(match[2]);
-        const len = binaryStr.length;
-        const bytes = new Uint8Array(len);
-        for (let i = 0; i < len; i++) {
-          bytes[i] = binaryStr.charCodeAt(i);
-        }
-        fileBuffer = bytes.buffer;
-      }
-    }
-
-    const ext = originalName.split('.').pop() || 'png';
-    const filename = `logos/${userId}_${Date.now()}.${ext}`;
-
-    // 1. Check if Cloudflare R2 bucket is bound
+    const key = `logos/${user.id}/${Date.now()}.${TYPES[mimeType]}`;
     const r2 = env.R2_BUCKET || env.BUCKET || env.LOGOS_BUCKET;
     if (r2) {
-      await r2.put(filename, fileBuffer, {
-        httpMetadata: {
-          contentType: mimeType,
-          cacheControl: 'public, max-age=31536000',
-        },
+      await r2.put(key, bytes, {
+        httpMetadata: { contentType: mimeType, cacheControl: 'public, max-age=31536000, immutable' },
+        customMetadata: { userId: user.id },
       });
-
-      // Public URL via Cloudflare R2 worker or CDN domain
-      const r2PublicDomain = env.R2_PUBLIC_DOMAIN;
-      const fileUrl = r2PublicDomain
-        ? `https://${r2PublicDomain}/${filename}`
-        : `/api/files/${encodeURIComponent(filename)}`;
-
-      return new Response(JSON.stringify({ success: true, url: fileUrl, storage: 'r2' }), {
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      });
+      const url = env.R2_PUBLIC_DOMAIN
+        ? `https://${env.R2_PUBLIC_DOMAIN}/${key}`
+        : `/api/files/${encodeURIComponent(key)}`;
+      return json({ success: true, url, storage: 'r2' }, 200, cors);
     }
 
-    // 2. Fallback: Base64 data URI if R2 bucket binding is not yet added in Cloudflare dashboard
-    const bytes = new Uint8Array(fileBuffer);
-    let binary = '';
-    for (let i = 0; i < bytes.byteLength; i++) {
-      binary += String.fromCharCode(bytes[i]);
-    }
-    const base64 = btoa(binary);
-    const dataUri = `data:${mimeType};base64,${base64}`;
-
-    return new Response(JSON.stringify({
+    // No R2 bucket bound: return an inline data URI (stored in the profile).
+    return json({
       success: true,
-      url: dataUri,
+      url: `data:${mimeType};base64,${toBase64(bytes)}`,
       storage: 'inline',
-      notice: 'Saved inline. To use Cloudflare R2, link R2 bucket with binding name R2_BUCKET in Cloudflare Pages settings.',
-    }), {
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-    });
+    }, 200, cors);
   } catch (err) {
-    return new Response(JSON.stringify({ error: err.message }), {
-      status: 500,
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-    });
+    return errorResponse(err, cors);
   }
 }
 
-export async function onRequestOptions() {
-  return new Response(null, {
-    headers: {
-      'Access-Control-Allow-Origin': '*',
-      'Access-Control-Allow-Methods': 'POST, OPTIONS',
-      'Access-Control-Allow-Headers': 'Content-Type, Authorization',
-    },
-  });
+export function onRequestOptions({ request, env }) {
+  return preflight(request, env, 'POST, OPTIONS');
 }

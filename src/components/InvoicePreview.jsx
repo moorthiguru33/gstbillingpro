@@ -167,7 +167,7 @@ const InvoicePreview = React.forwardRef(({ profile: profileProp, client, details
 
     // 2. Fallback only if no uploaded image exists
     if (upiId && totals.total && currencySymbol === 'INR') {
-      const upiUrl = `upi://pay?pa=${encodeURIComponent(upiId)}&pn=${encodeURIComponent(profile?.businessName || '')}&am=${totals.total.toFixed(2)}&cu=INR&tn=${encodeURIComponent(`Payment for ${details?.invoiceNumber || 'Invoice'}`)}`;
+      const upiUrl = `upi://pay?pa=${encodeURIComponent(upiId)}&pn=${encodeURIComponent(profile?.businessName || profile?.tradeName || profile?.name || 'Merchant')}&am=${totals.total.toFixed(2)}&cu=INR&tn=${encodeURIComponent(`Payment for ${details?.invoiceNumber || 'Invoice'}`)}`;
       QRCode.toDataURL(upiUrl, { width: 120, margin: 1, errorCorrectionLevel: 'M' })
         .then(setQrDataUrl)
         .catch(() => setQrDataUrl(''));
@@ -203,14 +203,23 @@ const InvoicePreview = React.forwardRef(({ profile: profileProp, client, details
   // Check if any item has discount or MRP
   const hasAnyDiscount = showDiscount && items.some(item => (item.discount || 0) > 0);
   const hasAnyMRP = showMRP && items.some(item => Number(item.mrp || 0) > Number(item.rate || 0));
-  const totalCustomerSavings = items.reduce((sum, item) => {
+  // "You saved" = MRP savings (MRP - selling rate, informational) + the
+  // discounts actually given (line + whole-bill). Each rupee is counted
+  // once. Legacy Fast-POS bills stored MRP savings inside totalDiscount
+  // with no line discounts; for those, totalDiscount already is the saving.
+  const mrpSavingsSum = items.reduce((sum, item) => {
     const qty = Number(item.quantity) || 0;
     const mrp = Number(item.mrp) || 0;
     const rate = Number(item.rate) || 0;
-    const mrpSavings = mrp > rate ? (mrp - rate) * qty : 0;
-    const discSavings = Number(item.discount || 0);
-    return sum + (mrpSavings > 0 ? mrpSavings : discSavings);
-  }, Number(totals?.invoiceDiscountAmount || totals?.totalDiscount || 0));
+    return sum + (mrp > rate ? (mrp - rate) * qty : 0);
+  }, 0);
+  const lineDiscountSum = items.reduce((sum, item) => sum + (resolveLineDiscount(item) || 0), 0);
+  const storedTotalDiscount = Number(totals?.totalDiscount) || 0;
+  const legacyPosSavings = totals && !('invoiceDiscountAmount' in totals)
+    && lineDiscountSum === 0 && storedTotalDiscount > 0 && mrpSavingsSum > 0;
+  const totalCustomerSavings = legacyPosSavings
+    ? Math.max(storedTotalDiscount, mrpSavingsSum)
+    : mrpSavingsSum + storedTotalDiscount + (Number(totals?.invoiceDiscountAmount) || 0);
 
   // v1.10.73 - one per-line calculation for every design, the item table and
   // the HSN/SAC summary, so they can never disagree with each other.
@@ -470,7 +479,10 @@ const InvoicePreview = React.forwardRef(({ profile: profileProp, client, details
     const invoiceNum = details?.invoiceNumber || '';
     const invoiceDate = details?.invoiceDate ? new Date(details.invoiceDate).toLocaleDateString('en-IN') : '';
     const sellerCurrency = getCountryConfig(profile?.country).currency;
-    const currencySymbol = sellerCurrency === 'INR' ? 'Rs.' : sellerCurrency;
+    // ₹ (U+20B9). Thermal fonts like Courier New lack the glyph, so the
+    // font stacks below list Indic-capable fallbacks (Nirmala UI on
+    // Windows, Noto on Android/Linux) that the browser uses per-character.
+    const currencySymbol = sellerCurrency === 'INR' ? '₹' : (getCountryConfig(profile?.country).currencySymbol || sellerCurrency);
     const showRoundOff = opt('showRoundOff', false);
     // v1.10.33 — Split the single "isNarrow" threshold into two.
     // Prior code used `widthMm < 80` for everything, but thermal80 has
@@ -523,9 +535,10 @@ const InvoicePreview = React.forwardRef(({ profile: profileProp, client, details
     const fontSizeBase = (fontSizeMap[fontSize] || fontSizeMap.medium) + 'px';
     // FontFamily: monospace prints crisper on thermal, but some printers
     // handle sans-serif better with newer firmware.
+    const indicFallbacks = '"Nirmala UI", "Noto Sans", "Noto Sans Tamil", "Noto Sans Devanagari", "Segoe UI Symbol"';
     const fontFamilyCss = fontFamily === 'sans'
-      ? '"Arial", "Helvetica", sans-serif'
-      : '"Courier New", "Consolas", monospace';
+      ? `"Arial", "Helvetica", ${indicFallbacks}, sans-serif`
+      : `"Courier New", "Consolas", "Noto Sans Mono", ${indicFallbacks}, monospace`;
     // FontWeight: baseline 500 (bold), or 800 (ultra) for the darkest print.
     // Normal (400) is included for users on modern printers who want lighter.
     const baseWeight = fontWeight === 'ultra' ? 800
@@ -563,6 +576,12 @@ const InvoicePreview = React.forwardRef(({ profile: profileProp, client, details
                            : '0.6px 0 0 currentColor, 0 0.6px 0 currentColor, 0.4px 0.4px 0 currentColor';
     const rootStyle = {
       ...containerStyle,
+      // Small inner gutter (inside the printable width) so the right-aligned
+      // amounts never touch / get clipped at the paper edge.
+      boxSizing: 'border-box',
+      paddingLeft: isVeryNarrow ? '1mm' : '1.5mm',
+      paddingRight: isVeryNarrow ? '1.5mm' : '2mm',
+      overflow: 'visible',
       color: '#000',
       background: '#fff',
       fontFamily: fontFamilyCss,
@@ -595,7 +614,10 @@ const InvoicePreview = React.forwardRef(({ profile: profileProp, client, details
               style={{ maxHeight: 45, marginBottom: 4, filter: contrastFilter }} />
           )}
           <div style={{ fontWeight: strongWeight, fontSize: '1.15em', letterSpacing: '0.02em' }}>
-            {(headerCaps || allCaps) ? (profile?.businessName || '').toUpperCase() : (profile?.businessName || '')}
+            {(() => {
+              const bn = profile?.businessName || profile?.tradeName || profile?.name || '';
+              return (headerCaps || allCaps) ? bn.toUpperCase() : bn;
+            })()}
           </div>
           {tagline && <div style={{ fontSize: '0.85em', fontWeight: baseWeight, fontStyle: 'italic' }}>{cap(tagline)}</div>}
           {profile?.address && <div style={{ fontSize: '0.9em', fontWeight: baseWeight }}>{cap(profile.address)}</div>}
@@ -625,7 +647,7 @@ const InvoicePreview = React.forwardRef(({ profile: profileProp, client, details
               <strong style={{ fontWeight: strongWeight }}>{cap('Bill to')}: </strong>{cap(client.name)}
             </div>
           )}
-          {client?.gstin && <div>{cap('GSTIN: ' + client.gstin)}</div>}
+          {(client?.gstin || client?.gstNumber) && <div>{cap('GSTIN: ' + (client.gstin || client.gstNumber))}</div>}
           {client?.phone && <div>{cap('Ph: ' + client.phone)}</div>}
         </div>
 
@@ -636,8 +658,10 @@ const InvoicePreview = React.forwardRef(({ profile: profileProp, client, details
         {(() => {
           // Amount column width scales with paper: narrow rolls get less
           // space; wider rolls give amounts more room.
-          const amountColMm = isNarrow ? 16 : paperCfg.widthMm < 100 ? 22 : 26;
-          const gridCols = `1fr ${amountColMm}mm`;
+          // Amount column sizes to its content (was a fixed 16mm on 80mm
+          // rolls — "₹12,345.00" is wider than that, so it overflowed the
+          // container and got clipped at the right edge).
+          const gridCols = 'minmax(0, 1fr) max-content';
           return (
             <div style={{ padding: secPad, ...dashLine }}>
               <div style={{
@@ -656,6 +680,8 @@ const InvoicePreview = React.forwardRef(({ profile: profileProp, client, details
                 const mrp = Number(item.mrp) || 0;
                 const tax = showGST && item.taxPercent > 0 ? ` +${item.taxPercent}%` : '';
                 const hsnBit = showHSN && item.hsn && !isVeryNarrow ? '  |  HSN ' + item.hsn : '';
+                // 58mm: HSN gets its own short line instead of being dropped.
+                const hsnLine = showHSN && item.hsn && isVeryNarrow ? 'HSN ' + item.hsn : '';
                 const mrpBit = showMRP && mrp > rate ? `  (MRP ${currencySymbol}${mrp.toFixed(2)})` : '';
                 return (
                   <div key={idx} style={{ marginBottom: 5, fontSize: '0.95em' }}>
@@ -671,8 +697,11 @@ const InvoicePreview = React.forwardRef(({ profile: profileProp, client, details
                           ? `${qty}${item.unit ? ' ' + item.unit : ''} × ${currencySymbol}${rate.toFixed(2)}${tax}${hsnBit}${mrpBit}`
                           : `${qty}${item.unit ? ' ' + item.unit : ''}${hsnBit}${mrpBit}`)}
                       </span>
-                      <span style={{ textAlign: 'right', fontWeight: strongWeight }}>{currencySymbol}{amount.toFixed(2)}</span>
+                      <span style={{ textAlign: 'right', fontWeight: strongWeight, whiteSpace: 'nowrap' }}>{currencySymbol}{amount.toFixed(2)}</span>
                     </div>
+                    {hsnLine && (
+                      <div style={{ fontSize: '0.85em', paddingLeft: thermalCompact ? 0 : 8, fontWeight: baseWeight }}>{cap(hsnLine)}</div>
+                    )}
                   </div>
                 );
               })}
@@ -684,8 +713,7 @@ const InvoicePreview = React.forwardRef(({ profile: profileProp, client, details
              Grid with fixed-width right column so every amount aligns
              vertically (Subtotal / CGST / SGST / Total all rightmost x). */}
         {(() => {
-          const totalsColMm = isNarrow ? 18 : paperCfg.widthMm < 100 ? 24 : 30;
-          const gridCols = `1fr ${totalsColMm}mm`;
+          const gridCols = 'minmax(0, 1fr) max-content';
           const rowStyle = { display: 'grid', gridTemplateColumns: gridCols, gap: '4px' };
           const amt = (n) => currencySymbol + (Number(n) || 0).toFixed(2);
           return (

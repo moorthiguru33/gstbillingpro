@@ -4,6 +4,7 @@ import { toast } from './Toast';
 import { confirmAction } from './ConfirmModal';
 import InvoicePreview from './InvoicePreview';
 import { getProfile, getInvoiceDisplayOptions, saveInvoiceDisplayOptions } from '../store';
+import { setDefaultPaperSize } from '../utils/paperDefaults';
 import { DEFAULT_PRINT_SETTINGS, getPrintSettings, savePrintSettings, buildSampleInvoice, BUSINESS_PRESETS, applyBusinessPreset, LABEL_PRESETS } from '../utils/printSettings';
 import HelpButton from './HelpButton';
 
@@ -444,7 +445,8 @@ export default function PrintSettings() {
                   const next = { ...applyBusinessPreset(settings, key), activeBusinessPresetId: key };
                   setSettings(next);
                   savePrintSettings(next);
-                  toast(`Applied "${preset.label}" preset`, 'success');
+                  if (preset.paper) setDefaultPaperSize(preset.paper);
+                  toast(`Applied "${preset.label}" preset${preset.paper ? ` · default paper ${preset.paper.replace('thermal', '').replace(/^(\d+)$/, '$1mm thermal')}` : ''}`, 'success');
                 }}
                 style={{
                   padding: '0.65rem 0.7rem',
