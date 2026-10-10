@@ -1,8 +1,9 @@
 import { useState, useEffect } from 'react';
 import { FileText, Eye, EyeOff, Loader2, CheckCircle, ArrowRight, Zap, Shield, BarChart3, Users, RefreshCw, Download } from 'lucide-react';
 import { signIn, signUp, resetPassword, signInWithGoogle } from '../lib/supabase.js';
-import { PLANS, TRIAL_DAYS, formatPlanPrice } from '../../shared/plans.js';
 import { LEGAL_LINKS } from '../../shared/company.js';
+import { t as tr } from '../i18n';
+import LandingSections, { LandingTopBar } from './LandingSections';
 
 // ============================================================
 // AuthPage — Beautiful Login / Register / Forgot Password
@@ -72,16 +73,29 @@ export default function AuthPage({ onAuth, onStartDemo }) {
     } finally { setLoading(false); }
   };
 
+  // ?ref=GBPxxxxxx on the landing link → remembered and claimed after sign-up
+  // (SubscriptionGuard). ?plan / #pricing simply scroll; buying happens in-app.
+  useEffect(() => {
+    try {
+      const ref = new URLSearchParams(window.location.search).get('ref');
+      if (ref && /^[A-Za-z0-9]{4,20}$/.test(ref)) localStorage.setItem('gbp_ref', ref.toUpperCase());
+    } catch { /* private mode */ }
+  }, []);
+  const goSignup = () => { setTab('register'); setError(''); setSuccess(''); window.scrollTo({ top: 0, behavior: 'smooth' }); };
+
   const features = [
-    { icon: FileText, text: 'GST Tax Invoices, Credit Notes, Proforma' },
-    { icon: BarChart3, text: 'GSTR-1, GSTR-3B automatic export' },
-    { icon: Users, text: 'Unlimited clients & products' },
-    { icon: Shield, text: 'Your data is 100% private & secure' },
-    { icon: RefreshCw, text: 'Recurring invoices & auto-billing' },
-    { icon: Download, text: 'PDF download & WhatsApp share' },
+    { icon: FileText, text: tr('landing.f1Title') },
+    { icon: Zap, text: tr('landing.f2Title') },
+    { icon: Download, text: tr('landing.f3Title') },
+    { icon: Users, text: tr('landing.f4Title') },
+    { icon: BarChart3, text: tr('landing.f5Title') },
+    { icon: RefreshCw, text: tr('landing.f6Title') },
+    { icon: Shield, text: tr('landing.a4') },
   ];
 
   return (
+    <div>
+    <LandingTopBar />
     <div style={{
       minHeight: '100vh',
       display: 'flex',
@@ -116,12 +130,10 @@ export default function AuthPage({ onAuth, onStartDemo }) {
 
           {/* Headline */}
           <h2 style={{ fontSize: '2.2rem', fontWeight: 800, lineHeight: 1.2, marginBottom: '1rem' }}>
-            Create Professional<br />
-            <span style={{ color: '#60a5fa' }}>GST Invoices</span><br />
-            in Seconds
+            {tr('landing.heroTitle')}
           </h2>
           <p style={{ color: '#bfdbfe', fontSize: '1rem', marginBottom: '2rem', lineHeight: 1.6 }}>
-            Complete GST billing solution for Indian businesses. GSTR-1, GSTR-3B, TDS, multi-currency and much more.
+            {tr('landing.heroSubtitle')}
           </p>
 
           {/* Features */}
@@ -154,10 +166,10 @@ export default function AuthPage({ onAuth, onStartDemo }) {
             <Zap size={20} color="#34d399" />
             <div>
               <div style={{ fontWeight: 700, color: '#34d399', fontSize: '1rem' }}>
-                30 Days FREE Trial
+                {tr('landing.ctaStart')}
               </div>
               <div style={{ color: '#a7f3d0', fontSize: '0.8rem' }}>
-                Then only {formatPlanPrice(PLANS.monthly.amount)}/month • No auto-renewal
+                {tr('landing.trust1')} • {tr('landing.trust2')}
               </div>
             </div>
           </div>
@@ -301,7 +313,7 @@ export default function AuthPage({ onAuth, onStartDemo }) {
                     boxShadow: tab === t ? '0 1px 4px rgba(0,0,0,0.1)' : 'none',
                   }}
                 >
-                  {t === 'login' ? '🔑 Login' : '🚀 Register Free'}
+                  {t === 'login' ? `🔑 ${tr('auth.loginTab')}` : `🚀 ${tr('auth.signupTab')}`}
                 </button>
               ))}
             </div>
@@ -309,12 +321,12 @@ export default function AuthPage({ onAuth, onStartDemo }) {
 
           {/* Title */}
           <h2 style={{ margin: '0 0 0.25rem', fontSize: '1.35rem', fontWeight: 700, color: '#0f172a' }}>
-            {tab === 'login' ? 'Sign in to Account' : tab === 'register' ? 'Create your account' : 'Reset Password'}
+            {tab === 'login' ? tr('auth.welcomeBack') : tab === 'register' ? tr('auth.createAccount') : tr('auth.forgot')}
           </h2>
           <p style={{ margin: '0 0 1.25rem', color: '#64748b', fontSize: '0.85rem' }}>
-            {tab === 'login' ? 'Manage your GST invoices and inventory'
-              : tab === 'register' ? 'Start your 30-day free trial — no credit card needed'
-              : 'Enter your email to receive a reset link'}
+            {tab === 'login' ? tr('landing.trust3')
+              : tab === 'register' ? `${tr('landing.ctaStart')} — ${tr('landing.trust1')}`
+              : tr('auth.email')}
           </p>
 
           {/* Messages */}
@@ -468,7 +480,7 @@ export default function AuthPage({ onAuth, onStartDemo }) {
               <a href="/terms.html" target="_blank" rel="noopener" style={{ color: '#3b82f6' }}>Terms of Service</a>
               {' '}and{' '}
               <a href="/privacy.html" target="_blank" rel="noopener" style={{ color: '#3b82f6' }}>Privacy Policy</a>.<br />
-              First {TRIAL_DAYS} days free, then {formatPlanPrice(PLANS.monthly.amount)}/month or {formatPlanPrice(PLANS.annual.amount)}/year.
+              {tr('landing.trust2')}
             </p>
           )}
 
@@ -488,6 +500,8 @@ export default function AuthPage({ onAuth, onStartDemo }) {
           .auth-mobile-header { display: block !important; }
         }
       `}</style>
+    </div>
+    <LandingSections onSignup={goSignup} />
     </div>
   );
 }
