@@ -5,7 +5,7 @@ import html2canvas from 'html2canvas';
 import { saveBill, applyStockChanges, getNextInvoiceNumber, getTermsTemplates, getAllClients, saveClient, getProfile, getAllProducts, getInvoiceDisplayOptions, saveInvoiceDisplayOptions, getAllProfiles, getRegionMode, saveRecurring, getAllBills, saveProductsBatch } from '../store';
 import { INVOICE_TYPES, COUNTRIES, printedSubtotal, stockEffect, appliedStock, stockDelta, generateEWayBillJSON, formatCurrency, getCountryConfig, getStatesForCountry, getAllUnits, addCustomUnit, removeCustomUnit, getCountriesForRegion, TDS_SECTIONS, TCS_SECTIONS, REMOVED_TCS_SECTIONS, TERMS_PRESETS, getActiveAccounts, getDefaultAccount, getAccountById, getDefaultUnitForMode, filterUnitsByMode, PAPER_SIZES, getPaperSize, computeInvoiceTotals, clientYearToDate, htmlHasText, ORDER_DETAIL_FIELDS, invoiceOptionOn, DEFAULT_DECLARATION, decodeGstin, safePageBoundaries } from '../utils';
 import { getPrintSettings, savePrintSettings } from '../utils/printSettings';
-import { openWhatsAppShare } from '../utils/share';
+import { shareOnWhatsApp } from '../utils/share';
 import { confirmAction, promptAction } from './ConfirmModal';
 import PrintPreviewModal from './PrintPreviewModal';
 import { ensureToken, findOrCreateFolder, uploadPDF } from '../services/googleDrive';
@@ -3043,7 +3043,7 @@ export default function InvoiceGenerator({ onBack, profile: profileProp, editing
     const total = formatCurrency(Number(totals.total) || 0, cur);
     const subtotal = formatCurrency(printedSubtotal(totals), cur);
     const dateStr = details.invoiceDate ? new Date(details.invoiceDate).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) : '';
-    const businessName = profile?.businessName || '';
+    const businessName = profile?.businessName || profile?.tradeName || profile?.name || '';
     const clientName = client?.name || 'Valued Customer';
     const totalTax = (Number(totals.cgst) || 0) + (Number(totals.sgst) || 0) + (Number(totals.igst) || 0);
     const validItems = (items || []).filter(i => (i.name || '').trim());
@@ -3076,7 +3076,12 @@ export default function InvoiceGenerator({ onBack, profile: profileProp, editing
       if (profile?.phone) lines.push(`📞 Contact: ${profile.phone}`);
     }
 
-    openWhatsAppShare(client?.phone, lines.join('\n'));
+    shareOnWhatsApp({ phone: client?.phone, message: lines.join('\n'), ask: promptAction, customerName: client?.name })
+      .then((used) => {
+        // Remember a number typed in the prompt on this invoice's client.
+        if (used && !client?.phone) setClient((prev) => ({ ...prev, phone: used.startsWith('91') && used.length === 12 ? used.slice(2) : used }));
+      })
+      .catch(() => {});
   };
 
   const exportEWayBill = () => {

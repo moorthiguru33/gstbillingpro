@@ -167,7 +167,7 @@ const InvoicePreview = React.forwardRef(({ profile: profileProp, client, details
 
     // 2. Fallback only if no uploaded image exists
     if (upiId && totals.total && currencySymbol === 'INR') {
-      const upiUrl = `upi://pay?pa=${encodeURIComponent(upiId)}&pn=${encodeURIComponent(profile?.businessName || '')}&am=${totals.total.toFixed(2)}&cu=INR&tn=${encodeURIComponent(`Payment for ${details?.invoiceNumber || 'Invoice'}`)}`;
+      const upiUrl = `upi://pay?pa=${encodeURIComponent(upiId)}&pn=${encodeURIComponent(profile?.businessName || profile?.tradeName || profile?.name || 'Merchant')}&am=${totals.total.toFixed(2)}&cu=INR&tn=${encodeURIComponent(`Payment for ${details?.invoiceNumber || 'Invoice'}`)}`;
       QRCode.toDataURL(upiUrl, { width: 120, margin: 1, errorCorrectionLevel: 'M' })
         .then(setQrDataUrl)
         .catch(() => setQrDataUrl(''));

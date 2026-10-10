@@ -4,8 +4,8 @@ import HelpButton from './HelpButton';
 import { getAllClients, getAllBills, deleteClient, saveClient, deleteBill, saveBill, getProfile } from '../store';
 import { formatCurrency, INVOICE_TYPES, markPaidPatch, salesSign, countsAsSales, isCancelledBill } from '../utils';
 import { getPrintSettings } from '../utils/printSettings';
-import { openWhatsAppShare } from '../utils/share';
-import { confirmAction } from './ConfirmModal';
+import { shareOnWhatsApp } from '../utils/share';
+import { confirmAction, promptAction } from './ConfirmModal';
 import { toast } from './Toast';
 
 // v1.10.31 — UI-C3: Shared helper to resolve the user's accent color as an
@@ -704,7 +704,7 @@ export default function ClientsView({ onEdit, onDuplicate, onNew }) {
 
   const shareWhatsApp = (bill) => {
     const msg = `*Invoice ${bill.invoiceNumber}*\nAmount: ${formatCurrency(bill.totalAmount)}\nDate: ${new Date(bill.invoiceDate).toLocaleDateString('en-IN')}\nStatus: ${(bill.status || 'unpaid').toUpperCase()}`;
-    openWhatsAppShare(bill.clientPhone, msg);
+    shareOnWhatsApp({ phone: bill.clientPhone || bill.data?.client?.phone, message: msg, ask: promptAction, customerName: bill.clientName }).catch(() => {});
   };
 
   const shareEmail = (bill) => {

@@ -3,11 +3,11 @@ import { FileText, Trash2, Plus, IndianRupee, Receipt, Edit3, TrendingUp, Search
 import HelpButton from './HelpButton';
 import { getAllBills, saveBill, deleteBill, getAllProducts, applyStockChanges, getProfile, getAllClients, getStockAlertSettings, saveReceipt, deleteReceipt, getAllReceipts } from '../store';
 import { formatCurrency, INVOICE_TYPES, getFYOptions, numberToWords, belongsToProfile, salesSign, isCancelledBill, markPaidPatch, stockEffect, appliedStock, stockDelta, SALES_INVOICE_TYPES } from '../utils';
-import { openWhatsAppShare } from '../utils/share';
+import { shareOnWhatsApp } from '../utils/share';
 import PageHeader from './PageHeader';
 import SupportNudge from './SupportNudge';
 import { toast } from './Toast';
-import { confirmAction } from './ConfirmModal';
+import { confirmAction, promptAction } from './ConfirmModal';
 
 // v1.10.13 — `bg` values switched from opaque tints (#fffbeb / #f5f3ff /
 // etc.) to translucent alpha versions of the accent color. Reason:
@@ -1064,7 +1064,7 @@ export default function Dashboard({ onNew, onEdit, onDuplicate, onConvert, onOpe
         sessionStorage.setItem('fgsb_whatsappDesktopExplained', '1');
       }
     } catch { /* sessionStorage sandboxed — skip */ }
-    openWhatsAppShare(bill.clientPhone, msg);
+    shareOnWhatsApp({ phone: bill.clientPhone || bill.data?.client?.phone, message: msg, ask: promptAction, customerName: bill.clientName }).catch(() => {});
   };
 
   const shareEmail = (bill) => {
@@ -1115,7 +1115,7 @@ export default function Dashboard({ onNew, onEdit, onDuplicate, onConvert, onOpe
       : isOverdueDate
         ? `Hi ${clientName}, this is a gentle reminder that Invoice ${bill.invoiceNumber} for ${outstandingStr} was due on ${dueDate}. Kindly arrange the payment at your earliest convenience. Thank you! - ${businessName}`
         : `Hi ${clientName}, this is a gentle reminder about the pending payment of ${outstandingStr} on Invoice ${bill.invoiceNumber}. Kindly arrange the payment at your earliest convenience. Thank you! - ${businessName}`;
-    openWhatsAppShare(clientPhone, msg);
+    shareOnWhatsApp({ phone: clientPhone, message: msg, ask: promptAction, customerName: clientName }).catch(() => {});
   };
 
   const getClientPhone = (bill) => {

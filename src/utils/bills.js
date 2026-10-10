@@ -19,6 +19,8 @@ export function normalizeBill(bill) {
   if (!out.invoiceNumber && out.data?.details?.invoiceNumber) out.invoiceNumber = out.data.details.invoiceNumber;
   if (!out.invoiceDate && out.data?.details?.invoiceDate) out.invoiceDate = out.data.details.invoiceDate;
   if (!out.clientName && out.data?.client?.name) out.clientName = out.data.client.name;
+  // WhatsApp share / reminders read bill.clientPhone; it only lived in data.client.
+  if (!out.clientPhone && (out.data?.client?.phone || out.client?.phone)) out.clientPhone = out.data?.client?.phone || out.client.phone;
   if (out.data && LEGACY_TYPES[out.data.invoiceType]) out.data = { ...out.data, invoiceType: out.invoiceType };
   return out;
 }

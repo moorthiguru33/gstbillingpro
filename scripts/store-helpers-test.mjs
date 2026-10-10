@@ -3,6 +3,7 @@
 // Run: node scripts/store-helpers-test.mjs
 import { normalizeProduct, productSellingPrice, productTaxPercent, defaultTaxRateFor, findNewCatalogItems } from '../src/utils/products.js';
 import { computeInvoiceTotals } from '../src/utils.js';
+import { sanitizeWhatsAppPhone, whatsAppUrl } from '../src/utils/share.js';
 import { normalizeBill } from '../src/utils/bills.js';
 import { advanceDate, templateHasEnded, isTemplateDue, buildBillFromTemplate, prefixForInvoiceType, profileForTemplate } from '../src/utils/recurring.js';
 import { DEMO_BILLS, DEMO_PRODUCTS, DEMO_PROFILE, DEMO_LAST_INVOICE_SEQ } from '../src/data/demoData.js';
@@ -99,6 +100,17 @@ console.log('POS totals: MRP savings are not a discount');
 const posItems = [{ quantity: 2, rate: 90, mrp: 100, taxPercent: 5, discount: 0 }];
 const pos = computeInvoiceTotals({ items: posItems, profile: { state: 'Tamil Nadu' }, showGST: true, invoiceOptions: { invoiceDiscountType: 'fixed', invoiceDiscountValue: 10, showRoundOff: true } });
 eq([pos.subtotal, pos.totalDiscount, pos.totalTaxAmount, pos.invoiceDiscountAmount, pos.total], [180, 0, 9, 10, 179], 'total = 180 + 9 GST - 10 bill discount (MRP 200 ignored)');
+
+console.log('WhatsApp numbers');
+eq(sanitizeWhatsAppPhone('98765 43210'), '919876543210', '10-digit Indian mobile gets 91');
+eq(sanitizeWhatsAppPhone('098765-43210'), '919876543210', 'leading 0 dropped');
+eq(sanitizeWhatsAppPhone('+91 98765 43210'), '919876543210', '+91 kept once');
+eq(sanitizeWhatsAppPhone('0091 9876543210'), '919876543210', '00 prefix');
+eq(sanitizeWhatsAppPhone('+1 415 555 0100'), '14155550100', 'foreign number untouched');
+eq(sanitizeWhatsAppPhone('12345'), '', 'too short → ask');
+eq(sanitizeWhatsAppPhone(''), '', 'empty');
+eq(whatsAppUrl('9876543210', 'Hi *A*'), 'https://wa.me/919876543210?text=Hi%20*A*', 'wa.me link');
+eq(whatsAppUrl('', 'x'), 'https://wa.me/?text=x', 'no phone → contact picker');
 
 console.log(`\n${passed} passed, ${failed} failed`);
 process.exit(failed ? 1 : 0);

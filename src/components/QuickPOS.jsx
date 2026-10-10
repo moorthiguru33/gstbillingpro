@@ -9,7 +9,8 @@ import {
 import { getAllProducts, saveBill, getNextInvoiceNumber, getProfile, getAllBills, getAllClients, deleteBill, saveProfile } from '../store';
 import { formatCurrency, getPaperSize, computeInvoiceTotals } from '../utils';
 import { getPrintSettings, savePrintSettings } from '../utils/printSettings';
-import { openWhatsAppShare } from '../utils/share';
+import { shareOnWhatsApp } from '../utils/share';
+import { promptAction } from './ConfirmModal';
 import { toast } from './Toast';
 import BarcodeScannerModal from './BarcodeScannerModal';
 import QuickStockModal from './QuickStockModal';
@@ -713,7 +714,7 @@ export default function QuickPOS({ onBackToDashboard, onPrintInvoice }) {
     const cur = 'INR';
     const total = formatCurrency(Number(bill.total || bill.totalAmount) || 0, cur);
     const dateStr = bill.invoiceDate ? new Date(bill.invoiceDate).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) : '';
-    const businessName = profile?.businessName || '';
+    const businessName = profile?.businessName || profile?.tradeName || profile?.name || '';
     const clientName = bill.client?.name || customerName || 'Valued Customer';
     const itemCount = (bill.items || []).length;
     const upiId = profile?.upiId || (profile?.paymentAccounts && profile.paymentAccounts[0]?.upiId) || '';
@@ -736,7 +737,7 @@ export default function QuickPOS({ onBackToDashboard, onPrintInvoice }) {
       if (profile?.phone) lines.push(`📞 Contact: ${profile.phone}`);
     }
 
-    openWhatsAppShare(phone, lines.join('\n'));
+    shareOnWhatsApp({ phone, message: lines.join('\n'), ask: promptAction, customerName: bill.client?.name || customerName }).catch(() => {});
   };
 
   // Start fresh sale
