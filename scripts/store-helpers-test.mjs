@@ -1,7 +1,8 @@
 // Tests for pure helpers used by the hosted store: product/bill
 // normalisation, recurring invoice generation, demo data shape.
 // Run: node scripts/store-helpers-test.mjs
-import { normalizeProduct, productSellingPrice, productTaxPercent } from '../src/utils/products.js';
+import { normalizeProduct, productSellingPrice, productTaxPercent, defaultTaxRateFor, findNewCatalogItems } from '../src/utils/products.js';
+import { computeInvoiceTotals } from '../src/utils.js';
 import { normalizeBill } from '../src/utils/bills.js';
 import { advanceDate, templateHasEnded, isTemplateDue, buildBillFromTemplate, prefixForInvoiceType, profileForTemplate } from '../src/utils/recurring.js';
 import { DEMO_BILLS, DEMO_PRODUCTS, DEMO_PROFILE, DEMO_LAST_INVOICE_SEQ } from '../src/data/demoData.js';
@@ -75,6 +76,29 @@ eq([bill.id, bill.invoiceNumber, bill.status, bill.generatedFrom], ['INV/2026-27
 eq([nextTemplate.nextDate, nextTemplate.occurrencesCreated, nextTemplate.lastGenerated], ['2026-11-01', 1, '2026-10-11'], 'template advanced');
 const inter = buildBillFromTemplate({ tpl: { ...tpl, clientState: 'Karnataka' }, profile: { state: 'Tamil Nadu' }, invoiceNumber: 'X', today: '2026-10-11' }).bill;
 ok(inter.data.totals.igst === 180 && !inter.data.totals.cgst, 'interstate → IGST');
+
+console.log('default GST + new catalogue items');
+eq(defaultTaxRateFor({}), 18, 'no setting → 18%');
+eq(defaultTaxRateFor({ defaultTaxRate: 5 }), 5, 'profile setting wins');
+eq(defaultTaxRateFor({ defaultTaxRate: 0 }), 0, '0% setting is kept');
+eq(defaultTaxRateFor({ defaultTaxRate: '' }), 18, 'blank setting → automatic');
+eq(defaultTaxRateFor({}, [0, 5]), 0, 'country without 18% → second-highest');
+const fresh = findNewCatalogItems([
+  { name: 'Biscuit  Pack', rate: 10, hsn: '1905', taxPercent: 18, unit: 'Pcs' },
+  { name: 'biscuit pack', rate: 10 },          // duplicate on the bill
+  { name: 'Salt', rate: 25, productId: 'p1' },  // picked from Products
+  { name: 'SALT', rate: 25 },                   // same name as a product
+  { name: 'Free sample', rate: 0 },             // zero rate
+  { name: 'x', rate: 5 },                       // too short
+  { name: 'Skipped', rate: 9 },                 // declined earlier
+], [{ id: 'p1', name: 'Salt' }], new Set(['skipped']));
+eq(fresh.map((p) => p.name), ['Biscuit Pack'], 'only genuinely new items');
+eq([fresh[0].sellingPrice, fresh[0].taxPercent, fresh[0].hsn, fresh[0].unit], [10, 18, '1905', 'Pcs'], 'new item keeps rate / GST / HSN / unit');
+
+console.log('POS totals: MRP savings are not a discount');
+const posItems = [{ quantity: 2, rate: 90, mrp: 100, taxPercent: 5, discount: 0 }];
+const pos = computeInvoiceTotals({ items: posItems, profile: { state: 'Tamil Nadu' }, showGST: true, invoiceOptions: { invoiceDiscountType: 'fixed', invoiceDiscountValue: 10, showRoundOff: true } });
+eq([pos.subtotal, pos.totalDiscount, pos.totalTaxAmount, pos.invoiceDiscountAmount, pos.total], [180, 0, 9, 10, 179], 'total = 180 + 9 GST - 10 bill discount (MRP 200 ignored)');
 
 console.log(`\n${passed} passed, ${failed} failed`);
 process.exit(failed ? 1 : 0);
