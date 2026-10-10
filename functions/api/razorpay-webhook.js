@@ -9,17 +9,18 @@
 // runs. Uses the same idempotent activation, so a payment is only ever
 // applied once whichever path arrives first.
 // ============================================================
-import { getPlan, PLANS } from '../../shared/plans.js';
+import { getPlan, PLANS, planCharge, priceBreakdown, normalizeCode } from '../../shared/plans.js';
 import {
   json, requireEnv, getServiceClient, hmacSha256Hex, timingSafeEqual, HttpError,
 } from '../../shared/server.js';
 import { loadOrder, activatePaidOrder } from '../../shared/activation.js';
+import { background, sendReceiptForOrder } from '../../shared/notify.js';
 
 const REQUIRED_ENV = ['SUPABASE_URL', 'SUPABASE_SERVICE_ROLE_KEY', 'RAZORPAY_WEBHOOK_SECRET'];
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const HANDLED = new Set(['payment.captured', 'order.paid']);
 
-export async function onRequestPost({ request, env }) {
+export async function onRequestPost({ request, env, waitUntil }) {
   try {
     requireEnv(env, REQUIRED_ENV);
   } catch {
@@ -48,20 +49,24 @@ export async function onRequestPost({ request, env }) {
       // rebuild it from the order notes that WE set server-side.
       const notes = payment.notes || payload.payload?.order?.entity?.notes || {};
       const plan = getPlan(notes.plan) ||
-        Object.values(PLANS).find(p => p.amount === Number(payment.amount)) || null;
+        Object.values(PLANS).find(p => planCharge(p) === Number(payment.amount)) || null;
+      const discount = getPlan(notes.plan) ? Math.max(0, Number(notes.discount) || 0) : 0;
       if (!UUID_RE.test(notes.userId || '') || !plan) {
         console.error(`[webhook] cannot map order ${payment.order_id} to a user/plan`);
         return json({ received: true, ignored: 'unknown order' });
       }
+      const bd = priceBreakdown(plan, discount);
       const { error } = await supabase.from('payment_orders').upsert({
         order_id: payment.order_id, user_id: notes.userId, plan: plan.id,
-        amount: plan.amount, currency: plan.currency, status: 'created',
+        amount: bd.total, base_amount: bd.base, discount: bd.discount, gst_amount: bd.gst,
+        coupon_code: normalizeCode(notes.coupon) || null, currency: bd.currency, status: 'created',
       }, { onConflict: 'order_id', ignoreDuplicates: true });
       if (error) throw error;
       orderRow = await loadOrder(supabase, payment.order_id);
     }
 
     const result = await activatePaidOrder(supabase, { orderRow, payment, source: 'webhook' });
+    if (!result.alreadyProcessed) await background(waitUntil, sendReceiptForOrder(env, supabase, orderRow.order_id));
     return json({ received: true, ...result });
   } catch (err) {
     if (err instanceof HttpError && err.status < 500 && err.status !== 409) {

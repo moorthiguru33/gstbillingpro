@@ -6,9 +6,10 @@
 import { createClient } from '@supabase/supabase-js';
 
 export class HttpError extends Error {
-  constructor(status, message) {
+  constructor(status, message, code) {
     super(message);
     this.status = status;
+    if (code) this.code = code; // machine-readable reason for the client (i18n)
   }
 }
 
@@ -67,7 +68,7 @@ export function json(data, status = 200, extraHeaders = {}) {
 
 /** Turn any thrown error into a JSON response without leaking internals. */
 export function errorResponse(err, headers = {}) {
-  if (err instanceof HttpError) return json({ error: err.message }, err.status, headers);
+  if (err instanceof HttpError) return json({ error: err.message, ...(err.code ? { code: err.code } : {}) }, err.status, headers);
   console.error('[api] unexpected error:', err && (err.stack || err.message || err));
   return json({ error: 'Something went wrong. Please try again or contact support.' }, 500, headers);
 }
@@ -88,7 +89,7 @@ export function requireEnv(env, names) {
   const missing = names.filter(n => !env[n]);
   if (missing.length) {
     console.error('[api] missing environment variables:', missing.join(', '));
-    throw new HttpError(500, 'Payment service is not configured. Please contact support.');
+    throw new HttpError(500, 'This service is not configured yet. Please contact support.');
   }
 }
 

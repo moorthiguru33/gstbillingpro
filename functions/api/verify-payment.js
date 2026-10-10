@@ -7,20 +7,23 @@
 // 2. Verifies the Razorpay checkout signature (constant-time).
 // 3. Loads the order from payment_orders and checks it belongs to the user.
 // 4. Fetches the payment from the Razorpay API and checks it is captured,
-//    belongs to the order and the amount equals the plan price.
-// 5. Activates idempotently: extends from max(now, current end) by the
-//    plan length and logs the REAL captured amount.
+//    belongs to the order and the amount equals the order price
+//    (plan price from shared/plans.js − server-validated coupon + GST).
+// 5. Activates idempotently (shared/activation.js: renewals, upgrades,
+//    lifetime, referral bonus), logs the REAL captured amount and e-mails
+//    the receipt (no-op until RESEND_API_KEY / FROM_EMAIL are set).
 // ============================================================
 import {
   HttpError, json, errorResponse, preflight, corsHeaders, assertOrigin, requireEnv,
   getServiceClient, authenticate, hmacSha256Hex, timingSafeEqual, razorpay,
 } from '../../shared/server.js';
 import { loadOrder, activatePaidOrder } from '../../shared/activation.js';
+import { background, sendReceiptForOrder } from '../../shared/notify.js';
 
 const REQUIRED_ENV = ['SUPABASE_URL', 'SUPABASE_SERVICE_ROLE_KEY', 'RAZORPAY_KEY_ID', 'RAZORPAY_KEY_SECRET'];
 const ID_RE = /^[A-Za-z0-9_]{6,64}$/;
 
-export async function onRequestPost({ request, env }) {
+export async function onRequestPost({ request, env, waitUntil }) {
   const cors = corsHeaders(request, env);
   try {
     assertOrigin(request, env);
@@ -56,6 +59,7 @@ export async function onRequestPost({ request, env }) {
     }
 
     const result = await activatePaidOrder(supabase, { orderRow, payment, source: 'verify' });
+    if (!result.alreadyProcessed) await background(waitUntil, sendReceiptForOrder(env, supabase, orderId));
     return json({ success: true, ...result, plan: orderRow.plan }, 200, cors);
   } catch (err) {
     return errorResponse(err, cors);

@@ -98,7 +98,7 @@
     "bundle:tesseract": "node scripts/bundle-tesseract-assets.mjs",
     "release:zip": "npm run build && node scripts/build-release-zip.mjs && node scripts/verify-release.mjs",
     "test": "npm run test:unit && node tests/smoke.mjs",
-    "test:unit": "node scripts/tax-test.mjs && node scripts/discount-modes-test.mjs && node scripts/csv-test.mjs && node scripts/plans-test.mjs && node scripts/store-helpers-test.mjs && node scripts/ocr-parse-test.mjs && node scripts/hsn-summary-test.mjs",
+    "test:unit": "node scripts/tax-test.mjs && node scripts/discount-modes-test.mjs && node scripts/csv-test.mjs && node scripts/plans-test.mjs && node scripts/store-helpers-test.mjs && node scripts/ocr-parse-test.mjs && node scripts/hsn-summary-test.mjs && node scripts/billing-test.mjs && node scripts/gen-plan-sql.mjs --check",
     "test:install": "playwright install firefox",
     "test:update-unix": "node scripts/test-update-unix.mjs",
     "verify:release": "node scripts/verify-release.mjs"
@@ -109,11 +109,14 @@
     "dompurify": "^3.4.16",
     "express": "^5.2.1",
     "html2canvas": "^1.4.1",
+    "i18next": "^23.16.8",
+    "i18next-browser-languagedetector": "^7.2.2",
     "jspdf": "^4.2.1",
     "lucide-react": "^0.577.0",
     "qrcode": "^1.5.4",
     "react": "^19.3.0",
     "react-dom": "^19.3.0",
+    "react-i18next": "^14.1.3",
     "tesseract.js": "^7.0.0"
   },
   "devDependencies": {
