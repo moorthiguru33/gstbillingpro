@@ -2,23 +2,9 @@ import { useState } from 'react';
 import { X, ChevronRight, Check } from 'lucide-react';
 import { getPrintSettings, savePrintSettings, BUSINESS_PRESETS, applyBusinessPreset } from '../utils/printSettings';
 import { toast } from './Toast';
-import { getInvoiceDisplayOptions, saveInvoiceDisplayOptions } from '../store';
+import { setDefaultPaperSize } from '../utils/paperDefaults';
 
-const PAPER_LABELS = { a4: 'A4', a5: 'A5', thermal80: '80mm thermal', thermal58: '58mm thermal' };
-
-// The invoice screen takes its paper size from the invoice defaults (browser
-// copy + server copy, server wins), not from print settings. Writing it only
-// to print settings, as before, meant the choice made here did nothing.
-const setDefaultPaperSize = async (paperSize) => {
-  try {
-    const local = JSON.parse(localStorage.getItem('freegstbill_invoiceOptions') || '{}');
-    localStorage.setItem('freegstbill_invoiceOptions', JSON.stringify({ ...local, paperSize }));
-  } catch { /* private window: server copy below still applies */ }
-  try {
-    const server = (await getInvoiceDisplayOptions()) || {};
-    await saveInvoiceDisplayOptions({ ...server, paperSize });
-  } catch { /* offline: the browser copy above still applies */ }
-};
+const PAPER_LABELS = { a4: 'A4', a5: 'A5', a5Landscape: 'A5 landscape', thermal80: '80mm thermal', thermal58: '58mm thermal' };
 
 // ============================================================================
 // v1.9.3 — First-run Setup Wizard
@@ -104,7 +90,7 @@ export default function SetupWizard({ onClose }) {
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '0.6rem' }}>
               {Object.entries(BUSINESS_PRESETS).map(([key, preset]) => (
                 <button key={key} type="button"
-                  onClick={() => setSelectedBiz(key)}
+                  onClick={() => { setSelectedBiz(key); if (preset.paper) setPaperSize(preset.paper); }}
                   style={{
                     padding: '0.85rem',
                     background: selectedBiz === key ? 'var(--primary)' : 'var(--card)',
@@ -154,6 +140,7 @@ export default function SetupWizard({ onClose }) {
               {[
                 ['a4', 'A4 · Standard'],
                 ['a5', 'A5 · Compact'],
+                ['a5Landscape', 'A5 Landscape'],
                 ['thermal80', '80mm Thermal'],
                 ['thermal58', '58mm Thermal'],
               ].map(([key, label]) => (
