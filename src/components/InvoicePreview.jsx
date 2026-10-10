@@ -1,4 +1,6 @@
 import React, { useState, useEffect } from 'react';
+import { showBranding } from '../lib/planState';
+import { MadeWithLine } from './MadeWithLine';
 import QRCode from 'qrcode';
 import DOMPurify from 'dompurify';
 import { numberToWords, printedSubtotal, formatCurrency, INVOICE_TYPES, getCountryConfig, CURRENCY_NAMES, formatExchangeRateLine, getAccountById, getPaperSize, resolveLineDiscount, htmlHasText, splitNumberedTerms, invoiceOptionOn, DEFAULT_DECLARATION, filledOrderDetails, formatShortDate } from '../utils';
@@ -904,6 +906,8 @@ const InvoicePreview = React.forwardRef(({ profile: profileProp, client, details
           </div>
         )}
 
+        {showBranding() && <MadeWithLine thermal />}
+
         {cutMark && (
           <div style={{ padding: '10px 4px 4px', textAlign: 'center', fontSize: '0.85em', letterSpacing: '0.15em', color: '#000', fontFamily: 'monospace', fontWeight: strongWeight }}>
             {'- - - - -  ✂  CUT HERE  ✂  - - - - -'}
@@ -1601,6 +1605,7 @@ const InvoicePreview = React.forwardRef(({ profile: profileProp, client, details
           );
         })()}
       </div>
+      {showBranding() && <MadeWithLine />}
       </>)}
 
       {/* Extra Sections - each starts on new page */}

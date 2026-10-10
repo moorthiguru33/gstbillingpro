@@ -136,3 +136,21 @@ export const getTrialDaysLeft = (sub) => {
   const diff = end - now;
   return Math.max(0, Math.ceil(diff / (1000 * 60 * 60 * 24)));
 };
+
+// ---- Plan usage (Phase 2) ----
+
+/** { tier, invoices_used, invoice_limit, businesses, business_limit } or null (before migration 002). */
+export const getMyPlanUsage = async () => {
+  const { data, error } = await supabase.rpc('my_plan');
+  if (error) { console.warn('my_plan unavailable:', error.message); return null; }
+  return data || null;
+};
+
+/** Founder Lifetime seats left (public), or null if unknown. */
+export const getFounderSlotsLeft = async () => {
+  try {
+    const { data, error } = await supabase.rpc('founder_slots_left');
+    if (error) return null;
+    return typeof data === 'number' ? data : null;
+  } catch { return null; }
+};
