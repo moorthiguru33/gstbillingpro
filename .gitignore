@@ -13,8 +13,14 @@ dist-ssr
 release-build
 *.local
 
-# Invoice data (personal/financial - keep local only)
-data/
+# Invoice data (personal/financial - keep local only).
+# Anchored to the repo root: the old unanchored `data/` also ignored
+# src/data/ (demo data + starter catalogue), which broke clean builds.
+/data/
+
+# Master product catalogue (~38 MB) is regenerated deterministically by
+# scripts/ensure-catalogs.mjs before every build.
+public/data/catalogs/
 Saved Invoices/
 Trash/
 
@@ -43,3 +49,9 @@ public/tesseract/
 
 # Built documentation site (regenerate with: node docs-site/build.mjs)
 docs-site/out/
+
+# Secrets - never commit. .env.example (placeholders only) IS tracked.
+.env
+.env.*
+!.env.example
+.dev.vars

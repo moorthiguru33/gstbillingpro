@@ -1,6 +1,17 @@
 import fs from 'fs';
 import path from 'path';
 
+// Deterministic PRNG (mulberry32) so every build/regeneration produces the
+// exact same catalogue - prices, stock and barcodes no longer change between
+// deploys.
+let prngState = 20261011;
+const rand = () => {
+  prngState = (prngState + 0x6D2B79F5) | 0;
+  let t = Math.imul(prngState ^ (prngState >>> 15), 1 | prngState);
+  t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+  return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+};
+
 const categories = [
   {
     name: 'Grocery & Staples',
@@ -178,7 +189,7 @@ categories.forEach((cat) => {
         const id = `item_${counter++}`;
         const name = `${brand} ${tpl.prefix} ${size}`;
         const [minP, maxP] = tpl.priceRange;
-        const price = Math.round(minP + Math.random() * (maxP - minP));
+        const price = Math.round(minP + rand() * (maxP - minP));
         const mrp = Math.round(price * 1.12);
         // Realistic EAN-13 barcode starting with 890 (India country code)
         const barcode = `890${String(1000000000 + counter * 37).slice(1)}`;
@@ -192,7 +203,7 @@ categories.forEach((cat) => {
           price,
           mrp,
           barcode,
-          stock: Math.floor(20 + Math.random() * 150),
+          stock: Math.floor(20 + rand() * 150),
         });
       });
     });
@@ -218,7 +229,7 @@ while (items.length < 1050) {
     price,
     mrp,
     barcode: `890${String(2000000000 + counter * 53).slice(1)}`,
-    stock: Math.floor(15 + Math.random() * 80),
+    stock: Math.floor(15 + rand() * 80),
   });
   i++;
 }

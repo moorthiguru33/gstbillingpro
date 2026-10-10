@@ -1,6 +1,17 @@
 import fs from 'fs';
 import path from 'path';
 
+// Deterministic PRNG (mulberry32) so every build/regeneration produces the
+// exact same catalogue - prices, stock and barcodes no longer change between
+// deploys.
+let prngState = 20261011;
+const rand = () => {
+  prngState = (prngState + 0x6D2B79F5) | 0;
+  let t = Math.imul(prngState ^ (prngState >>> 15), 1 | prngState);
+  t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+  return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+};
+
 // Master Indian Industry Blueprints for 100,000+ Products Database
 const industryConfigs = [
   {
@@ -430,7 +441,7 @@ industryConfigs.forEach((ind) => {
           idCounter++;
           const name = `${brand} ${item} - ${size}`;
           const [minP, maxP] = sub.priceRange;
-          const price = Math.round(minP + Math.random() * (maxP - minP));
+          const price = Math.round(minP + rand() * (maxP - minP));
           const mrp = Math.round(price * 1.15);
           const barcode = `890${String(1000000000 + idCounter * 17).slice(1)}`;
 
@@ -446,7 +457,7 @@ industryConfigs.forEach((ind) => {
             price,
             mrp,
             barcode,
-            stock: Math.floor(10 + Math.random() * 150),
+            stock: Math.floor(10 + rand() * 150),
           });
         });
       });
@@ -479,7 +490,7 @@ industryConfigs.forEach((ind) => {
       price,
       mrp,
       barcode,
-      stock: Math.floor(5 + Math.random() * 100),
+      stock: Math.floor(5 + rand() * 100),
     });
 
     varIdx++;
