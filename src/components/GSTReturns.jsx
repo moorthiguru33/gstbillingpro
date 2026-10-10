@@ -3,6 +3,7 @@ import { FileText, Download, Upload, ExternalLink, CheckCircle, ChevronDown, Che
 import { getAllBills, getAllExpenses, getAllPurchases, getProfile } from '../store';
 import { formatCurrency, INVOICE_TYPES, calculateLineItemTax, getStateCode, formatDateGST, getFilingPeriod, getUnitUQC, getFYOptions, belongsToProfile, toCsvLine, isCancelledBill, b2clThreshold, GST_PORTAL_RATES, setOffITC } from '../utils';
 import { toast } from './Toast';
+import { buildHsnSummary, normalizeHsn } from '../utils/hsnSummary';
 import HelpButton from './HelpButton';
 
 const GST_TYPES = ['tax-invoice', 'credit-note'];
@@ -728,29 +729,13 @@ export default function GSTReturns() {
   // v1.10.31 — GST-H3 fix: key by hsn+rate+uqc so items with the same HSN
   // but different UQCs (KGS vs NOS vs PCS) don't get their quantities
   // summed nonsensically. Also GST-C3 + C2: include cess + UTGST in totals.
-  const hsnMap = {};
-  filteredBills.forEach(bill => {
-    const { items } = bill.data;
-    const isInterState = billIsInterstate(bill);
-    const isIntraUT = billIsIntraUT(bill);
-    (items || []).forEach(item => {
-      const hsn = item.hsn || 'N/A';
-      const rate = item.taxPercent || 0;
-      const uqc = item.unit || 'OTH';
-      const key = `${hsn}|${rate}|${uqc}`;
-      if (!hsnMap[key]) hsnMap[key] = { hsn, rate, uqc, description: item.name || '', quantity: 0, taxable: 0, cgst: 0, sgst: 0, igst: 0, cess: 0, totalTax: 0 };
-      const split = computeItemTaxSplit(item, isInterState, !!bill.data?.taxInclusive, isIntraUT);
-      const sign = hsnSign(bill);
-      hsnMap[key].quantity += sign * (item.quantity || 0);
-      hsnMap[key].taxable += sign * split.taxable;
-      hsnMap[key].cgst += sign * split.cgst;
-      hsnMap[key].sgst += sign * (split.sgst + split.utgst);
-      hsnMap[key].igst += sign * split.igst;
-      hsnMap[key].cess += sign * split.cess;
-      hsnMap[key].totalTax += sign * (split.cgst + split.sgst + split.utgst + split.igst + split.cess);
-    });
+  // Built by utils/hsnSummary.js (shared with the CSV export below):
+  // normalised HSN codes, portal UQCs, one "Missing HSN" row per rate.
+  const hsnRows = buildHsnSummary(filteredBills, {
+    split: (item, bill) => computeItemTaxSplit(item, billIsInterstate(bill), !!bill.data?.taxInclusive, billIsIntraUT(bill)),
+    sign: hsnSign,
   });
-  const hsnRows = Object.values(hsnMap).sort((a, b) => (a.hsn || '').localeCompare(b.hsn || ''));
+  const hsnMissingRows = hsnRows.filter((r) => r.missing);
 
   // ========== Totals ==========
   // v1.10.31 — GST-C3: sumRows now carries cess. GST-H2: credit notes
@@ -980,28 +965,9 @@ export default function GSTReturns() {
     if (hsnRows.length === 0) { toast('No HSN data', 'warning'); return; }
     // v1.10.31 — GST-H3: key by hsn+rate+uqc so mixed-UQC items don't
     // aggregate nonsensically. GST-C3: cess included. GST-C2: UTGST folded.
-    const hsnDetailed = {};
-    filteredBills.forEach(bill => {
-      const { items } = bill.data;
-      const isInter = billIsInterstate(bill);
-      const isIntraUT = billIsIntraUT(bill);
-      (items || []).forEach(item => {
-        const hsn = item.hsn || 'N/A';
-        const rate = item.taxPercent || 0;
-        const uqc = getUnitUQC(item.unit) || 'NOS';
-        const key = `${hsn}|${rate}|${uqc}`;
-        if (!hsnDetailed[key]) hsnDetailed[key] = { hsn, desc: item.name || '', uqc, qty: 0, rate, taxable: 0, cgst: 0, sgst: 0, igst: 0, cess: 0, totalValue: 0 };
-        const split = computeItemTaxSplit(item, isInter, !!bill.data?.taxInclusive, isIntraUT);
-        const sign = hsnSign(bill); // v1.10.74 - credit notes reduce the row
-        hsnDetailed[key].qty += sign * (item.quantity || 0);
-        hsnDetailed[key].taxable += sign * split.taxable;
-        hsnDetailed[key].cgst += sign * split.cgst;
-        hsnDetailed[key].sgst += sign * (split.sgst + split.utgst);
-        hsnDetailed[key].igst += sign * split.igst;
-        hsnDetailed[key].cess += sign * split.cess;
-        hsnDetailed[key].totalValue += sign * (split.taxable + split.cgst + split.sgst + split.utgst + split.igst + split.cess);
-      });
-    });
+    if (hsnMissingRows.length) {
+      toast(`${hsnMissingRows.reduce((n, r) => n + r.itemNames.length, 0)} item(s) have no HSN/SAC code — they are exported as "N/A". Add HSN codes before uploading.`, 'warning', 6000);
+    }
     // v1.10.31 — Column order + header labels now match the GSTR-1
     // offline utility's Table 12 CSV template (v3.1.6+). The prior order
     // put "Total Value" LAST and used "Rate %" — the portal importer
@@ -1012,11 +978,11 @@ export default function GSTReturns() {
     downloadCSV(
       'GSTR1_HSN_Summary.csv',
       ['HSN', 'Description', 'UQC', 'Total Quantity', 'Total Value', 'Rate', 'Taxable Value', 'Integrated Tax Amount', 'Central Tax Amount', 'State/UT Tax Amount', 'Cess Amount'],
-      Object.values(hsnDetailed).map(r => [
-        r.hsn,
-        r.desc,
+      hsnRows.map(r => [
+        r.missing ? 'N/A' : r.hsn,
+        r.description,
         r.uqc,
-        r.qty,
+        r.quantity,
         r.totalValue.toFixed(2),
         r.rate,
         r.taxable.toFixed(2),
@@ -1491,30 +1457,18 @@ export default function GSTReturns() {
         itms: Object.entries(rateMap).map(([rt, d], i) => ({ num: i + 1, itm_det: { rt: Number(rt), txval: round2(d.txval), iamt: round2(d.iamt), camt: round2(d.camt), samt: round2(d.samt), csamt: round2(d.csamt) } })) });
     });
 
-    const hsnJsonMap = {};
+    // Same rows as the on-screen Table 12 / CSV (utils/hsnSummary.js),
+    // keyed HSN + rate + UQC. v1.10.43 rule kept: the portal rejects
+    // `hsn_sc: 'N/A'` / empty, so the "Missing HSN" rows are left out of
+    // the JSON; the pre-flight warning lists them.
     let unknownUnitCount = 0;
-    filteredBills.forEach(bill => {
-      const { items } = bill.data;
-      const isInter = billIsInterstate(bill);
-      (items || []).forEach(item => {
-        // v1.10.43 — HSN Table 12 rule: portal rejects `hsn_sc: 'N/A'`
-        // or empty. Silently DROP items with no HSN so the file uploads;
-        // the pre-flight warning already told the user how many were
-        // dropped and to fix the source products.
-        const hsnRaw = String(item.hsn || '').trim();
-        if (!hsnRaw || hsnRaw === 'N/A') return;
-        const hsn = hsnRaw;
-        const rate = item.taxPercent || 0; const key = `${hsn}_${rate}`;
-        const uqc = getUnitUQC(item.unit);
-        if (uqc === 'OTH' && item.unit) unknownUnitCount += 1;
-        if (!hsnJsonMap[key]) hsnJsonMap[key] = { hsn_sc: hsn, desc: item.name || '', uqc, qty: 0, rt: rate, txval: 0, iamt: 0, camt: 0, samt: 0, csamt: 0 };
-        const split = computeItemTaxSplit(item, isInter, !!bill.data?.taxInclusive);
-        const sign = hsnSign(bill); // v1.10.74 - credit notes reduce the row
-        hsnJsonMap[key].qty += sign * (item.quantity || 0); hsnJsonMap[key].txval += sign * split.taxable; hsnJsonMap[key].iamt += sign * split.igst; hsnJsonMap[key].camt += sign * split.cgst; hsnJsonMap[key].samt += sign * split.sgst;
-        const cessPct = Number(item.cessPercent) || 0;
-        if (cessPct > 0) hsnJsonMap[key].csamt += sign * split.taxable * cessPct / 100;
-      });
-    });
+    filteredBills.forEach(bill => (bill.data?.items || []).forEach(item => {
+      if (item?.unit && getUnitUQC(item.unit) === 'OTH' && normalizeHsn(item.hsn)) unknownUnitCount += 1;
+    }));
+    const hsnJsonRows = hsnRows.filter(r => !r.missing).map(r => ({
+      hsn_sc: r.hsn, desc: r.description, uqc: r.uqc, qty: r.quantity, rt: r.rate,
+      txval: r.taxable, iamt: r.igst, camt: r.cgst, samt: r.sgst, csamt: r.cess,
+    }));
 
     const docDet = Object.entries(docSummary).map(([, d], i) => ({ doc_num: i + 1, docs: [{ num: 1, from: d.from, to: d.to, totnum: d.total, cancel: d.cancelled, net_issue: d.total - d.cancelled }] }));
 
@@ -1545,7 +1499,7 @@ export default function GSTReturns() {
       b2b: Object.values(b2bMap), b2cs: b2csArr,
       ...(Object.keys(b2clMap).length > 0 ? { b2cl: Object.values(b2clMap) } : {}),
       ...(Object.keys(cdnrMap).length > 0 ? { cdnr: Object.values(cdnrMap) } : {}),
-      hsn: { data: Object.values(hsnJsonMap).map((r, i) => ({ num: i + 1, ...r, txval: round2(r.txval), iamt: round2(r.iamt), camt: round2(r.camt), samt: round2(r.samt), csamt: round2(r.csamt) })) },
+      hsn: { data: hsnJsonRows.map((r, i) => ({ num: i + 1, ...r, txval: round2(r.txval), iamt: round2(r.iamt), camt: round2(r.camt), samt: round2(r.samt), csamt: round2(r.csamt) })) },
       doc_issue: { doc_det: docDet },
     };
 
@@ -2272,7 +2226,7 @@ export default function GSTReturns() {
           <div className="glass-panel mb-4">
             <div className="table-header">
               <h3>HSN Summary — Table 12</h3>
-              <span className="text-muted" style={{ fontSize: '0.82rem' }}>{hsnRows.length} code{hsnRows.length !== 1 ? 's' : ''}</span>
+              <span className="text-muted" style={{ fontSize: '0.82rem' }}>{hsnRows.length - hsnMissingRows.length} code{hsnRows.length - hsnMissingRows.length !== 1 ? 's' : ''}{hsnMissingRows.length ? ' · items without HSN listed last' : ''}</span>
             </div>
             {hsnRows.length === 0 ? (
               <p style={{ padding: '1rem 1.25rem', margin: 0, fontSize: '0.85rem', color: 'var(--text-muted)' }}>No items found.</p>
@@ -2282,10 +2236,22 @@ export default function GSTReturns() {
                   <thead><tr><th>HSN</th><th>Description</th><th style={{ textAlign: 'right' }}>Qty</th><th style={{ textAlign: 'right' }}>Taxable</th><th style={{ textAlign: 'right' }}>CGST</th><th style={{ textAlign: 'right' }}>SGST</th><th style={{ textAlign: 'right' }}>IGST</th><th style={{ textAlign: 'right' }}>Total Tax</th></tr></thead>
                   <tbody>
                     {/* v1.10.6 — audit L13: HSN code is unique per row. */}
-                    {hsnRows.map((r, i) => (
-                      <tr key={r.hsn || `hsn-${i}`}>
-                        <td><span className="invoice-badge">{r.hsn}</span></td>
-                        <td className="font-medium">{r.description}</td>
+                    {hsnRows.map((r) => (
+                      <tr key={r.key} style={r.missing ? { background: '#fff7ed' } : undefined}>
+                        <td>
+                          {r.missing
+                            ? <span className="invoice-badge" style={{ background: '#fed7aa', color: '#9a3412' }}>Missing HSN</span>
+                            : <span className="invoice-badge">{r.hsn}</span>}
+                          <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)', marginTop: 2 }}>{r.rate}% · {r.uqc}</div>
+                        </td>
+                        <td className="font-medium" title={r.missing ? `${r.itemNames.join(', ')}\nInvoices: ${r.invoiceNumbers.join(', ')}` : r.itemNames.join(', ')}>
+                          {r.description}
+                          {r.missing && (
+                            <div style={{ fontSize: '0.72rem', color: '#9a3412', fontWeight: 400 }}>
+                              {r.itemNames.slice(0, 4).join(', ')}{r.itemNames.length > 4 ? '…' : ''}
+                            </div>
+                          )}
+                        </td>
                         <td style={{ textAlign: 'right' }}>{r.quantity}</td>
                         <td style={{ textAlign: 'right' }}>{formatCurrency(r.taxable)}</td>
                         <td style={{ textAlign: 'right' }}>{formatCurrency(r.cgst)}</td>

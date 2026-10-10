@@ -1554,7 +1554,15 @@ export const removeCustomUnit = (label) => {
 export const getAllUnits = () => [...BUILTIN_UNITS, ...getCustomUnits()];
 
 export const getUnitUQC = (label) => {
-  const u = getAllUnits().find(x => x.label === label);
+  // Case-insensitive, and accepts the UQC itself: catalogue / CSV / POS
+  // items carry 'NOS', 'pcs', 'KGS' … which used to fall through to 'OTH'
+  // and split one HSN into several Table 12 rows.
+  const key = String(label ?? '').trim().toLowerCase();
+  if (!key) return 'OTH';
+  const units = getAllUnits();
+  const u = units.find(x => x.label === label)
+    || units.find(x => String(x.label).toLowerCase() === key)
+    || units.find(x => String(x.uqc || '').toLowerCase() === key);
   return u?.uqc || 'OTH';
 };
 
