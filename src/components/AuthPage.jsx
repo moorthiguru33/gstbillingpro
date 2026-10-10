@@ -1,6 +1,8 @@
 import { useState, useEffect } from 'react';
 import { FileText, Eye, EyeOff, Loader2, CheckCircle, ArrowRight, Zap, Shield, BarChart3, Users, RefreshCw, Download } from 'lucide-react';
 import { signIn, signUp, resetPassword, signInWithGoogle } from '../lib/supabase.js';
+import { PLANS, TRIAL_DAYS, formatPlanPrice } from '../../shared/plans.js';
+import { LEGAL_LINKS } from '../../shared/company.js';
 
 // ============================================================
 // AuthPage — Beautiful Login / Register / Forgot Password
@@ -155,7 +157,7 @@ export default function AuthPage({ onAuth, onStartDemo }) {
                 30 Days FREE Trial
               </div>
               <div style={{ color: '#a7f3d0', fontSize: '0.8rem' }}>
-                Then only ₹99/month • Cancel anytime
+                Then only {formatPlanPrice(PLANS.monthly.amount)}/month • No auto-renewal
               </div>
             </div>
           </div>
@@ -462,10 +464,20 @@ export default function AuthPage({ onAuth, onStartDemo }) {
           {/* Terms */}
           {tab === 'register' && (
             <p style={{ textAlign: 'center', color: '#94a3b8', fontSize: '0.75rem', marginTop: '1rem', lineHeight: 1.5 }}>
-              By registering, you agree to our Terms of Service.<br />
-              First 30 days free, then ₹99/month.
+              By registering, you agree to our{' '}
+              <a href="/terms.html" target="_blank" rel="noopener" style={{ color: '#3b82f6' }}>Terms of Service</a>
+              {' '}and{' '}
+              <a href="/privacy.html" target="_blank" rel="noopener" style={{ color: '#3b82f6' }}>Privacy Policy</a>.<br />
+              First {TRIAL_DAYS} days free, then {formatPlanPrice(PLANS.monthly.amount)}/month or {formatPlanPrice(PLANS.annual.amount)}/year.
             </p>
           )}
+
+          {/* Legal links (required for payments; visible without signing in) */}
+          <nav aria-label="Legal" style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'center', gap: '0.35rem 0.9rem', marginTop: '1.25rem', fontSize: '0.72rem' }}>
+            {LEGAL_LINKS.map(l => (
+              <a key={l.href} href={l.href} target="_blank" rel="noopener" style={{ color: '#94a3b8', textDecoration: 'none' }}>{l.label}</a>
+            ))}
+          </nav>
         </div>
       </div>
 

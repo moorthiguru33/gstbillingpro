@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useMemo, lazy, Suspense } from 'react';
-import { Home, FileText, Settings, Plus, Users, Package, BarChart3, Wallet, RefreshCw, Receipt, BookOpen, Moon, Sun, Download, X, ShoppingCart, ChevronDown, Building2, Pencil, HelpCircle, Search, Command, Bell, Calculator, HardDrive, Menu, Heart, LogOut, Zap } from 'lucide-react';
+import { Home, FileText, Settings, Plus, Users, Package, BarChart3, Wallet, RefreshCw, Receipt, BookOpen, Moon, Sun, Download, X, ShoppingCart, ChevronDown, Building2, Pencil, HelpCircle, Search, Command, Bell, Calculator, Menu, Heart, LogOut, Zap } from 'lucide-react';
 import { getAllProfiles, saveProfile, getProfile, getEnabledModules, getAllBills, getAllProducts, getStockAlertSettings, getAllClients, runUpdateNow, setDemoMode, isDemoModeActive } from './store';
 import { isModuleEnabled, getUpcomingFilings, isCancelledBill, DOCS_URL } from './utils';
 // SaaS Auth + Subscription
@@ -39,6 +39,8 @@ const GSTReturns = lazy(() => import('./components/GSTReturns'));
 const IncomeTax = lazy(() => import('./components/IncomeTax'));
 const PurchaseBills = lazy(() => import('./components/PurchaseBills'));
 const ControlPanel = lazy(() => import('./components/ControlPanel'));
+// The hosted SaaS build never shows desktop-only tools (Control Panel).
+const IS_DESKTOP_BUILD = import.meta.env.VITE_DESKTOP_BUILD === '1';
 const SupportView = lazy(() => import('./components/SupportView'));
 import StarBanner from './components/StarBanner';
 import AppFooter from './components/AppFooter';
@@ -83,7 +85,7 @@ function BillingApp({ authUser, onSignOut, isDemoMode, onExitDemo }) {
       const params = new URLSearchParams(window.location.search);
       const v = params.get('view');
       // v1.10.74 - 'controlpanel' added so ?view=controlpanel deep links work too.
-      const valid = ['dashboard', 'new', 'pos', 'clients', 'inventory', 'expenses', 'purchases', 'recurring', 'receipts', 'reports', 'filing', 'incometax', 'settings', 'controlpanel', 'support'];
+      const valid = ['dashboard', 'new', 'pos', 'clients', 'inventory', 'expenses', 'purchases', 'recurring', 'receipts', 'reports', 'filing', 'incometax', 'settings', ...(IS_DESKTOP_BUILD ? ['controlpanel'] : []), 'support'];
       if (v && valid.includes(v)) {
         // Strip the query string so a refresh doesn't keep snapping back to
         // the shortcut target — only the *first* navigation honours it.
@@ -93,7 +95,7 @@ function BillingApp({ authUser, onSignOut, isDemoMode, onExitDemo }) {
     } catch { /* sandboxed history API — fall through */ }
     // 'guide' was the built-in User Guide (removed in v1.10.75).
     const last = sessionStorage.getItem('gst_currentView');
-    return last && last !== 'guide' ? last : 'dashboard';
+    return last && last !== 'guide' && (last !== 'controlpanel' || IS_DESKTOP_BUILD) ? last : 'dashboard';
   });
   const [profile, setProfile] = useState(null);
   const [editingBill, setEditingBill] = useState(() => {
@@ -117,30 +119,15 @@ function BillingApp({ authUser, onSignOut, isDemoMode, onExitDemo }) {
   const [showProfileMenu, setShowProfileMenu] = useState(false);
   const profileMenuRef = useRef(null);
 
-  // Update notification state. Auto-checks GitHub on mount + every 6h.
-  // The user can dismiss a specific version (stored in localStorage) so the
-  // banner doesn't keep nagging once they've seen it. A NEW version released
-  // after that dismissal will re-show the banner.
-  const [updateInfo, setUpdateInfo] = useState(null);
+  // Update notification state. GST Billing Pro is a hosted PWA: new
+  // deploys are fetched by the service worker and applied automatically
+  // (see main.jsx), so the desktop "download a new release from GitHub"
+  // updater inherited from the open-source project is disabled here.
+  // `updateInfo` stays null, which keeps the banner/modal below hidden.
+  const [updateInfo] = useState(null);
   const [showUpdateModal, setShowUpdateModal] = useState(false);
   const updateBannerVisible = updateInfo?.updateAvailable
     && localStorage.getItem('freegstbill_dismissedUpdate') !== updateInfo.latest;
-
-  useEffect(() => {
-    let cancelled = false;
-    const check = async () => {
-      try {
-        const res = await fetch('/api/check-update');
-        const data = await res.json();
-        if (!cancelled) setUpdateInfo(data);
-      } catch { /* offline — quietly skip */ }
-    };
-    // First check ~5 seconds after mount so it doesn't fight the initial load.
-    const initial = setTimeout(check, 5000);
-    // Then re-check every 6 hours while the app is open.
-    const interval = setInterval(check, 6 * 60 * 60 * 1000);
-    return () => { cancelled = true; clearTimeout(initial); clearInterval(interval); };
-  }, []);
 
   // ---- Notification centre ----
   // Computed from server data on app boot + every 10 minutes; tucked under a
@@ -522,7 +509,6 @@ function BillingApp({ authUser, onSignOut, isDemoMode, onExitDemo }) {
     });
     acts.push({ label: 'Go to Settings', hint: '', category: 'nav', run: () => setCurrentView('settings') });
     // v1.10.74 - Control Panel has its own sidebar button but was missing here.
-    acts.push({ label: 'Go to Control Panel', hint: '', category: 'nav', run: () => setCurrentView('controlpanel') });
     acts.push({ label: 'Go to Support & About', hint: '', category: 'nav', run: () => setCurrentView('support') });
     acts.push({ label: 'Toggle dark mode', hint: '', category: 'action', run: () => setDarkMode(d => !d) });
     acts.push({ label: 'Show keyboard shortcuts', hint: 'Ctrl+/', category: 'help', run: () => setShowShortcutsHelp(true) });
@@ -908,13 +894,8 @@ function BillingApp({ authUser, onSignOut, isDemoMode, onExitDemo }) {
             >
               <Heart size={18} style={{ color: '#e11d48' }} /> Support &amp; About
             </button>
-            <button
-              className={`nav-btn ${currentView === 'controlpanel' ? 'nav-btn-active' : ''}`}
-              onClick={() => setCurrentView('controlpanel')}
-              title="Update, backup, restore, move to another PC"
-            >
-              <HardDrive size={18} /> Control Panel
-            </button>
+            {/* Control Panel (desktop-only: ZIP backups in Documents, git
+                updater, move-to-another-PC) is hidden in the hosted SaaS. */}
             <button
               className={`nav-btn ${currentView === 'settings' ? 'nav-btn-active' : ''}`}
               onClick={() => setCurrentView('settings')}
@@ -1047,14 +1028,14 @@ function BillingApp({ authUser, onSignOut, isDemoMode, onExitDemo }) {
         {currentView === 'settings' && (
           <SettingsView onSaved={(p) => setProfile(p)} />
         )}
-        {currentView === 'controlpanel' && (
+        {currentView === 'controlpanel' && IS_DESKTOP_BUILD && (
           <ControlPanel />
         )}
         {currentView === 'support' && (
           <SupportView />
         )}
         </Suspense>
-        {/* Version + DiceCodes line: Dashboard only, so it never takes space on working screens. */}
+        {/* Brand + legal links footer: Dashboard only, so it never takes space on working screens. */}
         {currentView === 'dashboard' && <AppFooter onOpenSupport={() => setCurrentView('support')} />}
       </div>
 

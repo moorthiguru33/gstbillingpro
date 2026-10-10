@@ -16,7 +16,7 @@ import { authFetch } from '../lib/supabase.js';
 import { confirmAction } from './ConfirmModal';
 import PrintSettings from './PrintSettings';
 import HelpButton from './HelpButton';
-import { getBackupsList, restoreBackup, triggerBackup, deleteBackup, getTrashedBills, restoreTrashedBill, purgeTrashedBill, runUpdateNow } from '../store';
+import { getBackupsList, restoreBackup, triggerBackup, deleteBackup, getTrashedBills, restoreTrashedBill, purgeTrashedBill } from '../store';
 
 // v1.10.36 — Section order for the jump-nav pill bar. Keeping this at
 // module scope so the scroll-spy effect below can reference it without
@@ -153,19 +153,7 @@ export default function SettingsView({ onSaved }) {
     format: 'branded', brandPrefix: '', separator: '/', showFinYear: true, startNumber: 1, padDigits: 4,
   });
   const [invNumSaving, setInvNumSaving] = useState(false);
-  const [updateInfo, setUpdateInfo] = useState(null);
   const [checkingUpdate, setCheckingUpdate] = useState(false);
-  // v1.10.69 - see runUpdateNow() in store.js: this used to be a link to a URL
-  // protocol that no current install registers, so it did nothing at all.
-  const [updatingNow, setUpdatingNow] = useState(false);
-  const handleSettingsUpdateNow = async () => {
-    setUpdatingNow(true);
-    toast('Updating… your data is backed up first. This takes about a minute.', 'info', 8000);
-    const result = await runUpdateNow();
-    setUpdatingNow(false);
-    toast(result.ok ? 'Update finished. Reload the page to use the new version.' : `Update failed — ${result.error}`,
-      result.ok ? 'success' : 'error', 10000);
-  };
   const [regionMode, setRegionModeState] = useState(getRegionMode());
   const [enabledModules, setEnabledModulesState] = useState(getEnabledModules());
   const [stockAlerts, setStockAlerts] = useState({ enabled: true, threshold: 5 });
@@ -406,8 +394,13 @@ export default function SettingsView({ onSaved }) {
       ctx.imageSmoothingQuality = 'high';
       // Fill white for JPEG so transparent PNGs don't come out with black
       // backgrounds on printers that can't render alpha.
-      ctx.fillStyle = '#ffffff';
-      ctx.fillRect(0, 0, width, height);
+      // (`preservesAlpha` was referenced here but never defined, so every
+      // PNG/JPG logo upload threw a ReferenceError and silently failed.)
+      const preservesAlpha = /^image\/(png|webp|gif)$/i.test(file.type || '');
+      if (!preservesAlpha) {
+        ctx.fillStyle = '#ffffff';
+        ctx.fillRect(0, 0, width, height);
+      }
       ctx.drawImage(img, 0, 0, width, height);
       // Keep PNG for images that had alpha (so signature on transparent
       // stays transparent when placed on invoice), JPEG otherwise.
@@ -626,7 +619,7 @@ export default function SettingsView({ onSaved }) {
     try {
       const text = await file.text();
       const inspection = inspectBackup(text);
-      if (!inspection.valid) { toast("This file doesn't look like a Free GST Billing backup.", 'error'); return; }
+      if (!inspection.valid) { toast("This file doesn't look like a GST Billing Pro backup.", 'error'); return; }
       setImportInspection(inspection);
       setImportJsonText(text);
       // Auto-tick only the parts that actually have data in the file
@@ -1824,45 +1817,35 @@ export default function SettingsView({ onSaved }) {
            Profiles" still lands somewhere sensible. */}
 
       {/* ---- App Updates ---- */}
+      {/* Hosted PWA: the service worker fetches every new deploy; this
+          button just asks it to check now (no desktop downloader). */}
       <div id="section-updates" className="glass-panel p-6 mb-6" style={{ order: 11 }}>
         <h3 className="section-title">App Updates</h3>
-        <p className="page-subtitle mb-4">Check if a newer version is available.</p>
+        <p className="page-subtitle mb-4">GST Billing Pro updates itself automatically. You can also check now.</p>
         <div className="flex gap-4 items-center">
           <button type="button" className="btn btn-secondary" disabled={checkingUpdate} onClick={async () => {
             setCheckingUpdate(true);
             try {
-              const res = await fetch('/api/check-update');
-              const data = await res.json();
-              setUpdateInfo(data);
-              if (data.updateAvailable) {
-                toast(`Update available: v${data.latest}`, 'info');
-              } else if (data.error) {
-                toast('Could not check for updates. Check internet connection.', 'warning');
+              const reg = await navigator.serviceWorker?.getRegistration?.();
+              if (!reg) {
+                toast('You are on the latest version.', 'success');
               } else {
-                toast('You are on the latest version!', 'success');
+                await reg.update();
+                if (reg.waiting || reg.installing || window.__fgsbSwUpdateReady) {
+                  toast('A new version was downloaded — it will apply in a few seconds (or reload the page).', 'info', 8000);
+                  setTimeout(() => window.__fgsbApplyUpdate?.(), 1500);
+                } else {
+                  toast('You are on the latest version!', 'success');
+                }
               }
             } catch {
-              toast('Could not check for updates.', 'error');
+              toast('Could not check for updates. Check your internet connection.', 'warning');
             }
             setCheckingUpdate(false);
           }}>
             <RefreshCw size={18} className={checkingUpdate ? 'spin' : ''} /> {checkingUpdate ? 'Checking...' : 'Check for Updates'}
           </button>
-          {updateInfo && (
-            <span style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>
-              Current: v{updateInfo.current}{updateInfo.latest ? ` | Latest: v${updateInfo.latest}` : ''}
-            </span>
-          )}
         </div>
-        {updateInfo?.updateAvailable && (
-          <div className="update-available-box">
-            <p><strong>New version v{updateInfo.latest} is available!</strong></p>
-            <p>Your data is backed up first and is not affected. Click below to update:</p>
-            <button type="button" className="btn btn-primary" disabled={updatingNow} onClick={handleSettingsUpdateNow} style={{ marginTop: '0.5rem', display: 'inline-flex' }}>
-              <Download size={18} /> {updatingNow ? 'Updating…' : 'Update Now'}
-            </button>
-          </div>
-        )}
       </div>
 
       <div id="section-data" className="glass-panel p-6 mb-6" style={{ order: 10 }}>
@@ -1872,12 +1855,12 @@ export default function SettingsView({ onSaved }) {
         <div className="notice notice-info" style={{ marginBottom: '1rem' }}>
           <span className="notice-icon">🔒</span>
           <div>
-            <strong>Your data is on this computer only.</strong> Nothing is uploaded to
-            us, our servers, or any third party — not invoices, not clients, not
-            settings. The only time anything leaves your machine is if you explicitly
-            click <em>Save to Drive</em> below (uploads to <strong>your own</strong>
-            Google Drive account).
-            Files live under <code>data/</code> and <code>Saved Invoices/</code> next to the app.
+            <strong>Your data is stored securely in your GST Billing Pro cloud account.</strong>{' '}
+            It is encrypted in transit and isolated so only you can see it, and it syncs
+            to every device you sign in on. We never sell or share it — see our{' '}
+            <a href="/privacy.html" target="_blank" rel="noopener">Privacy Policy</a>.
+            Use <em>Export Backup</em> below any time to keep your own copy (or <em>Save to Drive</em> to
+            upload it to <strong>your own</strong> Google Drive).
           </div>
         </div>
 

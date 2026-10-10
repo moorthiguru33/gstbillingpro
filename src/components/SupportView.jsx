@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { HelpCircle, Mail, MessageSquare, Zap, BookOpen, Shield, CheckCircle, Keyboard, FileText, Smartphone } from 'lucide-react';
+import { COMPANY, LEGAL_LINKS } from '../../shared/company.js';
 
 export default function SupportView() {
   const [copied, setCopied] = useState(false);
@@ -137,6 +138,24 @@ export default function SupportView() {
               <p style={{ margin: 0, fontSize: '0.85rem', color: 'var(--text-muted)', lineHeight: 1.5 }}>{a}</p>
             </div>
           ))}
+        </div>
+      </div>
+
+      {/* About & legal */}
+      <div className="card" style={{ padding: '1.5rem', borderRadius: 14, border: '1px solid var(--border-color)', background: 'var(--card-bg)', marginTop: '1.25rem' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.75rem' }}>
+          <Shield size={20} color="#2563eb" />
+          <h2 style={{ fontSize: '1.15rem', fontWeight: 700, margin: 0 }}>About {COMPANY.product}</h2>
+        </div>
+        <p style={{ margin: '0 0 0.5rem', fontSize: '0.875rem', color: 'var(--text-muted)', lineHeight: 1.6 }}>
+          {COMPANY.product} is made and supported by <strong>{COMPANY.owner}</strong>, {COMPANY.city}, {COMPANY.state}.
+          Phone / WhatsApp <a href={`tel:${COMPANY.phoneHref}`}>{COMPANY.phone}</a> · <a href={`mailto:${COMPANY.email}`}>{COMPANY.email}</a>
+        </p>
+        <p style={{ margin: '0 0 0.75rem', fontSize: '0.8rem', color: 'var(--text-muted)', lineHeight: 1.6 }}>
+          Based on the open-source <em>{COMPANY.upstreamName}</em>, used under the {COMPANY.upstreamLicense} licence. The original copyright notice is kept in the LICENSE file of our source code.
+        </p>
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem 1rem', fontSize: '0.85rem' }}>
+          {LEGAL_LINKS.map(l => <a key={l.href} href={l.href} target="_blank" rel="noopener">{l.label}</a>)}
         </div>
       </div>
     </div>
