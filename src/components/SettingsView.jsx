@@ -120,6 +120,29 @@ export default function SettingsView({ onSaved }) {
   // saving, and any future drift in the dirty check turns straight into a
   // popup on every exit. The sticky bar already makes unsaved work visible
   // without interrupting anyone.
+  // Jump-nav: scroll the page's real scroll container (.main-content, not
+  // the window) so the chosen section starts just below the sticky bar.
+  // scrollIntoView() on the flex-`order`ed sections often stopped short or
+  // was undone when async sections (Print, Backups) finished loading above
+  // the target, so the position is corrected once more after they settle.
+  const scrollToSection = (id) => {
+    const el = document.getElementById(id);
+    if (!el) return;
+    setActiveSection(id);
+    const scroller = el.closest('.main-content') || document.scrollingElement || document.documentElement;
+    const target = () => {
+      const bar = saveBarRef.current?.getBoundingClientRect().height || saveBarH;
+      const base = scroller === document.scrollingElement || scroller === document.documentElement
+        ? 0 : scroller.getBoundingClientRect().top;
+      return Math.max(0, el.getBoundingClientRect().top - base + scroller.scrollTop - bar - 12);
+    };
+    scroller.scrollTo({ top: target(), behavior: 'smooth' });
+    setTimeout(() => {
+      const t = target();
+      if (Math.abs(scroller.scrollTop - t) > 4) scroller.scrollTo({ top: t, behavior: 'auto' });
+    }, 700);
+  };
+
   useEffect(() => {
     const els = JUMP_NAV_SECTIONS
       .map(([id]) => document.getElementById(id))
@@ -870,13 +893,7 @@ export default function SettingsView({ onSaved }) {
               <a key={id} href={`#${id}`}
                 onClick={(e) => {
                   e.preventDefault();
-                  const el = document.getElementById(id);
-                  // Stop below the sticky bar, not underneath it.
-                  if (el) {
-                    const offset = saveBarH + 20;
-                    el.style.scrollMarginTop = `${offset}px`;
-                    el.scrollIntoView({ behavior: 'smooth', block: 'start' });
-                  }
+                  scrollToSection(id);
                 }}
                 style={{
                   fontSize: '0.76rem',
