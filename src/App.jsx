@@ -24,10 +24,10 @@ import WhatsAppSupportWidget from './components/WhatsAppSupportWidget.jsx';
 import Dashboard from './components/Dashboard';
 import InvoiceGenerator from './components/InvoiceGenerator';
 import QuickPOS from './components/QuickPOS';
-import SetupWizard from './components/SetupWizard';
 import ToastContainer, { toast } from './components/Toast';
 import ConfirmModalContainer from './components/ConfirmModal';
-import WelcomeGuide from './components/WelcomeGuide';
+import OnboardingWizard from './components/OnboardingWizard';
+import { UsageMeter } from './components/plans/PlanSettings';
 const SettingsView = lazy(() => import('./components/SettingsView'));
 const ClientsView = lazy(() => import('./components/ClientsView'));
 const InventoryView = lazy(() => import('./components/InventoryView'));
@@ -46,6 +46,7 @@ const SupportView = lazy(() => import('./components/SupportView'));
 import StarBanner from './components/StarBanner';
 import AppFooter from './components/AppFooter';
 import { getPrintSettings } from './utils/printSettings';
+import { t as tr } from './i18n';
 
 const openDocs = () => window.open(DOCS_URL, '_blank', 'noopener,noreferrer');
 
@@ -487,21 +488,21 @@ function BillingApp({ authUser, onSignOut, isDemoMode, onExitDemo }) {
   }, [currentView, JSON.stringify(enabledModules)]);
 
   const navItems = [
-    { id: 'dashboard', icon: Home, label: 'Dashboard', module: 'dashboard' },
-    { id: 'pos', icon: Zap, label: '⚡ Quick POS', module: 'dashboard', onClick: () => setCurrentView('pos') },
-    { id: 'new', icon: Plus, label: 'New Invoice', onClick: handleNewInvoice, module: 'invoicing' },
-    { id: 'clients', icon: Users, label: 'Clients', module: 'clients' },
-    { id: 'inventory', icon: Package, label: 'Products', module: 'inventory' },
-    { id: 'expenses', icon: Wallet, label: 'Expenses', module: 'expenses' },
-    { id: 'purchases', icon: ShoppingCart, label: 'Purchases', module: 'purchases' },
-    { id: 'recurring', icon: RefreshCw, label: 'Recurring', module: 'recurring' },
-    { id: 'receipts', icon: Receipt, label: 'Receipts', module: 'receipts' },
-    { id: 'reports', icon: BarChart3, label: 'Reports', module: 'reports' },
-    { id: 'filing', icon: BookOpen, label: 'GST Returns', module: 'gstReturns' },
-    { id: 'incometax', icon: Calculator, label: 'Income Tax', module: 'incomeTax' },
+    { id: 'dashboard', icon: Home, label: tr('nav.dashboard'), module: 'dashboard' },
+    { id: 'pos', icon: Zap, label: tr('nav.pos'), module: 'dashboard', onClick: () => setCurrentView('pos') },
+    { id: 'new', icon: Plus, label: tr('nav.newInvoice'), onClick: handleNewInvoice, module: 'invoicing' },
+    { id: 'clients', icon: Users, label: tr('nav.clients'), module: 'clients' },
+    { id: 'inventory', icon: Package, label: tr('nav.products'), module: 'inventory' },
+    { id: 'expenses', icon: Wallet, label: tr('nav.expenses'), module: 'expenses' },
+    { id: 'purchases', icon: ShoppingCart, label: tr('nav.purchases'), module: 'purchases' },
+    { id: 'recurring', icon: RefreshCw, label: tr('nav.recurring'), module: 'recurring' },
+    { id: 'receipts', icon: Receipt, label: tr('nav.receipts'), module: 'receipts' },
+    { id: 'reports', icon: BarChart3, label: tr('nav.reports'), module: 'reports' },
+    { id: 'filing', icon: BookOpen, label: tr('nav.gstReturns'), module: 'gstReturns' },
+    { id: 'incometax', icon: Calculator, label: tr('nav.incomeTax'), module: 'incomeTax' },
     // v1.10.75 - opens the online documentation, which covers every screen
     // and stays current; the old built-in guide had fallen far behind.
-    { id: 'guide', icon: HelpCircle, label: 'User Guide', module: 'dashboard', onClick: openDocs }, // gated by dashboard so it's always available
+    { id: 'guide', icon: HelpCircle, label: tr('nav.guide'), module: 'dashboard', onClick: openDocs }, // gated by dashboard so it's always available
   ].filter(item => showIfModule(item.module));
 
   // Command palette actions — declared here (not earlier) because the deps
@@ -510,7 +511,7 @@ function BillingApp({ authUser, onSignOut, isDemoMode, onExitDemo }) {
   // ReferenceError ("Cannot access 'X' before initialization") at runtime.
   const paletteActions = useMemo(() => {
     const acts = [
-      { label: 'New Invoice', hint: 'Ctrl+N', category: 'action', run: () => { handleNewInvoice(); } },
+      { label: tr('nav.newInvoice'), hint: 'Ctrl+N', category: 'action', run: () => { handleNewInvoice(); } },
     ];
     navItems.forEach(item => {
       if (item.id === 'new') return; // already covered above
@@ -726,16 +727,17 @@ function BillingApp({ authUser, onSignOut, isDemoMode, onExitDemo }) {
     <>
       {showWelcome ? (
         <>
-          <WelcomeGuide onComplete={(p) => {
+          <OnboardingWizard profile={profile} onDone={(p) => {
             if (p) setProfile(p);
             setShowWelcome(false);
+            setShowWizard(false);
           }} />
           <ToastContainer />
           <ConfirmModalContainer />
         </>
       ) : (
         <div className="app-layout">
-          {showWizard && <SetupWizard onClose={() => setShowWizard(false)} />}
+          {showWizard && <OnboardingWizard profile={profile} onDone={(p) => { if (p) setProfile(p); setShowWizard(false); }} />}
           {showResumeSetupPill && (
             <button type="button"
               onClick={() => setShowWizard(true)}
@@ -749,14 +751,14 @@ function BillingApp({ authUser, onSignOut, isDemoMode, onExitDemo }) {
                 boxShadow: '0 6px 20px rgba(30,64,175,0.35), 0 2px 4px rgba(0,0,0,0.15)',
                 display: 'flex', alignItems: 'center', gap: '0.4rem',
               }}>
-              ✨ Finish setup
+              {tr('nav.finishSetup')}
             </button>
           )}
       {/* v1.10.66 (#59) — phone-only top bar with the menu button. CSS hides it
           on wider screens, where the sidebar is always shown. */}
       <div className="mobile-topbar">
         <button type="button" className="mobile-topbar-btn" onClick={() => setNavOpen(true)}
-          aria-label="Open menu" aria-expanded={navOpen}>
+          aria-label={tr('nav.openMenu')} aria-expanded={navOpen}>
           <Menu size={22} />
         </button>
         <span className="mobile-topbar-title">GST Billing</span>
@@ -901,7 +903,7 @@ function BillingApp({ authUser, onSignOut, isDemoMode, onExitDemo }) {
               onClick={() => setCurrentView('support')}
               title="Who makes this app, and how to help"
             >
-              <Heart size={18} style={{ color: '#e11d48' }} /> Support &amp; About
+              <Heart size={18} style={{ color: '#e11d48' }} /> {tr('nav.support')}
             </button>
             {/* Control Panel (desktop-only: ZIP backups in Documents, git
                 updater, move-to-another-PC) is hidden in the hosted SaaS. */}
@@ -910,7 +912,7 @@ function BillingApp({ authUser, onSignOut, isDemoMode, onExitDemo }) {
               onClick={() => setCurrentView('settings')}
               style={updateBannerVisible ? { position: 'relative' } : undefined}
             >
-              <Settings size={18} /> Settings
+              <Settings size={18} /> {tr('nav.settings')}
               {updateBannerVisible && (
                 <span style={{
                   position: 'absolute', top: '8px', right: '12px',
@@ -924,6 +926,7 @@ function BillingApp({ authUser, onSignOut, isDemoMode, onExitDemo }) {
               {serverStatus === 'online' ? 'App Ready' : serverStatus === 'offline' ? 'App Not Running' : 'Connecting...'}
             </div>
           </div>
+          <UsageMeter />
         </nav>
       </div>
 

@@ -16,6 +16,7 @@ import BarcodeScannerModal from './BarcodeScannerModal';
 import QuickStockModal from './QuickStockModal';
 import MasterCatalogModal from './MasterCatalogModal';
 import InvoicePreview from './InvoicePreview';
+import { t as tr } from '../i18n';
 
 // Web Audio API Sound Synthesizer for Counter Scanners (100% Offline, Zero-Latency)
 const playAudioFeedback = (type = 'beep', soundEnabled = true) => {
@@ -969,7 +970,7 @@ export default function QuickPOS({ onBackToDashboard, onPrintInvoice }) {
           </div>
           <div>
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-              <h2 style={{ margin: 0, fontSize: '1.15rem', fontWeight: 800 }}>⚡ Counter Billing POS</h2>
+              <h2 style={{ margin: 0, fontSize: '1.15rem', fontWeight: 800 }}>{tr('pos.title')}</h2>
               <span
                 style={{
                   background: billType === 'gst' ? '#1d4ed8' : '#047857',

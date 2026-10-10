@@ -9,6 +9,7 @@ import { toast } from './Toast';
 import { confirmAction } from './ConfirmModal';
 import HelpButton from './HelpButton';
 import { productSellingPrice, productTaxPercent } from '../utils/products.js';
+import { t as tr } from '../i18n';
 
 // v1.10.29 — reported: "here purchase price and selling price need".
 // Product now carries BOTH: `purchasePrice` (what we paid the supplier) and
@@ -244,7 +245,7 @@ export default function InventoryView() {
       <div className="page-header">
         <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
           <div>
-            <h1 className="page-title">Products</h1>
+            <h1 className="page-title">{tr('products.title')}</h1>
             <p className="page-subtitle">Manage your products and services catalog</p>
           </div>
           <HelpButton title="Products — how to use" doc="products">
@@ -377,7 +378,7 @@ export default function InventoryView() {
             <Package size={48} />
             <p>{products.length === 0 ? 'No products yet. Add your first product.' : 'No products match your search.'}</p>
             {products.length === 0 && (
-              <button className="btn btn-primary" onClick={openAdd}><Plus size={18} /> Add Product</button>
+              <button className="btn btn-primary" onClick={openAdd}><Plus size={18} /> {tr('products.add')}</button>
             )}
           </div>
         ) : (

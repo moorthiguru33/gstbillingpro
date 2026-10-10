@@ -1,8 +1,26 @@
-import { StrictMode, Component } from 'react'
+import { StrictMode, Component, lazy, Suspense } from 'react'
 import { createRoot } from 'react-dom/client'
 import { registerSW } from 'virtual:pwa-register'
+import { useTranslation } from 'react-i18next'
+import './i18n'
 import App from './App.jsx'
 import './index.css'
+
+// /admin is a separate, lazily loaded screen (its own chunk). Access is
+// decided by the server (/api/admin/*), never by this route.
+const AdminApp = lazy(() => import('./components/admin/AdminApp.jsx'))
+const isAdminRoute = () => /^\/admin\/?$/.test(window.location.pathname)
+
+// Re-render the whole tree when the UI language changes. <App /> is created
+// here (not passed in as children) so React does not bail out of the update.
+// eslint-disable-next-line react-refresh/only-export-components
+function Root() {
+  useTranslation()
+  if (isAdminRoute()) {
+    return <Suspense fallback={<div style={{ padding: '2rem', fontFamily: 'Inter, sans-serif' }}>Loading…</div>}><AdminApp /></Suspense>
+  }
+  return <App />
+}
 
 // v1.10.2 — Deferred SW update. Prior code called `updateSW(true)`
 // inside `onNeedRefresh` which triggers `location.reload()` immediately.
@@ -210,7 +228,7 @@ class ErrorBoundary extends Component {
 createRoot(document.getElementById('root')).render(
   <StrictMode>
     <ErrorBoundary>
-      <App />
+      <Root />
     </ErrorBoundary>
   </StrictMode>,
 )

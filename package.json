@@ -98,10 +98,12 @@
     "bundle:tesseract": "node scripts/bundle-tesseract-assets.mjs",
     "release:zip": "npm run build && node scripts/build-release-zip.mjs && node scripts/verify-release.mjs",
     "test": "npm run test:unit && node tests/smoke.mjs",
-    "test:unit": "node scripts/tax-test.mjs && node scripts/discount-modes-test.mjs && node scripts/csv-test.mjs && node scripts/plans-test.mjs && node scripts/store-helpers-test.mjs && node scripts/ocr-parse-test.mjs && node scripts/hsn-summary-test.mjs && node scripts/billing-test.mjs && node scripts/gen-plan-sql.mjs --check",
+    "test:unit": "node scripts/tax-test.mjs && node scripts/discount-modes-test.mjs && node scripts/csv-test.mjs && node scripts/plans-test.mjs && node scripts/store-helpers-test.mjs && node scripts/ocr-parse-test.mjs && node scripts/hsn-summary-test.mjs && node scripts/billing-test.mjs && node scripts/gen-plan-sql.mjs --check && node scripts/i18n-check.mjs && node scripts/seo-pages.mjs --check",
     "test:install": "playwright install firefox",
     "test:update-unix": "node scripts/test-update-unix.mjs",
-    "verify:release": "node scripts/verify-release.mjs"
+    "verify:release": "node scripts/verify-release.mjs",
+    "i18n:check": "node scripts/i18n-check.mjs",
+    "seo:pages": "node scripts/seo-pages.mjs"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.47.10",
