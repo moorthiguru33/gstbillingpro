@@ -1221,7 +1221,7 @@ function BillingApp({ authUser, onSignOut, isDemoMode, onExitDemo }) {
       )}
       {mobileSheet === 'more' && (
         <BottomSheet title={tr('mobile.more')} onClose={() => setMobileSheet(null)}>
-          <div className="msheet-grid">
+          <div className="msheet-grid msheet-grid-4">
             {navItems.filter(item => roleCanView(item.id) && !['dashboard'].includes(item.id)).map(item => (
               <button type="button" key={item.id} className={`msheet-tile${currentView === item.id ? ' active' : ''}`}
                 onClick={() => { setMobileSheet(null); setBillsTab(false); if (item.onClick) item.onClick(); else setCurrentView(item.id); }}>

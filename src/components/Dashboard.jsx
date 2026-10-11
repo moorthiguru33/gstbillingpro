@@ -1228,8 +1228,8 @@ export default function Dashboard({ onNew, onEdit, onDuplicate, onConvert, onOpe
           from real data rather than from "have you seen this screen", and
           removes itself for good once everything is set up. */}
       {startedSteps && (
-        <div className="glass-panel p-6 mb-6">
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', marginBottom: '0.9rem' }}>
+        <div className="glass-panel p-6 mb-6 mchecklist">
+          <div className="mcl-head" style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', marginBottom: '0.9rem' }}>
             <span style={{ fontSize: '1.15rem' }}>👋</span>
             <h3 className="section-title" style={{ margin: 0, flex: 1 }}>{tr('checklist.title')}</h3>
             <span style={{ fontSize: '0.78rem', color: 'var(--text-muted)' }}>
@@ -1242,7 +1242,7 @@ export default function Dashboard({ onNew, onEdit, onDuplicate, onConvert, onOpe
             </button>
           </div>
           {startedSteps.map((s) => (
-            <div key={s.key} style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', padding: '0.55rem 0', borderTop: '1px solid var(--border-color)' }}>
+            <div key={s.key} className={`mcl-row${s.done ? ' mcl-done' : ''}`} style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', padding: '0.55rem 0', borderTop: '1px solid var(--border-color)' }}>
               <span style={{ width: 22, height: 22, flexShrink: 0, borderRadius: '50%', display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
                 background: s.done ? 'rgba(5, 150, 105, 0.16)' : 'transparent', border: s.done ? 'none' : '1.5px solid var(--border-color)' }}>
                 {s.done && <CheckCircle size={15} style={{ color: '#059669' }} />}
@@ -1257,7 +1257,7 @@ export default function Dashboard({ onNew, onEdit, onDuplicate, onConvert, onOpe
               )}
             </div>
           ))}
-          <div style={{ marginTop: '0.9rem', fontSize: '0.78rem', color: 'var(--text-muted)' }}>
+          <div className="mcl-foot" style={{ marginTop: '0.9rem', fontSize: '0.78rem', color: 'var(--text-muted)' }}>
             {tr('checklist.newHere')}{' '}
             <button type="button" onClick={onOpenGuide}
               style={{ background: 'none', border: 0, padding: 0, font: 'inherit', color: 'var(--primary)', textDecoration: 'underline', cursor: 'pointer' }}>
@@ -1436,7 +1436,7 @@ export default function Dashboard({ onNew, onEdit, onDuplicate, onConvert, onOpe
       <div className="glass-panel" id="invoice-list">
         <div className="table-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '0.5rem', marginBottom: '0.75rem' }}>
           <h3 style={{ margin: 0 }}>Invoices</h3>
-          <div style={{ display: 'flex', gap: '0.35rem', background: 'var(--bg-secondary, #f1f5f9)', padding: 3, borderRadius: 8, border: '1px solid var(--border, #cbd5e1)' }}>
+          <div className="mseg" style={{ display: 'flex', gap: '0.35rem', background: 'var(--bg-secondary, #f1f5f9)', padding: 3, borderRadius: 8, border: '1px solid var(--border, #cbd5e1)' }}>
             <button
               type="button"
               onClick={() => setTaxModeFilter('all')}
@@ -1538,7 +1538,7 @@ export default function Dashboard({ onNew, onEdit, onDuplicate, onConvert, onOpe
         {/* v1.9.1 — Quick bulk-print filters. One-click "print everything
              matching X" without needing to manually tick rows. Useful for
              month-end filing, wholesale reminders, CA handoffs. */}
-        <div style={{
+        <div className="mquickprint" style={{
           padding: '0.5rem 0.85rem', display: 'flex', gap: '0.5rem', flexWrap: 'wrap',
           alignItems: 'center', borderBottom: '1px solid var(--border)',
         }}>
