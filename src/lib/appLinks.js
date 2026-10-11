@@ -1,0 +1,6 @@
+// Download links for the native wrappers (GitHub Release assets).
+const REL = 'https://github.com/moorthiguru33/gstbillingpro/releases';
+export const WINDOWS_DOWNLOAD_URL = `${REL}/download/desktop-v1.0.0/GST-Billing-Pro-Setup-1.0.0.exe`;
+export const WINDOWS_PORTABLE_URL = `${REL}/download/desktop-v1.0.0/GST-Billing-Pro-Portable-1.0.0.exe`;
+export const ANDROID_DOWNLOAD_URL = `${REL}/download/android-v1.0.0/gst-billing-pro-1.0.0.apk`;
+export const RELEASES_URL = REL;

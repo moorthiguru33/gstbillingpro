@@ -49,6 +49,10 @@ import StarBanner from './components/StarBanner';
 import AppFooter from './components/AppFooter';
 import { getPrintSettings } from './utils/printSettings';
 import { t as tr } from './i18n';
+import BottomTabBar from './components/mobile/BottomTabBar';
+import BottomSheet from './components/mobile/BottomSheet';
+import useMobileEnhancements from './components/mobile/useMobileEnhancements';
+import { WINDOWS_DOWNLOAD_URL, ANDROID_DOWNLOAD_URL } from './lib/appLinks';
 
 const openDocs = () => window.open(DOCS_URL, '_blank', 'noopener,noreferrer');
 
@@ -415,6 +419,16 @@ function BillingApp({ authUser, onSignOut, isDemoMode, onExitDemo }) {
   // covering the page that was just asked for. Opening the business list is
   // the one exception: that choice is not finished yet.
   const [navOpen, setNavOpen] = useState(false);
+  // Phone navigation: bottom tabs + sheets (CSS hides them on desktop).
+  const [mobileSheet, setMobileSheet] = useState(null); // 'new' | 'more' | 'biz' | null
+  const [billsTab, setBillsTab] = useState(false);
+  useMobileEnhancements();
+  const openBillsList = () => {
+    setBillsTab(true);
+    setCurrentView('dashboard');
+    setTimeout(() => document.getElementById('invoice-list')?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 250);
+  };
+  const goMobile = (view) => { setMobileSheet(null); setBillsTab(false); if (view === 'bills') openBillsList(); else setCurrentView(view); };
   const closeNavAfterPick = (e) => {
     const picked = e.target.closest('button');
     if (picked && !picked.classList.contains('profile-switcher-btn')) setNavOpen(false);
@@ -761,12 +775,24 @@ function BillingApp({ authUser, onSignOut, isDemoMode, onExitDemo }) {
       {/* v1.10.66 (#59) — phone-only top bar with the menu button. CSS hides it
           on wider screens, where the sidebar is always shown. */}
       <div className="mobile-topbar">
+        <button type="button" className="mobile-biz"
+          onClick={() => (allProfiles.length > 1 ? setMobileSheet('biz') : setCurrentView('settings'))}
+          aria-label={allProfiles.length > 1 ? tr('mobile.switchBusiness') : tr('nav.settings')}>
+          <span className="mobile-biz-avatar" aria-hidden="true">{(profile?.businessName || 'G').trim().charAt(0).toUpperCase()}</span>
+          <span className="mobile-biz-text">
+            <span className="mobile-biz-name">{profile?.businessName || 'GST Billing Pro'}</span>
+            <span className="mobile-biz-sub">{allProfiles.length > 1 ? tr('mobile.switchBusiness') : 'GST Billing Pro'}</span>
+          </span>
+          {allProfiles.length > 1 && <ChevronDown size={16} />}
+        </button>
+        <button type="button" className="mobile-topbar-btn" onClick={() => setShowNotifs(s => !s)} aria-label="Notifications" style={{ position: 'relative' }}>
+          <Bell size={20} />
+          {notifTotal > 0 && <span className="mobile-badge">{notifTotal > 99 ? '99+' : notifTotal}</span>}
+        </button>
         <button type="button" className="mobile-topbar-btn" onClick={() => setNavOpen(true)}
           aria-label={tr('nav.openMenu')} aria-expanded={navOpen}>
           <Menu size={22} />
         </button>
-        <span className="mobile-topbar-title">GST Billing</span>
-        <span className="mobile-topbar-business">{profile?.businessName || ''}</span>
       </div>
       {navOpen && <div className="sidebar-backdrop" onClick={() => setNavOpen(false)} aria-hidden="true" />}
       <div className={`sidebar${navOpen ? ' sidebar-open' : ''}`} onClick={closeNavAfterPick}>
@@ -945,9 +971,9 @@ function BillingApp({ authUser, onSignOut, isDemoMode, onExitDemo }) {
           <button className="pwa-dismiss-btn" onClick={dismissInstallBanner} title="Remind me later (re-shows in 14 days)"><X size={16} /></button>
         </div>
       )}
-      <div className="main-content">
+      <div className={`main-content view-${currentView}`}>
         {isDemoMode && (
-          <div style={{
+          <div className="demo-banner" style={{
             background: 'linear-gradient(90deg, #059669, #10b981)',
             color: '#fff',
             padding: '0.65rem 1.25rem',
@@ -962,7 +988,8 @@ function BillingApp({ authUser, onSignOut, isDemoMode, onExitDemo }) {
           }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
               <Zap size={18} color="#fff" />
-              <span style={{ fontSize: '0.88rem', fontWeight: 600 }}>
+              <span className="lbl-short" style={{ fontWeight: 700 }}>Live Demo</span>
+              <span className="lbl-long" style={{ fontSize: '0.88rem', fontWeight: 600 }}>
                 ⚡ <strong>Live Demo Mode:</strong> You are exploring with sample data. Create bills, test thermal printing, or add products freely!
               </span>
             </div>
@@ -988,7 +1015,7 @@ function BillingApp({ authUser, onSignOut, isDemoMode, onExitDemo }) {
         )}
         {currentView !== 'new' && <StarBanner />}
         {currentView === 'dashboard' && (
-          <Dashboard onNew={handleNewInvoice} onEdit={handleEditInvoice} onDuplicate={handleDuplicateInvoice} onConvert={handleConvertToInvoice} onOpenProducts={() => setCurrentView('inventory')} onOpenSettings={() => setCurrentView('settings')} onOpenGuide={openDocs} onOpenSupport={() => setCurrentView('support')} activeProfile={profile} onOpenPOS={() => setCurrentView('pos')} />
+          <Dashboard onNew={handleNewInvoice} onEdit={handleEditInvoice} onDuplicate={handleDuplicateInvoice} onConvert={handleConvertToInvoice} onOpenProducts={() => setCurrentView('inventory')} onOpenSettings={() => setCurrentView('settings')} onOpenGuide={openDocs} onOpenSupport={() => setCurrentView('support')} activeProfile={profile} onOpenPOS={() => setCurrentView('pos')} onNavigate={goMobile} />
         )}
         {currentView === 'pos' && (
           <QuickPOS
@@ -1055,6 +1082,69 @@ function BillingApp({ authUser, onSignOut, isDemoMode, onExitDemo }) {
         {/* Brand + legal links footer: Dashboard only, so it never takes space on working screens. */}
         {currentView === 'dashboard' && <AppFooter onOpenSupport={() => setCurrentView('support')} />}
       </div>
+
+      {currentView !== 'new' && currentView !== 'pos' && (
+        <BottomTabBar
+          active={mobileSheet === 'more' ? 'more' : currentView === 'dashboard' ? (billsTab ? 'bills' : 'home') : currentView === 'inventory' ? 'items' : 'more'}
+          onHome={() => { setBillsTab(false); setCurrentView('dashboard'); document.querySelector('.main-content')?.scrollTo({ top: 0, behavior: 'smooth' }); }}
+          onBills={openBillsList}
+          onNew={() => setMobileSheet('new')}
+          onItems={() => goMobile('inventory')}
+          onMore={() => setMobileSheet('more')}
+        />
+      )}
+      {mobileSheet === 'new' && (
+        <BottomSheet title={tr('mobile.createNew')} onClose={() => setMobileSheet(null)}>
+          <div className="msheet-grid">
+            {[
+              { icon: FileText, label: tr('mobile.newInvoice'), run: () => { setMobileSheet(null); handleNewInvoice(); }, show: showIfModule('invoicing') },
+              { icon: Zap, label: tr('mobile.counterSale'), run: () => goMobile('pos'), show: true },
+              { icon: ShoppingCart, label: tr('mobile.purchase'), run: () => goMobile('purchases'), show: showIfModule('purchases') },
+              { icon: Wallet, label: tr('mobile.expense'), run: () => goMobile('expenses'), show: showIfModule('expenses') },
+              { icon: Receipt, label: tr('nav.receipts'), run: () => goMobile('receipts'), show: showIfModule('receipts') },
+              { icon: Users, label: tr('mobile.parties'), run: () => goMobile('clients'), show: showIfModule('clients') },
+            ].filter(a => a.show).map(a => (
+              <button type="button" key={a.label} className="msheet-tile" onClick={a.run}>
+                <span className="msheet-tile-icon"><a.icon size={24} /></span><span>{a.label}</span>
+              </button>
+            ))}
+          </div>
+        </BottomSheet>
+      )}
+      {mobileSheet === 'more' && (
+        <BottomSheet title={tr('mobile.more')} onClose={() => setMobileSheet(null)}>
+          <div className="msheet-grid">
+            {navItems.filter(item => roleCanView(item.id) && !['dashboard'].includes(item.id)).map(item => (
+              <button type="button" key={item.id} className={`msheet-tile${currentView === item.id ? ' active' : ''}`}
+                onClick={() => { setMobileSheet(null); setBillsTab(false); if (item.onClick) item.onClick(); else setCurrentView(item.id); }}>
+                <span className="msheet-tile-icon"><item.icon size={24} /></span><span>{item.label}</span>
+              </button>
+            ))}
+            <button type="button" className="msheet-tile" onClick={() => goMobile('settings')}><span className="msheet-tile-icon"><Settings size={24} /></span><span>{tr('nav.settings')}</span></button>
+            <button type="button" className="msheet-tile" onClick={() => goMobile('support')}><span className="msheet-tile-icon"><Heart size={24} /></span><span>{tr('nav.support')}</span></button>
+            <button type="button" className="msheet-tile" onClick={() => { setMobileSheet(null); setDarkMode(!darkMode); }}><span className="msheet-tile-icon">{darkMode ? <Sun size={24} /> : <Moon size={24} />}</span><span>{darkMode ? 'Light' : 'Dark'}</span></button>
+          </div>
+          <div className="msheet-links">
+            <a className="btn btn-secondary" href={ANDROID_DOWNLOAD_URL} target="_blank" rel="noopener noreferrer"><Download size={18} /> {tr('mobile.getAndroid')}</a>
+            <a className="btn btn-secondary" href={WINDOWS_DOWNLOAD_URL} target="_blank" rel="noopener noreferrer"><Download size={18} /> {tr('mobile.downloadWindows')}</a>
+            <button type="button" className="btn btn-secondary" onClick={() => { setMobileSheet(null); handleSignOut(); }}><LogOut size={18} /> {tr('mobile.signOut')}</button>
+          </div>
+        </BottomSheet>
+      )}
+      {mobileSheet === 'biz' && (
+        <BottomSheet title={tr('mobile.switchBusiness')} onClose={() => setMobileSheet(null)}>
+          <div className="msheet-list">
+            {allProfiles.map(bp => (
+              <button type="button" key={bp.id || bp.businessName}
+                className={`msheet-row${bp.businessName?.trim().toLowerCase() === profile?.businessName?.trim().toLowerCase() ? ' active' : ''}`}
+                onClick={() => { setMobileSheet(null); handleSwitchProfile(bp); }}>
+                <Building2 size={20} /> <span>{bp.businessName}</span>
+              </button>
+            ))}
+            <button type="button" className="msheet-row" onClick={() => goMobile('settings')}><Pencil size={18} /> <span>{tr('mobile.manageBusinesses')}</span></button>
+          </div>
+        </BottomSheet>
+      )}
 
       {/* Update modal — release notes + Export-backup-first nudge + Update Now */}
       {/* Notification popover — rendered as a click-out modal so it works on

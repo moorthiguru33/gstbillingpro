@@ -7,6 +7,7 @@ import UnassignedBanner from './UnassignedBanner';
 import { getPrintSettings } from '../utils/printSettings';
 import { toast } from './Toast';
 import { confirmAction, promptAction } from './ConfirmModal';
+import { t as i18nT } from '../i18n';
 
 // v1.10.31 — UI-C3: Same accent-color helper as ClientsView so the
 // Purchase Bill PDF header rule + totals line pick up the user's brand.
@@ -181,7 +182,7 @@ export default function PurchaseBills() {
       // always shown, so nothing disappears from an existing ledger.
       setPurchases((rows || []).filter(r => belongsToProfile(r, prof)));
     } catch {
-      toast('Failed to load purchases', 'error');
+      toast(i18nT('ui.failedToLoadPurchases'), 'error');
     }
   };
 
@@ -368,13 +369,13 @@ export default function PurchaseBills() {
       doc.save(filename);
     } catch (err) {
       console.error('Purchase PDF failed:', err);
-      toast('Could not generate PDF — see console', 'error');
+      toast(i18nT('ui.couldNotGeneratePdfSeeConsole'), 'error');
     }
   };
 
   const handleSave = async () => {
-    if (!form.supplierName.trim()) { toast('Supplier name is required', 'warning'); return; }
-    if (!form.invoiceNumber.trim()) { toast('Invoice number is required', 'warning'); return; }
+    if (!form.supplierName.trim()) { toast(i18nT('ui.supplierNameIsRequired'), 'warning'); return; }
+    if (!form.invoiceNumber.trim()) { toast(i18nT('ui.invoiceNumberIsRequired'), 'warning'); return; }
     // v1.10.58 — reported (#47 item 2, @sangwanmail-eng): "Purchase also
     // save without adding any product." Supplier and invoice number were
     // checked, but nothing verified the bill had any line items, so an
@@ -384,7 +385,7 @@ export default function PurchaseBills() {
     // bill sits in GSTR-3B reconciliation as a vendor invoice claiming
     // nothing, and the empty rows also feed the stock/product sync on save.
     if (!form.items.some(i => (i.name || '').trim() && (parseFloat(i.quantity) || 0) * (parseFloat(i.rate) || 0) > 0)) {
-      toast('Add at least one item with a quantity and rate', 'warning');
+      toast(i18nT('ui.addAtLeastOneItemWith2'), 'warning');
       return;
     }
     try {
@@ -531,7 +532,7 @@ export default function PurchaseBills() {
         toast(editingId ? 'Purchase updated' : 'Purchase added — items synced to Products', 'success');
       } catch (e) {
         console.warn('Products auto-sync from purchase failed (non-fatal):', e);
-        toast('Purchase saved, but updating stock in Products failed - check them there', 'warning');
+        toast(i18nT('ui.purchaseSavedButUpdatingStockIn'), 'warning');
       }
 
       closeForm();
@@ -542,7 +543,7 @@ export default function PurchaseBills() {
       // suggestions until the page was reloaded.
       loadProducts();
     } catch {
-      toast('Failed to save purchase', 'error');
+      toast(i18nT('ui.failedToSavePurchase'), 'error');
     }
   };
 
@@ -556,7 +557,7 @@ export default function PurchaseBills() {
       toast(`Marked ${paymentStatus.toLowerCase()}`, 'success');
       loadPurchases();
     } catch {
-      toast('Could not change the status', 'error');
+      toast(i18nT('ui.couldNotChangeTheStatus'), 'error');
     }
   };
 
@@ -581,9 +582,9 @@ export default function PurchaseBills() {
 
   const handleDelete = async (id) => {
     if (await confirmAction({
-      title: 'Delete this purchase bill?',
-      message: 'Stock levels for the products in this bill will be reverted. Any GST ITC already claimed against this bill in past returns stays as filed.',
-      confirmLabel: 'Delete',
+      title: i18nT('ui.deleteThisPurchaseBill'),
+      message: i18nT('ui.stockLevelsForTheProductsIn'),
+      confirmLabel: i18nT('ui.delete'),
       tone: 'danger',
     })) {
       try {
@@ -596,7 +597,7 @@ export default function PurchaseBills() {
         toast(stockOk ? 'Purchase deleted' : 'Purchase deleted, but its stock could not be taken out of Products', stockOk ? 'success' : 'warning');
         loadPurchases();
       } catch {
-        toast('Failed to delete', 'error');
+        toast(i18nT('ui.failedToDelete'), 'error');
       }
     }
   };
@@ -804,7 +805,7 @@ export default function PurchaseBills() {
   };
 
   const exportCSV = () => {
-    if (filtered.length === 0) { toast('No purchases to export', 'warning'); return; }
+    if (filtered.length === 0) { toast(i18nT('ui.noPurchasesToExport'), 'warning'); return; }
     // v1.10.74 - Cess and Inter-state columns; Tax never included cess.
     const headers = ['Date', 'Supplier', 'GSTIN', 'Invoice No', 'Taxable Amount', 'Tax (excl. cess)', 'Cess', 'Inter-state', 'Round-off', 'Total', 'Status', 'Note'];
     // v1.10.66 (#63) — toCsvLine neutralises formula-like text and quotes
@@ -819,7 +820,7 @@ export default function PurchaseBills() {
     const a = document.createElement('a');
     a.href = url; a.download = 'purchases.csv'; a.click();
     URL.revokeObjectURL(url);
-    toast('Purchases CSV downloaded', 'success');
+    toast(i18nT('ui.purchasesCsvDownloaded'), 'success');
   };
 
   const formTotals = calcPurchaseTotal(form.items, form.applyRoundOff);
@@ -829,31 +830,31 @@ export default function PurchaseBills() {
       <div className="page-header">
         <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
           <div>
-            <h1 className="page-title">Purchase Bills</h1>
-            <p className="page-subtitle">Track supplier invoices for ITC claims in GSTR-3B</p>
+            <h1 className="page-title">{i18nT('ui.purchaseBills')}</h1>
+            <p className="page-subtitle">{i18nT('ui.trackSupplierInvoicesForItcClaims')}</p>
           </div>
-          <HelpButton title="Purchase Bills — how to use" doc="purchases">
+          <HelpButton title={i18nT('ui.purchaseBillsHowToUse')} doc="purchases">
             <ul style={{ paddingLeft: '1.1rem', margin: 0 }}>
-              <li><strong>Add Purchase</strong> — record every supplier tax invoice you receive. The GST paid becomes your ITC (input tax credit) in GSTR-3B.</li>
-              <li><strong>Import from image (OCR)</strong> — snap the supplier's invoice with your phone. The app reads the supplier, GSTIN, invoice number, date, total and the item lines it can find, all on your computer. Check every field before saving.</li>
-              <li><strong>Interstate toggle</strong> — flip ON when the supplier is in a different state (they charged IGST) so ITC routes correctly.</li>
-              <li><strong>Payment status</strong> — Unpaid / Partial / Paid drives the "amount payable to suppliers" report.</li>
-              <li><strong>Export CSV</strong> — hand to your CA at return time.</li>
+              <li><strong>{i18nT('ui.addPurchase')}</strong> {i18nT('ui.recordEverySupplierTaxInvoiceYou')}</li>
+              <li><strong>{i18nT('ui.importFromImageOcr')}</strong> — snap the supplier's invoice with your phone. The app reads the supplier, GSTIN, invoice number, date, total and the item lines it can find, all on your computer. Check every field before saving.</li>
+              <li><strong>{i18nT('ui.interstateToggle')}</strong> {i18nT('ui.flipOnWhenTheSupplierIs')}</li>
+              <li><strong>{i18nT('ui.paymentStatus')}</strong> {i18nT('ui.unpaidPartialPaidDrivesTheAmount')}</li>
+              <li><strong>{i18nT('ui.exportCsv')}</strong> {i18nT('ui.handToYourCaAtReturn')}</li>
             </ul>
           </HelpButton>
         </div>
         <div className="flex gap-2">
-          <button className="btn btn-secondary" onClick={exportCSV}><Download size={16} /> Export CSV</button>
-          <button className="btn btn-secondary" onClick={() => setShowOCR(true)} title="Extract fields from a bill photo/scan">
-            <Wand2 size={16} /> Import from image (OCR)
+          <button className="btn btn-secondary" onClick={exportCSV}><Download size={16} /> {i18nT('ui.exportCsv')}</button>
+          <button className="btn btn-secondary" onClick={() => setShowOCR(true)} title={i18nT('ui.extractFieldsFromABillPhoto')}>
+            <Wand2 size={16} /> {i18nT('ui.importFromImageOcr')}
           </button>
-          <button className="btn btn-primary" onClick={openAdd}><Plus size={18} /> Add Purchase</button>
+          <button className="btn btn-primary" onClick={openAdd}><Plus size={18} /> {i18nT('ui.addPurchase')}</button>
         </div>
       </div>
 
       {/* v1.10.22 — Bill OCR modal (tesseract.js, lazy-loaded). */}
       {showOCR && (
-        <Suspense fallback={<div className="modal-overlay"><div className="modal-content" style={{ maxWidth: 320, textAlign: 'center' }}>Loading OCR…</div></div>}>
+        <Suspense fallback={<div className="modal-overlay"><div className="modal-content" style={{ maxWidth: 320, textAlign: 'center' }}>{i18nT('ui.loadingOcr')}</div></div>}>
           <BillOCR onClose={() => setShowOCR(false)} onExtracted={applyOCR} />
         </Suspense>
       )}
@@ -866,15 +867,15 @@ export default function PurchaseBills() {
           <div className="modal-overlay" onClick={() => setViewPurchase(null)}>
             <div className="modal-content" onClick={e => e.stopPropagation()} style={{ maxWidth: 720 }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
-                <h3 className="section-title" style={{ margin: 0 }}>Purchase Bill · {p.invoiceNumber || '—'}</h3>
-                <button className="icon-btn" onClick={() => setViewPurchase(null)} title="Close"><X size={18} /></button>
+                <h3 className="section-title" style={{ margin: 0 }}>{i18nT('ui.purchaseBill')} {p.invoiceNumber || '—'}</h3>
+                <button className="icon-btn" onClick={() => setViewPurchase(null)} title={i18nT('ui.close')}><X size={18} /></button>
               </div>
               <div style={{ fontSize: '0.85rem', color: 'var(--text-muted)', marginBottom: '1rem' }}>
                 {p.date ? new Date(p.date).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) : ''} · {p.paymentStatus || 'Unpaid'} · {p.interstate ? 'Interstate (IGST)' : 'Intrastate (CGST+SGST)'}
               </div>
               {/* Supplier block */}
               <div style={{ background: 'var(--bg-secondary)', padding: '0.75rem 1rem', borderRadius: 6, marginBottom: '1rem' }}>
-                <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', textTransform: 'uppercase', marginBottom: 4 }}>Supplier</div>
+                <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', textTransform: 'uppercase', marginBottom: 4 }}>{i18nT('ui.supplier')}</div>
                 <div style={{ fontWeight: 600 }}>{p.supplierName || '—'}</div>
                 {p.supplierAddress && <div style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>{p.supplierAddress}</div>}
                 {p.supplierGstin && <div style={{ fontSize: '0.82rem' }}>GSTIN: <strong>{p.supplierGstin}</strong></div>}
@@ -885,12 +886,12 @@ export default function PurchaseBills() {
                   <thead>
                     <tr>
                       <th>#</th>
-                      <th>Description</th>
+                      <th>{i18nT('ui.description')}</th>
                       <th>HSN</th>
-                      <th style={{ textAlign: 'right' }}>Qty</th>
-                      <th style={{ textAlign: 'right' }}>Rate</th>
+                      <th style={{ textAlign: 'right' }}>{i18nT('ui.qty')}</th>
+                      <th style={{ textAlign: 'right' }}>{i18nT('ui.rate')}</th>
                       <th style={{ textAlign: 'right' }}>GST%</th>
-                      <th style={{ textAlign: 'right' }}>Amount</th>
+                      <th style={{ textAlign: 'right' }}>{i18nT('ui.amount')}</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -914,7 +915,7 @@ export default function PurchaseBills() {
               </div>
               {/* Totals */}
               <div style={{ display: 'grid', gridTemplateColumns: '1fr auto', gap: '0.35rem 1rem', fontSize: '0.9rem', maxWidth: 320, marginLeft: 'auto' }}>
-                <span style={{ color: 'var(--text-muted)' }}>Taxable</span>
+                <span style={{ color: 'var(--text-muted)' }}>{i18nT('ui.taxable')}</span>
                 <span style={{ textAlign: 'right' }}>{formatCurrency(t.taxable)}</span>
                 {/* v1.10.74 - tax split: IGST, or CGST + SGST half each. */}
                 {p.interstate ? (
@@ -925,8 +926,8 @@ export default function PurchaseBills() {
                     <span style={{ color: 'var(--text-muted)' }}>SGST</span><span style={{ textAlign: 'right' }}>{formatCurrency(t.tax / 2)}</span>
                   </>
                 )}
-                {t.cess > 0.005 && <><span style={{ color: 'var(--text-muted)' }}>Cess</span><span style={{ textAlign: 'right' }}>{formatCurrency(t.cess)}</span></>}
-                {Math.abs(t.roundOff) > 0.005 && <><span style={{ color: 'var(--text-muted)', fontStyle: 'italic' }}>Round-off</span><span style={{ textAlign: 'right', fontStyle: 'italic' }}>{(t.roundOff > 0 ? '+' : '') + formatCurrency(t.roundOff)}</span></>}
+                {t.cess > 0.005 && <><span style={{ color: 'var(--text-muted)' }}>{i18nT('ui.cess2')}</span><span style={{ textAlign: 'right' }}>{formatCurrency(t.cess)}</span></>}
+                {Math.abs(t.roundOff) > 0.005 && <><span style={{ color: 'var(--text-muted)', fontStyle: 'italic' }}>{i18nT('ui.roundOff')}</span><span style={{ textAlign: 'right', fontStyle: 'italic' }}>{(t.roundOff > 0 ? '+' : '') + formatCurrency(t.roundOff)}</span></>}
                 <span style={{ borderTop: '2px solid var(--text)', paddingTop: 6, fontWeight: 700 }}>TOTAL</span>
                 {/* v1.10.34 — was hardcoded color:'#0f172a' (slate-900) which
                     disappeared against the dark card background. Reported
@@ -934,12 +935,12 @@ export default function PurchaseBills() {
                     view modal. Now uses --text so it flips with theme. */}
                 <span style={{ borderTop: '2px solid var(--text)', paddingTop: 6, textAlign: 'right', fontWeight: 700, fontSize: '1.05rem', color: 'var(--text)' }}>{formatCurrency(t.finalTotal)}</span>
               </div>
-              {p.note && <p style={{ fontSize: '0.82rem', fontStyle: 'italic', color: 'var(--text-muted)', marginTop: '1rem' }}>Note: {p.note}</p>}
+              {p.note && <p style={{ fontSize: '0.82rem', fontStyle: 'italic', color: 'var(--text-muted)', marginTop: '1rem' }}>{i18nT('ui.note')} {p.note}</p>}
               {/* Action bar */}
               <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.5rem', marginTop: '1rem', paddingTop: '1rem', borderTop: '1px solid var(--border)' }}>
-                <button className="btn btn-secondary" onClick={() => setViewPurchase(null)}>Close</button>
-                <button className="btn btn-secondary" onClick={() => { openEdit(p); setViewPurchase(null); }}><Edit3 size={14} /> Edit</button>
-                <button className="btn btn-primary" onClick={() => viewAsPdf(p)}><Download size={14} /> Download PDF</button>
+                <button className="btn btn-secondary" onClick={() => setViewPurchase(null)}>{i18nT('ui.close')}</button>
+                <button className="btn btn-secondary" onClick={() => { openEdit(p); setViewPurchase(null); }}><Edit3 size={14} /> {i18nT('ui.edit2')}</button>
+                <button className="btn btn-primary" onClick={() => viewAsPdf(p)}><Download size={14} /> {i18nT('ui.downloadPdf')}</button>
               </div>
             </div>
           </div>
@@ -957,15 +958,15 @@ export default function PurchaseBills() {
       <div className="stats-grid" style={{ gridTemplateColumns: 'repeat(3, 1fr)' }}>
         <div className="stat-card">
           <div className="stat-icon stat-icon-purple"><ShoppingCart size={22} /></div>
-          <div><p className="stat-label">Total Purchases</p><h2 className="stat-value stat-value-purple">{formatCurrency(totalStats.total)}</h2></div>
+          <div><p className="stat-label">{i18nT('ui.totalPurchases')}</p><h2 className="stat-value stat-value-purple">{formatCurrency(totalStats.total)}</h2></div>
         </div>
         <div className="stat-card">
           <div className="stat-icon stat-icon-green"><ShoppingCart size={22} /></div>
-          <div><p className="stat-label">GST (ITC Eligible)</p><h2 className="stat-value stat-value-green">{formatCurrency(totalStats.tax)}</h2></div>
+          <div><p className="stat-label">{i18nT('ui.gstItcEligible')}</p><h2 className="stat-value stat-value-green">{formatCurrency(totalStats.tax)}</h2></div>
         </div>
         <div className="stat-card">
           <div className="stat-icon stat-icon-blue"><ShoppingCart size={22} /></div>
-          <div><p className="stat-label">Entries</p><h2 className="stat-value">{filtered.length}</h2></div>
+          <div><p className="stat-label">{i18nT('ui.entries')}</p><h2 className="stat-value">{filtered.length}</h2></div>
         </div>
       </div>
 
@@ -974,16 +975,16 @@ export default function PurchaseBills() {
         <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap', alignItems: 'center' }}>
           <div className="search-box" style={{ maxWidth: '300px' }}>
             <Search size={16} className="search-icon" />
-            <input type="text" placeholder="Search supplier, invoice..." value={search}
+            <input type="text" placeholder={i18nT('ui.searchSupplierInvoice')} value={search}
               onChange={e => setSearch(e.target.value)} className="search-input" />
           </div>
           <select className="filter-select" value={fyFilter} onChange={e => setFyFilter(e.target.value)}>
             {/* v1.10.74 - '' already means no FY filter below. */}
-            <option value="">All years</option>
+            <option value="">{i18nT('ui.allYears')}</option>
             {fyOptions.map(fy => <option key={fy.value} value={fy.value}>{fy.label}</option>)}
           </select>
           {search && (
-            <button className="icon-btn icon-btn-red" onClick={() => setSearch('')} title="Clear search" aria-label="Clear search"><X size={15} /></button>
+            <button className="icon-btn icon-btn-red" onClick={() => setSearch('')} title={i18nT('ui.clearSearch')} aria-label={i18nT('ui.clearSearch')}><X size={15} /></button>
           )}
         </div>
       </div>
@@ -995,17 +996,17 @@ export default function PurchaseBills() {
             <h3 className="section-title">{editingId ? 'Edit Purchase Bill' : 'Add Purchase Bill'}</h3>
             <div className="grid grid-cols-2 gap-4">
               <div className="form-group">
-                <label className="form-label">Date *</label>
+                <label className="form-label">{i18nT('ui.date2')}</label>
                 <input type="date" className="form-input" value={form.date} onChange={e => updateField('date', e.target.value)} />
               </div>
               <div className="form-group">
-                <label className="form-label">Payment Status</label>
+                <label className="form-label">{i18nT('ui.paymentStatus2')}</label>
                 <select className="form-input" value={form.paymentStatus} onChange={e => updateField('paymentStatus', e.target.value)}>
                   {PAYMENT_STATUSES.map(s => <option key={s} value={s}>{s}</option>)}
                 </select>
               </div>
               <div className="form-group">
-                <label className="form-label">Supplier Name *</label>
+                <label className="form-label">{i18nT('ui.supplierName')}</label>
                 {/* v1.10.50 (#39) — recall previously used suppliers. A native
                     <datalist> rather than a custom dropdown: it is keyboard
                     accessible for free, does not trap focus, and degrades to a
@@ -1028,26 +1029,26 @@ export default function PurchaseBills() {
                 </datalist>
               </div>
               <div className="form-group">
-                <label className="form-label">Supplier GSTIN</label>
+                <label className="form-label">{i18nT('ui.supplierGstin')}</label>
                 <input type="text" className="form-input" value={form.supplierGstin}
-                  onChange={e => updateSupplierGstin(e.target.value)} placeholder="15-digit GSTIN" maxLength={15} />
+                  onChange={e => updateSupplierGstin(e.target.value)} placeholder={i18nT('ui.n15DigitGstin')} maxLength={15} />
               </div>
               {/* v1.10.29 — Supplier address for the PDF. Optional; full width row. */}
               <div className="form-group" style={{ gridColumn: 'span 2' }}>
-                <label className="form-label">Supplier Address (optional)</label>
+                <label className="form-label">{i18nT('ui.supplierAddressOptional')}</label>
                 <input type="text" className="form-input" value={form.supplierAddress || ''}
                   onChange={e => updateField('supplierAddress', e.target.value)}
-                  placeholder="Street, City, State — printed on the Purchase Bill PDF" />
+                  placeholder={i18nT('ui.streetCityStatePrintedOnThe')} />
               </div>
               <div className="form-group">
-                <label className="form-label">Invoice Number *</label>
+                <label className="form-label">{i18nT('ui.invoiceNumber2')}</label>
                 <input type="text" className="form-input" value={form.invoiceNumber}
-                  onChange={e => updateField('invoiceNumber', e.target.value)} placeholder="Supplier invoice no." />
+                  onChange={e => updateField('invoiceNumber', e.target.value)} placeholder={i18nT('ui.supplierInvoiceNo')} />
               </div>
               <div className="form-group">
-                <label className="form-label">Note (optional)</label>
+                <label className="form-label">{i18nT('ui.noteOptional')}</label>
                 <input type="text" className="form-input" value={form.note}
-                  onChange={e => updateField('note', e.target.value)} placeholder="Any note..." />
+                  onChange={e => updateField('note', e.target.value)} placeholder={i18nT('ui.anyNote')} />
               </div>
               <div className="form-group" style={{ gridColumn: 'span 2' }}>
                 <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.82rem', cursor: 'pointer' }}>
@@ -1055,7 +1056,7 @@ export default function PurchaseBills() {
                     onChange={e => updateField('interstate', e.target.checked)}
                     style={{ width: 16, height: 16, accentColor: 'var(--primary)' }} />
                   <span>
-                    <strong>Inter-state purchase</strong> — supplier charged IGST (different state)
+                    <strong>{i18nT('ui.interStatePurchase')}</strong> {i18nT('ui.supplierChargedIgstDifferentState')}
                     <span style={{ color: '#94a3b8', fontSize: '0.72rem', display: 'block' }}>
                       Routes ITC to IGST in GSTR-3B instead of CGST + SGST. Tip: first 2 digits of supplier GSTIN = their state code.
                     </span>
@@ -1065,7 +1066,7 @@ export default function PurchaseBills() {
             </div>
 
             {/* Items */}
-            <h4 style={{ marginTop: '1rem', marginBottom: '0.5rem', fontWeight: 600, fontSize: '0.9rem' }}>Items</h4>
+            <h4 style={{ marginTop: '1rem', marginBottom: '0.5rem', fontWeight: 600, fontSize: '0.9rem' }}>{i18nT('ui.items')}</h4>
             {/* Rendered once for all rows — a <datalist> is referenced by id,
                 so duplicating it per row would only bloat the DOM. */}
             {/* Same rule as the supplier list above — value only. */}
@@ -1075,7 +1076,7 @@ export default function PurchaseBills() {
             {form.items.map((item, idx) => (
               <div key={idx} data-focus-key={item._focusKey} style={{ display: 'flex', gap: '0.5rem', marginBottom: '0.5rem', flexWrap: 'wrap', alignItems: 'flex-end' }}>
                 <div className="form-group" style={{ flex: 2, margin: 0 }}>
-                  {idx === 0 && <label className="form-label">Name</label>}
+                  {idx === 0 && <label className="form-label">{i18nT('ui.name')}</label>}
                   {/* v1.10.50 (#39) — recall previously purchased items along
                       with their HSN, rate and tax rates. One shared datalist
                       serves every row; the browser scopes suggestions to the
@@ -1091,7 +1092,7 @@ export default function PurchaseBills() {
                     onChange={e => updateItem(idx, 'hsn', e.target.value)} placeholder="HSN" />
                 </div>
                 <div className="form-group" style={{ flex: 0.7, margin: 0 }}>
-                  {idx === 0 && <label className="form-label">Qty</label>}
+                  {idx === 0 && <label className="form-label">{i18nT('ui.qty')}</label>}
                   {/* v1.6.8 (P2 #30): decimal quantity for 2.5 kg / 0.5 hr / etc. */}
                   {/* v1.10.69 - requested (#71 item 2, @sangwanmail-eng): the
                       number fields here now select their contents on focus, as
@@ -1102,13 +1103,13 @@ export default function PurchaseBills() {
                     onChange={e => updateItem(idx, 'quantity', e.target.value)} />
                 </div>
                 <div className="form-group" style={{ flex: 1, margin: 0 }}>
-                  {idx === 0 && <label className="form-label">Rate</label>}
+                  {idx === 0 && <label className="form-label">{i18nT('ui.rate')}</label>}
                   <input type="number" className="form-input" value={item.rate} min="0" step="any"
                     onFocus={e => e.target.select()}
                     onChange={e => updateItem(idx, 'rate', e.target.value)} />
                 </div>
                 <div className="form-group" style={{ flex: 0.75, margin: 0 }}>
-                  {idx === 0 && <label className="form-label">Tax %</label>}
+                  {idx === 0 && <label className="form-label">{i18nT('ui.tax')}</label>}
                   {/* v1.6.8 (P2 #29): "Other…" for jeweller 3% / diamond 0.25% /
                        agriculture 0.1% and any bespoke rate. */}
                   <select className="form-input" value={
@@ -1116,12 +1117,12 @@ export default function PurchaseBills() {
                   } onChange={async e => {
                     if (e.target.value === '__custom__') {
                       const v = await promptAction({
-                        title: 'Custom tax rate',
-                        message: 'Enter a GST rate between 0% and 100% (up to 2 decimals).',
+                        title: i18nT('ui.customTaxRate'),
+                        message: i18nT('ui.enterAGstRateBetween0'),
                         defaultValue: String(item.taxPercent || 0),
                         placeholder: 'e.g. 7.5',
                         inputType: 'number',
-                        confirmLabel: 'Apply rate',
+                        confirmLabel: i18nT('ui.applyRate'),
                       });
                       const n = parseFloat(v);
                       if (Number.isFinite(n) && n >= 0 && n <= 100) updateItem(idx, 'taxPercent', n);
@@ -1138,46 +1139,46 @@ export default function PurchaseBills() {
                     <option value="18">18%</option>
                     <option value="28">28%</option>
                     <option value="40">40%</option>
-                    <option value="__custom__">Other…{['0','0.1','0.25','3','5','12','18','28','40'].includes(String(item.taxPercent)) ? '' : ` (${item.taxPercent}%)`}</option>
+                    <option value="__custom__">{i18nT('ui.other')}{['0','0.1','0.25','3','5','12','18','28','40'].includes(String(item.taxPercent)) ? '' : ` (${item.taxPercent}%)`}</option>
                   </select>
                 </div>
                 <div className="form-group" style={{ flex: 0.7, margin: 0 }}>
-                  {idx === 0 && <label className="form-label" title="Compensation Cess — for tobacco, aerated, motor vehicles, coal, etc.">Cess %</label>}
+                  {idx === 0 && <label className="form-label" title={i18nT('ui.compensationCessForTobaccoAeratedMotor')}>{i18nT('ui.cess')}</label>}
                   <input type="number" className="form-input" value={item.cessPercent ?? 0} min="0" step="any"
                     onFocus={e => e.target.select()}
                     onChange={e => updateItem(idx, 'cessPercent', e.target.value)} />
                 </div>
                 <div style={{ flex: '0 0 auto', marginBottom: idx === 0 ? 0 : 0 }}>
                   {form.items.length > 1 && (
-                    <button className="icon-btn icon-btn-red" onClick={() => removeItem(idx)} title="Remove"><Trash2 size={15} /></button>
+                    <button className="icon-btn icon-btn-red" onClick={() => removeItem(idx)} title={i18nT('ui.remove2')}><Trash2 size={15} /></button>
                   )}
                 </div>
               </div>
             ))}
             <button className="btn btn-secondary" style={{ fontSize: '0.8rem', padding: '0.35rem 0.75rem', marginTop: '0.25rem' }}
-              onClick={addItem}><Plus size={14} /> Add Item</button>
+              onClick={addItem}><Plus size={14} /> {i18nT('ui.addItem')}</button>
 
             <div style={{ marginTop: '1rem', padding: '0.75rem', background: 'var(--bg-secondary)', borderRadius: 8, fontSize: '0.85rem' }}>
               <div style={{ display: 'flex', gap: '1.5rem', flexWrap: 'wrap', alignItems: 'center' }}>
-                <span>Taxable: <strong>{formatCurrency(formTotals.taxable)}</strong></span>
-                <span>Tax: <strong>{formatCurrency(formTotals.tax)}</strong></span>
+                <span>{i18nT('ui.taxable2')} <strong>{formatCurrency(formTotals.taxable)}</strong></span>
+                <span>{i18nT('ui.tax2')} <strong>{formatCurrency(formTotals.tax)}</strong></span>
                 {formTotals.cess > 0 && (
-                  <span>Cess: <strong>{formatCurrency(formTotals.cess)}</strong></span>
+                  <span>{i18nT('ui.cess3')} <strong>{formatCurrency(formTotals.cess)}</strong></span>
                 )}
                 {/* v1.10.74 - hide when there is nothing to round, like View/PDF. */}
                 {form.applyRoundOff && Math.abs(formTotals.roundOff) > 0.005 && (
                   <span style={{ color: '#475569' }}>
-                    Round-off: <strong>{(formTotals.roundOff >= 0 ? '+' : '') + formatCurrency(formTotals.roundOff)}</strong>
+                    {i18nT('ui.roundOff2')} <strong>{(formTotals.roundOff >= 0 ? '+' : '') + formatCurrency(formTotals.roundOff)}</strong>
                   </span>
                 )}
-                <span>Total: <strong>{formatCurrency(formTotals.finalTotal)}</strong></span>
+                <span>{i18nT('ui.total2')} <strong>{formatCurrency(formTotals.finalTotal)}</strong></span>
               </div>
               <label style={{ display: 'flex', alignItems: 'center', gap: '0.45rem', fontSize: '0.78rem', cursor: 'pointer', marginTop: '0.6rem', color: '#475569' }}>
                 <input type="checkbox" checked={!!form.applyRoundOff}
                   onChange={e => updateField('applyRoundOff', e.target.checked)}
                   style={{ width: 14, height: 14, accentColor: 'var(--primary)' }} />
                 <span>
-                  <strong>Apply round-off</strong> — round the grand total to the nearest rupee.
+                  <strong>{i18nT('ui.applyRoundOff')}</strong> — round the grand total to the nearest rupee.
                   Use when the supplier's bill is rounded (e.g. ₹1,234.56 → ₹1,235). Off by default —
                   most suppliers' totals already match what's calculated from line items.
                 </span>
@@ -1185,7 +1186,7 @@ export default function PurchaseBills() {
             </div>
 
             <div className="flex gap-2 justify-end mt-4">
-              <button className="btn btn-secondary" onClick={closeForm}>Cancel</button>
+              <button className="btn btn-secondary" onClick={closeForm}>{i18nT('ui.cancel')}</button>
               <button className="btn btn-primary" onClick={handleSave}><Save size={16} /> {editingId ? 'Update' : 'Save'}</button>
             </div>
           </div>
@@ -1194,27 +1195,27 @@ export default function PurchaseBills() {
 
       {/* Purchase Table */}
       <div className="glass-panel">
-        <div className="table-header"><h3>Purchase Records</h3></div>
+        <div className="table-header"><h3>{i18nT('ui.purchaseRecords')}</h3></div>
         {filtered.length === 0 ? (
           <div className="empty-state">
             <ShoppingCart size={48} />
             <p>{purchases.length === 0 ? 'No purchase bills recorded yet.' : 'No purchases match your filters.'}</p>
-            {purchases.length === 0 && <button className="btn btn-primary" onClick={openAdd}><Plus size={18} /> Add Purchase</button>}
+            {purchases.length === 0 && <button className="btn btn-primary" onClick={openAdd}><Plus size={18} /> {i18nT('ui.addPurchase')}</button>}
           </div>
         ) : (
           <div className="table-scroll">
             <table className="data-table" style={{ minWidth: '800px' }}>
               <thead>
                 <tr>
-                  <th>Date</th>
-                  <th>Supplier</th>
+                  <th>{i18nT('ui.date')}</th>
+                  <th>{i18nT('ui.supplier')}</th>
                   <th>GSTIN</th>
-                  <th>Invoice No</th>
-                  <th style={{ textAlign: 'right' }}>Taxable</th>
-                  <th style={{ textAlign: 'right' }}>Tax</th>
-                  <th style={{ textAlign: 'right' }}>Total</th>
-                  <th>Status</th>
-                  <th>Actions</th>
+                  <th>{i18nT('ui.invoiceNo2')}</th>
+                  <th style={{ textAlign: 'right' }}>{i18nT('ui.taxable')}</th>
+                  <th style={{ textAlign: 'right' }}>{i18nT('ui.tax3')}</th>
+                  <th style={{ textAlign: 'right' }}>{i18nT('ui.total')}</th>
+                  <th>{i18nT('ui.status')}</th>
+                  <th>{i18nT('ui.actions')}</th>
                 </tr>
               </thead>
               <tbody>
@@ -1247,9 +1248,9 @@ export default function PurchaseBills() {
                           {/* v1.10.30 — quick View modal (no download).
                               Modal has a Download PDF button inside for
                               users who do want the file. */}
-                          <button className="icon-btn" onClick={() => setViewPurchase(p)} title="View details (no download)"><Eye size={15} /></button>
-                          <button className="icon-btn icon-btn-blue" onClick={() => openEdit(p)} title="Edit"><Edit3 size={15} /></button>
-                          <button className="icon-btn icon-btn-red" onClick={() => handleDelete(p.id)} title="Delete"><Trash2 size={15} /></button>
+                          <button className="icon-btn" onClick={() => setViewPurchase(p)} title={i18nT('ui.viewDetailsNoDownload')}><Eye size={15} /></button>
+                          <button className="icon-btn icon-btn-blue" onClick={() => openEdit(p)} title={i18nT('ui.edit2')}><Edit3 size={15} /></button>
+                          <button className="icon-btn icon-btn-red" onClick={() => handleDelete(p.id)} title={i18nT('ui.delete')}><Trash2 size={15} /></button>
                         </div>
                       </td>
                     </tr>
@@ -1258,7 +1259,7 @@ export default function PurchaseBills() {
               </tbody>
               <tfoot>
                 <tr style={{ fontWeight: 'bold', borderTop: '2px solid var(--border)' }}>
-                  <td colSpan={4}>Total</td>
+                  <td colSpan={4}>{i18nT('ui.total')}</td>
                   <td style={{ textAlign: 'right' }}>{formatCurrency(totalStats.taxable)}</td>
                   <td style={{ textAlign: 'right' }}>{formatCurrency(totalStats.tax)}</td>
                   <td style={{ textAlign: 'right' }}>{formatCurrency(totalStats.total)}</td>

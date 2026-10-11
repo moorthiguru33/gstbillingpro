@@ -3,7 +3,7 @@ import { MessageCircle, X, Send, ShieldCheck } from 'lucide-react';
 
 export default function WhatsAppSupportWidget() {
   const [isOpen, setIsOpen] = useState(false);
-  const supportPhone = '919944880248';
+  const supportPhone = '919442745754';
 
   const handleOpenChat = () => {
     const text = encodeURIComponent('Hi GST Billing Pro Team, I have a query regarding billing / setup.');
@@ -11,7 +11,7 @@ export default function WhatsAppSupportWidget() {
   };
 
   return (
-    <div style={{
+    <div className="wa-float" style={{
       position: 'fixed',
       bottom: '24px',
       right: '24px',
@@ -133,7 +133,7 @@ export default function WhatsAppSupportWidget() {
               fontSize: '0.7rem',
               color: '#94a3b8',
             }}>
-              <ShieldCheck size={13} color="#10b981" /> Official Customer Support (+91 99448 80248)
+              <ShieldCheck size={13} color="#10b981" /> Official Customer Support (+91 94427 45754)
             </div>
           </div>
         </div>

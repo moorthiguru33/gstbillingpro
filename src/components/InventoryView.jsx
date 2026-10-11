@@ -10,6 +10,7 @@ import { confirmAction } from './ConfirmModal';
 import HelpButton from './HelpButton';
 import { productSellingPrice, productTaxPercent } from '../utils/products.js';
 import { t as tr } from '../i18n';
+import { t as i18nT } from '../i18n';
 
 // v1.10.29 — reported: "here purchase price and selling price need".
 // Product now carries BOTH: `purchasePrice` (what we paid the supplier) and
@@ -42,7 +43,7 @@ export default function InventoryView() {
       const data = await getAllProducts();
       setProducts(data);
     } catch {
-      toast('Failed to load products', 'error');
+      toast(i18nT('ui.failedToLoadProducts'), 'error');
     }
   };
 
@@ -72,7 +73,7 @@ export default function InventoryView() {
     if (!window.confirm('Import 1,000+ popular Indian retail & FMCG items (Kirana, Snacks, Dairy, Stationery, Hardware, Electronics, Pharma) into your catalog?')) return;
     setImportingCatalog(true);
     try {
-      toast('Importing 1,000+ products... please wait', 'info', 6000);
+      toast(i18nT('ui.importing1000ProductsPleaseWait'), 'info', 6000);
       const res = await saveProductsBatch(STARTER_CATALOG);
       toast(`Successfully imported ${res.count || 1000}+ products!`, 'success', 6000);
       await loadProducts();
@@ -124,13 +125,13 @@ export default function InventoryView() {
 
   const handleSave = async () => {
     if (!form.name.trim()) {
-      toast('Product name is required', 'warning');
+      toast(i18nT('ui.productNameIsRequired'), 'warning');
       return;
     }
     // v1.10.74 - the input's min/max are not enforced by the browser on save.
     const gst = form.taxPercent === '' ? 0 : Number(form.taxPercent);
     if (!Number.isFinite(gst) || gst < 0 || gst > 100) {
-      toast('GST % must be between 0 and 100', 'warning');
+      toast(i18nT('ui.gstMustBeBetween0And'), 'warning');
       return;
     }
     try {
@@ -156,23 +157,23 @@ export default function InventoryView() {
       closeForm();
       loadProducts();
     } catch {
-      toast('Failed to save product', 'error');
+      toast(i18nT('ui.failedToSaveProduct'), 'error');
     }
   };
 
   const handleDelete = async (id) => {
     if (await confirmAction({
-      title: 'Delete this product?',
-      message: 'Existing invoices that used this product keep their line items unchanged. This just removes the product from your catalog.',
-      confirmLabel: 'Delete',
+      title: i18nT('ui.deleteThisProduct'),
+      message: i18nT('ui.existingInvoicesThatUsedThisProduct'),
+      confirmLabel: i18nT('ui.delete'),
       tone: 'danger',
     })) {
       try {
         await deleteProduct(id);
-        toast('Product deleted', 'success');
+        toast(i18nT('ui.productDeleted'), 'success');
         loadProducts();
       } catch {
-        toast('Failed to delete', 'error');
+        toast(i18nT('ui.failedToDelete'), 'error');
       }
     }
   };
@@ -203,7 +204,7 @@ export default function InventoryView() {
     try {
       const text = await file.text();
       const lines = text.split(/\r?\n/).filter(l => l.trim());
-      if (lines.length < 2) { toast('CSV file is empty or has no data rows', 'warning'); return; }
+      if (lines.length < 2) { toast(i18nT('ui.csvFileIsEmptyOrHas'), 'warning'); return; }
       const headers = lines[0].split(',').map(h => h.trim().toLowerCase().replace(/['"]/g, ''));
       let imported = 0;
       // v1.10.74 - importing the same file twice made duplicates. Skip names
@@ -235,7 +236,7 @@ export default function InventoryView() {
       toast(`Imported ${imported} product(s)${skipped ? `, skipped ${skipped} already in your list` : ''}`, 'success');
       loadProducts();
     } catch {
-      toast('Failed to parse CSV file', 'error');
+      toast(i18nT('ui.failedToParseCsvFile'), 'error');
     }
     if (csvInputRef.current) csvInputRef.current.value = '';
   };
@@ -246,14 +247,14 @@ export default function InventoryView() {
         <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
           <div>
             <h1 className="page-title">{tr('products.title')}</h1>
-            <p className="page-subtitle">Manage your products and services catalog</p>
+            <p className="page-subtitle">{i18nT('ui.manageYourProductsAndServicesCatalog')}</p>
           </div>
-          <HelpButton title="Products — how to use" doc="products">
+          <HelpButton title={i18nT('ui.productsHowToUse')} doc="products">
             <ul style={{ paddingLeft: '1.1rem', margin: 0 }}>
-              <li><strong>Add Product</strong>: name, HSN/SAC, purchase and selling price, GST %, unit and stock. Typing the name on an invoice fills the rest in.</li>
-              <li><strong>Stock</strong> goes down when you save an invoice and up when you save a purchase bill.</li>
-              <li><strong>Import CSV</strong>: columns <code>name, hsn, rate, gst%, unit, stock</code>.</li>
-              <li><strong>Low stock</strong> shows in amber, none in red. Set the level in Settings → Low-stock alerts.</li>
+              <li><strong>{i18nT('ui.addProduct')}</strong>{i18nT('ui.nameHsnSacPurchaseAndSelling')}</li>
+              <li><strong>{i18nT('ui.stock2')}</strong> {i18nT('ui.goesDownWhenYouSaveAn')}</li>
+              <li><strong>{i18nT('ui.importCsv')}</strong>{i18nT('ui.columns')} <code>{i18nT('ui.nameHsnRateGstUnitStock')}</code>.</li>
+              <li><strong>{i18nT('ui.lowStock')}</strong> {i18nT('ui.showsInAmberNoneInRed')}</li>
             </ul>
           </HelpButton>
         </div>
@@ -263,9 +264,9 @@ export default function InventoryView() {
             className="btn btn-secondary"
             style={{ background: '#ecfdf5', color: '#047857', borderColor: '#a7f3d0', fontWeight: 700 }}
             onClick={() => setShowQuickStockModal(true)}
-            title="Scan barcode and add stock instantly (Alt+S)"
+            title={i18nT('ui.scanBarcodeAndAddStockInstantly')}
           >
-            <Package size={16} /> ⚡ Scan Stock In (Alt+S)
+            <Package size={16} /> {i18nT('ui.scanStockInAltS')}
           </button>
           <button
             type="button"
@@ -273,14 +274,14 @@ export default function InventoryView() {
             style={{ background: 'linear-gradient(135deg, #eff6ff, #e0e7ff)', color: '#1e40af', borderColor: '#bfdbfe', fontWeight: 700 }}
             onClick={() => setShowMasterCatalogModal(true)}
           >
-            <Sparkles size={16} /> ✨ 1,25,000+ Master Products Hub
+            <Sparkles size={16} /> {i18nT('ui.n125000MasterProductsHub')}
           </button>
           <input type="file" accept=".csv" ref={csvInputRef} style={{ display: 'none' }} onChange={handleCSVImport} />
           <button className="btn btn-secondary" onClick={() => csvInputRef.current?.click()}>
-            <Upload size={16} /> Import CSV
+            <Upload size={16} /> {i18nT('ui.importCsv')}
           </button>
           <button className="btn btn-primary" onClick={openAdd}>
-            <Plus size={18} /> Add Product
+            <Plus size={18} /> {i18nT('ui.addProduct')}
           </button>
         </div>
       </div>
@@ -289,9 +290,9 @@ export default function InventoryView() {
       <div className="glass-panel p-4 mb-6">
         <div className="search-box" style={{ maxWidth: '400px' }}>
           <Search size={16} className="search-icon" />
-          <input type="text" placeholder="Search by name or HSN..." value={search}
+          <input type="text" placeholder={i18nT('ui.searchByNameOrHsn')} value={search}
             onChange={e => setSearch(e.target.value)} className="search-input" />
-          {search && <button className="icon-btn" onClick={() => setSearch('')} title="Clear search" aria-label="Clear search"><X size={14} /></button>}
+          {search && <button className="icon-btn" onClick={() => setSearch('')} title={i18nT('ui.clearSearch')} aria-label={i18nT('ui.clearSearch')}><X size={14} /></button>}
         </div>
       </div>
 
@@ -302,17 +303,17 @@ export default function InventoryView() {
             <h3 className="section-title">{editingId ? 'Edit Product' : 'Add Product'}</h3>
             <div className="grid grid-cols-2 gap-4">
               <div className="form-group" style={{ gridColumn: 'span 2' }}>
-                <label className="form-label">Product / Service Name *</label>
+                <label className="form-label">{i18nT('ui.productServiceName')}</label>
                 <input type="text" className="form-input" value={form.name}
-                  onChange={e => updateField('name', e.target.value)} placeholder="e.g. Web Development" />
+                  onChange={e => updateField('name', e.target.value)} placeholder={i18nT('ui.eGWebDevelopment')} />
               </div>
               <div className="form-group">
-                <label className="form-label">HSN / SAC Code</label>
+                <label className="form-label">{i18nT('ui.hsnSacCode')}</label>
                 <input type="text" className="form-input" value={form.hsn}
                   onChange={e => updateField('hsn', e.target.value)} placeholder="e.g. 998314" />
               </div>
               <div className="form-group">
-                <label className="form-label">Barcode / EAN (Optional)</label>
+                <label className="form-label">{i18nT('ui.barcodeEanOptional')}</label>
                 <input type="text" className="form-input" value={form.barcode || ''}
                   onChange={e => updateField('barcode', e.target.value)} placeholder="e.g. 8901030123456" />
               </div>
@@ -321,18 +322,18 @@ export default function InventoryView() {
                   the purchase-bill rate. Legacy `rate` field kept invisible
                   for backward compat — writes through to sellingPrice. */}
               <div className="form-group">
-                <label className="form-label">Purchase Price</label>
+                <label className="form-label">{i18nT('ui.purchasePrice')}</label>
                 <input type="number" className="form-input" value={form.purchasePrice}
                   onChange={e => updateField('purchasePrice', e.target.value)}
                   placeholder="0.00" min="0" step="any"
-                  title="What you pay the supplier. Auto-fills on new Purchase Bills." />
+                  title={i18nT('ui.whatYouPayTheSupplierAuto')} />
               </div>
               <div className="form-group">
-                <label className="form-label">Selling Price</label>
+                <label className="form-label">{i18nT('ui.sellingPrice')}</label>
                 <input type="number" className="form-input" value={form.sellingPrice}
                   onChange={e => updateField('sellingPrice', e.target.value)}
                   placeholder="0.00" min="0" step="any"
-                  title="What you charge the customer. Auto-fills on new Invoices." />
+                  title={i18nT('ui.whatYouChargeTheCustomerAuto')} />
               </div>
               <div className="form-group">
                 <label className="form-label">GST %</label>
@@ -340,7 +341,7 @@ export default function InventoryView() {
                   onChange={e => updateField('taxPercent', e.target.value)} placeholder="18" min="0" max="100" />
               </div>
               <div className="form-group">
-                <label className="form-label">Unit</label>
+                <label className="form-label">{i18nT('ui.unit')}</label>
                 <select className="form-input" value={form.unit}
                   onChange={e => updateField('unit', e.target.value)}>
                   {form.unit && !units.some(u => u.label === form.unit) && (
@@ -350,18 +351,18 @@ export default function InventoryView() {
                 </select>
               </div>
               <div className="form-group">
-                <label className="form-label">Stock Quantity</label>
+                <label className="form-label">{i18nT('ui.stockQuantity')}</label>
                 <input type="number" className="form-input" value={form.stock}
                   onChange={e => updateField('stock', e.target.value)} placeholder="0" min="0" />
               </div>
               <div className="form-group" style={{ gridColumn: 'span 2' }}>
-                <label className="form-label">Description (optional)</label>
+                <label className="form-label">{i18nT('ui.descriptionOptional')}</label>
                 <input type="text" className="form-input" value={form.description}
-                  onChange={e => updateField('description', e.target.value)} placeholder="Brief description..." />
+                  onChange={e => updateField('description', e.target.value)} placeholder={i18nT('ui.briefDescription')} />
               </div>
             </div>
             <div className="flex gap-2 justify-end mt-4">
-              <button className="btn btn-secondary" onClick={closeForm}>Cancel</button>
+              <button className="btn btn-secondary" onClick={closeForm}>{i18nT('ui.cancel')}</button>
               <button className="btn btn-primary" onClick={handleSave}>
                 <Save size={16} /> {editingId ? 'Update' : 'Save'}
               </button>
@@ -372,7 +373,7 @@ export default function InventoryView() {
 
       {/* Product Table */}
       <div className="glass-panel">
-        <div className="table-header"><h3>Products & Services</h3></div>
+        <div className="table-header"><h3>{i18nT('ui.productsAndServices')}</h3></div>
         {filtered.length === 0 ? (
           <div className="empty-state">
             <Package size={48} />
@@ -386,13 +387,13 @@ export default function InventoryView() {
             <table className="data-table">
               <thead>
                 <tr>
-                  <th>Name</th>
-                  <th>HSN/SAC</th>
-                  <th>Rate</th>
+                  <th>{i18nT('ui.name')}</th>
+                  <th>{i18nT('ui.hsnSac')}</th>
+                  <th>{i18nT('ui.rate')}</th>
                   <th>GST %</th>
-                  <th>Unit</th>
-                  <th>Stock</th>
-                  <th>Actions</th>
+                  <th>{i18nT('ui.unit')}</th>
+                  <th>{i18nT('ui.stock2')}</th>
+                  <th>{i18nT('ui.actions')}</th>
                 </tr>
               </thead>
               <tbody>
@@ -405,7 +406,7 @@ export default function InventoryView() {
                     <td className="text-muted">{product.unit || 'Nos'}</td>
                     <td>
                       {(product.stock ?? 0) <= 0 ? (
-                        <span style={{ color: '#dc2626', fontWeight: 600 }}>Out of Stock</span>
+                        <span style={{ color: '#dc2626', fontWeight: 600 }}>{i18nT('ui.outOfStock')}</span>
                       ) : (stockAlerts.enabled !== false && (product.stock ?? 0) <= Number(stockAlerts.threshold ?? 5)) ? (
                         <span style={{ color: '#d97706', fontWeight: 600 }}>{product.stock}</span>
                       ) : (
@@ -414,10 +415,10 @@ export default function InventoryView() {
                     </td>
                     <td>
                       <div className="table-actions">
-                        <button className="icon-btn icon-btn-blue" onClick={() => openEdit(product)} title="Edit">
+                        <button className="icon-btn icon-btn-blue" onClick={() => openEdit(product)} title={i18nT('ui.edit2')}>
                           <Edit3 size={15} />
                         </button>
-                        <button className="icon-btn icon-btn-red" onClick={() => handleDelete(product.id)} title="Delete">
+                        <button className="icon-btn icon-btn-red" onClick={() => handleDelete(product.id)} title={i18nT('ui.delete')}>
                           <Trash2 size={15} />
                         </button>
                       </div>

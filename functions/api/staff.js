@@ -33,7 +33,7 @@ export async function roleIn(supabase, ownerId, userId) {
   return data?.role || null;
 }
 
-async function orgTier(supabase, ownerId, now) {
+export async function orgTier(supabase, ownerId, now) {
   const { data: sub, error } = await supabase.from('subscriptions').select('*').eq('user_id', ownerId).maybeSingle();
   if (error) throw error;
   return effectivePlan(sub, now).tier;

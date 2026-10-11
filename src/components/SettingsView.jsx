@@ -10,6 +10,7 @@ import { getCountryConfig, getStatesForCountry, validateTaxId, getCountriesForRe
 // React icon. Aliased to `ImageIcon` so `new Image()` resolves to
 // the browser primitive again.
 import { Save, Upload, Download, Plus, Trash2, Edit3, Image as ImageIcon, PenTool, Cloud, CloudOff, Building2, Hash, RefreshCw, Save as SaveIcon } from 'lucide-react';
+import { WINDOWS_DOWNLOAD_URL, ANDROID_DOWNLOAD_URL } from '../lib/appLinks';
 import { initGoogleDrive, isConnected, disconnect } from '../services/googleDrive';
 import { toast } from './Toast';
 import { authFetch } from '../lib/supabase.js';
@@ -868,6 +869,13 @@ export default function SettingsView({ onSaved }) {
           <hr style={{ border: 0, borderTop: '1px solid var(--border)', margin: '1.25rem 0' }} />
           <h3 className="section-title">{tr('settingsHome.needHelp')}</h3>
           <p className="settings-help">{tr('settingsHome.needHelpText')}</p>
+          <hr style={{ border: 0, borderTop: '1px solid var(--border)', margin: '1.25rem 0' }} />
+          <h3 className="section-title">{tr('mobile.apps')}</h3>
+          <p className="settings-help">{tr('mobile.appsSub')}</p>
+          <div style={{ display: 'flex', gap: '0.6rem', flexWrap: 'wrap' }}>
+            <a className="btn btn-primary" href={WINDOWS_DOWNLOAD_URL} rel="noopener noreferrer" style={{ textDecoration: 'none' }}><Download size={16} /> {tr('mobile.downloadWindows')}</a>
+            <a className="btn btn-secondary" href={ANDROID_DOWNLOAD_URL} rel="noopener noreferrer" style={{ textDecoration: 'none' }}><Download size={16} /> {tr('mobile.getAndroid')}</a>
+          </div>
         </div>
       )}
       <div className="settings-pages" data-page={page} hidden={page === 'home' || !canSettings}>

@@ -200,7 +200,7 @@ export default function AuthPage({ onAuth, onStartDemo }) {
         padding: '2rem 1rem',
         background: 'rgba(255,255,255,0.03)',
         backdropFilter: 'blur(10px)',
-      }}>
+      }} className="auth-right">
         {/* Mobile Header Branding (Shown only on small screens) */}
         <div className="auth-mobile-header" style={{
           display: 'none',
@@ -227,7 +227,7 @@ export default function AuthPage({ onAuth, onStartDemo }) {
           width: '100%',
           maxWidth: 420,
           boxShadow: '0 25px 60px rgba(0,0,0,0.3)',
-        }}>
+        }} className="auth-card">
           {/* Quick Demo Mode Action */}
           {onStartDemo && (
             <div style={{ marginBottom: '1.25rem' }}>
@@ -518,6 +518,10 @@ export default function AuthPage({ onAuth, onStartDemo }) {
         @media (max-width: 768px) {
           .auth-left-panel { display: none !important; }
           .auth-mobile-header { display: block !important; }
+          .auth-right { flex-direction: column; justify-content: flex-start !important; padding: 1.25rem 0.9rem 2rem !important; }
+          .auth-card { padding: 1.25rem !important; border-radius: 16px !important; }
+          .auth-card input, .auth-card select { font-size: 16px !important; min-height: 46px; }
+          .auth-card button { min-height: 46px; }
         }
       `}</style>
     </div>

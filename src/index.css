@@ -3407,3 +3407,16 @@ body {
   .settings-card-icon { width: 44px; height: 44px; }
   .settings-pages .print-settings-body, .settings-pages [class*="print-settings-layout"] { grid-template-columns: 1fr !important; }
 }
+
+/* ---- Phase 3b: AI billing ---- */
+.ai-modal { max-width: 560px; width: calc(100vw - 24px); }
+.ai-center { display: flex; flex-direction: column; align-items: center; gap: 0.75rem; padding: 1.25rem 0; text-align: center; }
+.ai-mic { width: 84px; height: 84px; border-radius: 50%; border: 0; background: var(--primary); color: #fff; display: inline-flex; align-items: center; justify-content: center; cursor: pointer; box-shadow: 0 8px 24px rgba(37, 99, 235, 0.35); }
+.ai-mic.rec { background: #dc2626; animation: ai-pulse 1.2s infinite; }
+@keyframes ai-pulse { 0%, 100% { box-shadow: 0 0 0 0 rgba(220, 38, 38, 0.45); } 50% { box-shadow: 0 0 0 14px rgba(220, 38, 38, 0); } }
+.ai-transcript { font-style: italic; color: var(--text-muted); background: var(--bg-secondary); border-radius: 8px; padding: 0.5rem 0.75rem; }
+.ai-rows { display: flex; flex-direction: column; gap: 0.5rem; max-height: 50vh; overflow: auto; margin: 0.5rem 0; }
+.ai-row { display: grid; grid-template-columns: 1fr 70px 90px auto; gap: 0.4rem; align-items: start; }
+.ai-name small { font-size: 0.7rem; } .ai-name small.ok { color: #15803d; } .ai-name small.new { color: #b45309; }
+.ai-num { text-align: right; }
+@media (max-width: 480px) { .ai-row { grid-template-columns: 1fr 60px 76px auto; } }

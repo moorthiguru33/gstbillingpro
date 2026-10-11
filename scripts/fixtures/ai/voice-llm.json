@@ -1,0 +1,4 @@
+{
+  "stt": { "text": "ரவி அண்ணா 9876543210 க்கு இரண்டு கிலோ சர்க்கரை கிலோ 45 ரூபாய், 3 சோப்பு, one dozen eggs 72 rupees", "transcription_info": { "language": "ta" } },
+  "llm": { "response": "Sure! Here is the JSON:\n```json\n{\"customer\":{\"name\":\"Ravi Anna\",\"phone\":\"+91 98765 43210\"},\"items\":[{\"name\":\"சர்க்கரை\",\"qty\":\"2\",\"unit\":\"kilo\",\"rate\":\"₹45\"},{\"name\":\"Soap\",\"qty\":3,\"unit\":\"pieces\",\"rate\":null},{\"name\":\"Eggs\",\"qty\":1,\"unit\":\"dozen\",\"rate\":72},{\"name\":\"<script>x</script>\",\"qty\":-4,\"rate\":\"abc\"},{\"qty\":2},\"junk\"]}\n```\nLet me know!" }
+}

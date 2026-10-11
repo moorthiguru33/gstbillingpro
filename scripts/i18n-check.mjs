@@ -11,7 +11,7 @@ import { fileURLToPath } from 'node:url';
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const DIR = path.join(ROOT, 'src/i18n/locales');
 // Sections whose keys are also built at runtime (t(`plans.${tier}`) …): never pruned.
-const DYNAMIC_PREFIXES = ['landing.', 'biz.', 'plans.', 'lang.', 'staff.', 'settingsHome.'];
+const DYNAMIC_PREFIXES = ['landing.', 'biz.', 'plans.', 'lang.', 'staff.', 'settingsHome.', 'ai.'];
 const PLURAL = /_(zero|one|two|few|many|other)$/;
 
 const flat = (obj, pre = '', out = {}) => {
