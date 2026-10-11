@@ -22,6 +22,7 @@ import { t as tr } from '../i18n';
 import AiBillButton from './ai/AiBillButton';
 import { t as i18nT } from '../i18n';
 import QuickAddSheet from './mobile/QuickAddSheet';
+import { setLeaveGuard } from '../lib/appRouter';
 
 // Rich text editor component that works with contentEditable properly
 function RichEditor({ value, onChange, placeholder, toolbar = false }) {
@@ -964,6 +965,16 @@ export default function InvoiceGenerator({ onBack, profile: profileProp, editing
     },
     cancel: () => setLeaveModal(false),
   };
+
+  // Browser / phone Back while the bill has unsaved changes: stay and show
+  // the same Save / Discard / Cancel dialog as the in-app Back button.
+  useEffect(() => {
+    setLeaveGuard(() => {
+      if (isMeaningfulInvoice() && isDirty.current) { setLeaveModal(true); return false; }
+      return true;
+    });
+    return () => setLeaveGuard(null);
+  }, [isMeaningfulInvoice]);
 
   useEffect(() => {
     const handler = (e) => {

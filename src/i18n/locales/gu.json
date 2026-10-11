@@ -36,7 +36,8 @@
     "settings": "સેટિંગ્સ",
     "support": "મદદ અને માહિતી",
     "openMenu": "મેનુ ખોલો",
-    "finishSetup": "✨ સેટઅપ પૂર્ણ કરો"
+    "finishSetup": "✨ સેટઅપ પૂર્ણ કરો",
+    "pressBackAgain": "બહાર નીકળવા માટે ફરીથી બેક દબાવો"
   },
   "landing": {
     "navFeatures": "સુવિધાઓ",

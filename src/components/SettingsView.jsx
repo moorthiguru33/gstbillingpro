@@ -46,7 +46,7 @@ const JUMP_NAV_SECTIONS = [
   ['section-updates',  'Updates'],
 ];
 
-export default function SettingsView({ onSaved }) {
+export default function SettingsView({ onSaved, routePage, onPageChange }) {
   const [profile, setProfile] = useState({
     businessName: '', address: '', state: '', gstin: '', pan: '',
     email: '', phone: '', bankName: '', accountNumber: '', ifsc: '',
@@ -67,8 +67,18 @@ export default function SettingsView({ onSaved }) {
   const [page, setPage] = useState(() => {
     try { const v = sessionStorage.getItem(SETTINGS_PAGE_KEY); return v && allowedPages.includes(v) ? v : 'home'; } catch { return 'home'; }
   });
+  // The URL (/app/settings/<page>) drives the page too, so browser Back/Forward
+  // between settings pages works. Adjusting state during render on a prop
+  // change is React's recommended pattern (no effect round-trip).
+  const [prevRoutePage, setPrevRoutePage] = useState(routePage);
+  if (routePage !== undefined && routePage !== prevRoutePage) {
+    setPrevRoutePage(routePage);
+    const next = routePage && allowedPages.includes(routePage) ? routePage : 'home';
+    if (next !== page) setPage(next);
+  }
   const openPage = (id) => {
     setPage(id);
+    onPageChange?.(id);
     try { sessionStorage.setItem(SETTINGS_PAGE_KEY, id); } catch { /* ignore */ }
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };

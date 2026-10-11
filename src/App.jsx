@@ -53,6 +53,7 @@ import BottomTabBar from './components/mobile/BottomTabBar';
 import BottomSheet from './components/mobile/BottomSheet';
 import useMobileEnhancements from './components/mobile/useMobileEnhancements';
 import { WINDOWS_DOWNLOAD_URL, ANDROID_DOWNLOAD_URL } from './lib/appLinks';
+import { createAppRouter, pathToRoute, isAppPath, routeKey, OVERLAY_SELECTOR, setActiveRouter } from './lib/appRouter';
 
 const openDocs = () => window.open(DOCS_URL, '_blank', 'noopener,noreferrer');
 
@@ -86,6 +87,9 @@ function BillingApp({ authUser, onSignOut, isDemoMode, onExitDemo }) {
     try { return !getPrintSettings()?.onboardingComplete; } catch { return false; }
   })();
   const [requestedView, setCurrentView] = useState(() => {
+    // A real app URL (/app/settings, refresh or deep link) wins.
+    const fromUrl = pathToRoute(window.location.pathname);
+    if (fromUrl) return fromUrl.view;
     // PWA manifest "shortcuts" deep-link in via ?view=X (e.g. right-clicking
     // the pinned taskbar icon → "New Invoice" opens /?view=new). Honour that
     // before falling back to whatever the user was last looking at.
@@ -421,8 +425,84 @@ function BillingApp({ authUser, onSignOut, isDemoMode, onExitDemo }) {
   const [navOpen, setNavOpen] = useState(false);
   // Phone navigation: bottom tabs + sheets (CSS hides them on desktop).
   const [mobileSheet, setMobileSheet] = useState(null); // 'new' | 'more' | 'biz' | null
-  const [billsTab, setBillsTab] = useState(false);
+  const [billsTab, setBillsTab] = useState(() => pathToRoute(window.location.pathname)?.sub === 'bills');
+  const [settingsPage, setSettingsPage] = useState(() => {
+    const r = pathToRoute(window.location.pathname);
+    if (r && r.view === 'settings') return r.sub || 'home';
+    try { return sessionStorage.getItem('gbp_settings_page') || 'home'; } catch { return 'home'; }
+  });
   useMobileEnhancements();
+
+  // ---- Browser history: Back walks through screens and closes overlays ----
+  const routeSub = currentView === 'dashboard' ? (billsTab ? 'bills' : '')
+    : currentView === 'settings' ? (settingsPage === 'home' ? '' : settingsPage) : '';
+  const currentRouteKey = routeKey({ view: currentView, sub: routeSub });
+  const [initialRoute] = useState(() => ({ view: currentView, sub: routeSub }));
+  const routerRef = useRef(null);
+  useEffect(() => {
+    const applyRoute = (r) => {
+      setCurrentView(r.view);
+      setBillsTab(r.view === 'dashboard' && r.sub === 'bills');
+      if (r.view === 'settings') setSettingsPage(r.sub || 'home');
+      setNavOpen(false);
+      if (r.view === 'dashboard' && r.sub === 'bills') {
+        setTimeout(() => document.getElementById('invoice-list')?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 250);
+      }
+    };
+    const visible = (el) => el.getClientRects().length > 0;
+    const overlays = () => [...document.querySelectorAll(OVERLAY_SELECTOR)].filter(visible);
+    const closeTopOverlay = () => {
+      const els = overlays();
+      if (!els.length) return;
+      // highest z-index wins; ties → the one later in the DOM (opened last)
+      const top = els.reduce((a, b) => ((parseInt(getComputedStyle(b).zIndex, 10) || 0) >= (parseInt(getComputedStyle(a).zIndex, 10) || 0) ? b : a));
+      top.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true }));
+      setTimeout(() => {
+        if (top.isConnected && visible(top)) document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+      }, 60);
+    };
+    const mq = (q) => { try { return window.matchMedia(q).matches; } catch { return false; } };
+    const phoneLike = mq('(max-width: 768px)') || mq('(display-mode: standalone)') || document.referrer.startsWith('android-app://');
+    const router = createAppRouter({
+      win: window,
+      storage: sessionStorage,
+      useExitGuard: phoneLike,
+      onRoute: applyRoute,
+      onExitAttempt: () => toast(tr('nav.pressBackAgain'), 'info', 2000),
+      overlayCount: () => overlays().length,
+      closeTopOverlay,
+    });
+    router.start(initialRoute);
+    routerRef.current = router;
+    setActiveRouter(router);
+    let raf = 0;
+    const obs = new MutationObserver(() => {
+      if (raf) return;
+      raf = requestAnimationFrame(() => { raf = 0; router.syncOverlays(); });
+    });
+    obs.observe(document.body, { childList: true, subtree: true, attributes: true, attributeFilter: ['class', 'style'] });
+    return () => {
+      obs.disconnect();
+      cancelAnimationFrame(raf);
+      router.stop();
+      setActiveRouter(null);
+      routerRef.current = null;
+      // Signed out / left demo: the landing page lives at "/".
+      if (isAppPath(window.location.pathname)) window.history.replaceState(null, '', '/');
+    };
+  }, [initialRoute]);
+  useEffect(() => {
+    routerRef.current?.navigate({ view: currentView, sub: routeSub });
+    try { if (currentView === 'settings') sessionStorage.setItem('gbp_settings_page', settingsPage); } catch { /* ignore */ }
+  }, [currentRouteKey]); // eslint-disable-line react-hooks/exhaustive-deps
+  // In-app "Back" (invoice editor etc.): go to the previous screen in history.
+  const goBackInApp = () => {
+    const prev = routerRef.current?.previousRoute();
+    const r = prev || { view: 'dashboard', sub: '' };
+    setCurrentView(r.view);
+    setBillsTab(r.view === 'dashboard' && r.sub === 'bills');
+    if (r.view === 'settings') setSettingsPage(r.sub || 'home');
+  };
   const openBillsList = () => {
     setBillsTab(true);
     setCurrentView('dashboard');
@@ -1030,7 +1110,7 @@ function BillingApp({ authUser, onSignOut, isDemoMode, onExitDemo }) {
         {currentView === 'new' && (
           <InvoiceGenerator
             key={editorKey}
-            onBack={() => { setEditingBill(null); setCurrentView('dashboard'); }}
+            onBack={() => { setEditingBill(null); goBackInApp(); }}
             profile={profile} editingBill={editingBill}
           />
         )}
@@ -1070,7 +1150,7 @@ function BillingApp({ authUser, onSignOut, isDemoMode, onExitDemo }) {
           <IncomeTax key={businessKey} />
         )}
         {currentView === 'settings' && (
-          <SettingsView onSaved={(p) => setProfile(p)} />
+          <SettingsView onSaved={(p) => setProfile(p)} routePage={settingsPage} onPageChange={setSettingsPage} />
         )}
         {currentView === 'controlpanel' && IS_DESKTOP_BUILD && (
           <ControlPanel />
