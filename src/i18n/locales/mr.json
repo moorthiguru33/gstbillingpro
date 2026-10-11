@@ -36,7 +36,8 @@
     "settings": "सेटिंग्ज",
     "support": "मदत आणि माहिती",
     "openMenu": "मेनू उघडा",
-    "finishSetup": "✨ सेटअप पूर्ण करा"
+    "finishSetup": "✨ सेटअप पूर्ण करा",
+    "pressBackAgain": "बाहेर पडण्यासाठी पुन्हा बॅक दाबा"
   },
   "landing": {
     "navFeatures": "वैशिष्ट्ये",

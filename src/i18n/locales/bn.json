@@ -36,7 +36,8 @@
     "settings": "সেটিংস",
     "support": "সাহায্য ও পরিচিতি",
     "openMenu": "মেনু খুলুন",
-    "finishSetup": "✨ সেটআপ শেষ করুন"
+    "finishSetup": "✨ সেটআপ শেষ করুন",
+    "pressBackAgain": "বের হতে আবার ব্যাক চাপুন"
   },
   "landing": {
     "navFeatures": "বৈশিষ্ট্য",

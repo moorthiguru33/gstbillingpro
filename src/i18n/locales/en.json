@@ -36,7 +36,8 @@
     "settings": "Settings",
     "support": "Support & About",
     "openMenu": "Open menu",
-    "finishSetup": "✨ Finish setup"
+    "finishSetup": "✨ Finish setup",
+    "pressBackAgain": "Press back again to exit"
   },
   "landing": {
     "navFeatures": "Features",

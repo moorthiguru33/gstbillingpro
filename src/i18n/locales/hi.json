@@ -36,7 +36,8 @@
     "settings": "सेटिंग्स",
     "support": "सहायता और जानकारी",
     "openMenu": "मेनू खोलें",
-    "finishSetup": "✨ सेटअप पूरा करें"
+    "finishSetup": "✨ सेटअप पूरा करें",
+    "pressBackAgain": "बाहर निकलने के लिए फिर से बैक दबाएँ"
   },
   "landing": {
     "navFeatures": "फ़ीचर्स",
