@@ -19,7 +19,8 @@ group('module gating', () => {
   assert.equal(moduleAllowed('pro', 'payroll'), true);
   assert.equal(moduleAllowed('business', 'payroll'), true);
   assert.equal(moduleAllowed('pro', 'nope'), false);
-  assert.equal(Object.keys(MODULES).length, 4);
+  assert.equal(moduleAllowed('free', 'docs'), true);
+  assert.equal(Object.keys(MODULES).length, 5);
 });
 
 group('router sub pages', () => {

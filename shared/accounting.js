@@ -45,6 +45,7 @@ export const DEFAULT_ACCOUNTS = Object.freeze([
   A('sales_ret', 'Sales Returns (Credit Notes)', 'income', 'sales'),
   A('other_income', 'Other Income', 'income', 'indirect_income'),
   A('discount_recd', 'Discount Received', 'income', 'indirect_income'),
+  A('interest_income', 'Interest Received', 'income', 'indirect_income'),
   A('purchases', 'Purchases', 'expense', 'purchases'),
   A('freight', 'Freight & Courier', 'expense', 'direct_exp'),
   A('salaries', 'Salaries & Wages', 'expense', 'indirect_exp'),
@@ -60,6 +61,7 @@ export const DEFAULT_ACCOUNTS = Object.freeze([
   A('insurance', 'Insurance', 'expense', 'indirect_exp'),
   A('software', 'Software & Subscriptions', 'expense', 'indirect_exp'),
   A('discount_allowed', 'Discount Allowed', 'expense', 'indirect_exp'),
+  A('interest_exp', 'Interest Paid', 'expense', 'indirect_exp'),
   A('misc_exp', 'Miscellaneous Expenses', 'expense', 'indirect_exp'),
 ]);
 export const ACCOUNT_TYPES = Object.freeze(['asset', 'liability', 'equity', 'income', 'expense']);
@@ -170,7 +172,7 @@ function gstSplit(tax, interstate) {
  * Derive auto vouchers. billKind(bill) -> 'sale' | 'credit' | null.
  * Returns vouchers sorted by date.
  */
-export function deriveVouchers({ bills = [], purchases = [], expenses = [], receipts = [], billKind, bankId = 'bank' }) {
+export function deriveVouchers({ bills = [], purchases = [], expenses = [], receipts = [], billKind, bankId = 'bank', paidByDocs = new Set() }) {
   const out = [];
   const kindOf = billKind || ((b) => (b.status === 'cancelled' ? null : (b.invoiceType === 'credit-note' ? 'credit' : (['tax-invoice', 'bill-of-supply', 'composition', undefined, ''].includes(b.invoiceType) ? 'sale' : null))));
   for (const b of bills) {
@@ -215,7 +217,7 @@ export function deriveVouchers({ bills = [], purchases = [], expenses = [], rece
     const g = gstSplit(tax, !!pu.interstate);
     const lines = [line('purchases', r2(total - tax), 0), line('in_cgst', g.cgst, 0), line('in_sgst', g.sgst, 0), line('in_igst', g.igst, 0), line('creditors', 0, total, { p: party })];
     out.push({ id: `auto:pur:${pu.id}`, date: day(pu.date), type: 'purchase', no: pu.invoiceNumber || pu.id, narration: `Purchase ${pu.invoiceNumber || ''} — ${party}`, source: 'auto', ref: pu.id, lines: nonZero(lines) });
-    if (String(pu.paymentStatus || '').toLowerCase() === 'paid') {
+    if (String(pu.paymentStatus || '').toLowerCase() === 'paid' && !paidByDocs.has(pu.id)) {
       out.push({ id: `auto:purpay:${pu.id}`, date: day(pu.date), type: 'payment', no: pu.invoiceNumber || pu.id, narration: `Paid to ${party} (${pu.invoiceNumber || ''})`, source: 'auto', ref: pu.id, lines: [line('creditors', total, 0, { p: party }), line(modeAccount(pu.paymentMode || 'bank', bankId), 0, total)] });
     }
   }

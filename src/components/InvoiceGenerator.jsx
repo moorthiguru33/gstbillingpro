@@ -6,6 +6,7 @@ import { saveBill, applyStockChanges, getNextInvoiceNumber, getTermsTemplates, g
 import { INVOICE_TYPES, COUNTRIES, printedSubtotal, stockEffect, appliedStock, stockDelta, generateEWayBillJSON, formatCurrency, getCountryConfig, getStatesForCountry, getAllUnits, addCustomUnit, removeCustomUnit, getCountriesForRegion, TDS_SECTIONS, TCS_SECTIONS, REMOVED_TCS_SECTIONS, TERMS_PRESETS, getActiveAccounts, getDefaultAccount, getAccountById, getDefaultUnitForMode, filterUnitsByMode, PAPER_SIZES, getPaperSize, computeInvoiceTotals, clientYearToDate, htmlHasText, ORDER_DETAIL_FIELDS, invoiceOptionOn, DEFAULT_DECLARATION, decodeGstin, safePageBoundaries, localDateISO } from '../utils';
 import { getPrintSettings, savePrintSettings } from '../utils/printSettings';
 import { shareOnWhatsApp } from '../utils/share';
+import { getPref } from '../lib/prefs';
 import { confirmAction, promptAction } from './ConfirmModal';
 import PrintPreviewModal from './PrintPreviewModal';
 import { ensureToken, findOrCreateFolder, uploadPDF } from '../services/googleDrive';
@@ -514,12 +515,12 @@ const LineItem = memo(function LineItem({
   );
 });
 
-export default function InvoiceGenerator({ onBack, profile: profileProp, editingBill }) {
+export default function InvoiceGenerator({ onBack, profile: profileProp, editingBill, presetType }) {
   const draft = loadDraft();
   const [allProfiles, setAllProfiles] = useState([]);
   const [activeProfile, setActiveProfile] = useState(profileProp);
   const profile = activeProfile || profileProp;
-  const [invoiceType, setInvoiceType] = useState(draft?.invoiceType || 'tax-invoice');
+  const [invoiceType, setInvoiceType] = useState(draft?.invoiceType || (INVOICE_TYPES[presetType] ? presetType : 'tax-invoice'));
   // email/phone/isSEZ must be part of initial state — otherwise the SEZ flag
   // set inside ClientModal is silently discarded on save, and reopening the
   // bill can never restore contact fields even if the saved client has them.
@@ -684,6 +685,9 @@ export default function InvoiceGenerator({ onBack, profile: profileProp, editing
     return () => ro.disconnect();
   }, [previewCollapsed]);
   const draftInitialized = useRef(!!draft);
+  const waAfterSaveSent = useRef(false);
+  const [waNonce, setWaNonce] = useState(0);
+  const waHandled = useRef(0);
   const [autoSaveStatus, setAutoSaveStatus] = useState('idle'); // 'idle' | 'saving' | 'saved'
   const autoSaveTimer = useRef(null);
   // v1.10.22 — reported: "if user click back without even changing anything
@@ -1127,6 +1131,9 @@ export default function InvoiceGenerator({ onBack, profile: profileProp, editing
         setDetails(d.details);
       }
     } else if (!details.invoiceNumber) {
+      // Opened from the phone menu as a given document (credit note, quote …).
+      const preset = !draft && INVOICE_TYPES[presetType];
+      if (preset) setInvoiceOptions(prev => ({ ...prev, showGST: preset.showGST, showPlaceOfSupply: preset.showGST }));
       // v1.10.10 — honour the per-type prefix override for fresh invoices.
       const _psForPrefix = getPrintSettings();
       const rawOverride = _psForPrefix.customPrefixes?.[invoiceType];
@@ -1970,6 +1977,13 @@ export default function InvoiceGenerator({ onBack, profile: profileProp, editing
 
     const changes = stockDelta(stockFrom, bill.data.stockApplied);
     const moved = await applyStockChanges(changes);
+    // "Send WhatsApp after save" (Settings → SMS / WhatsApp): open the
+    // prefilled message once per editor session, on a manual save of a
+    // bill whose customer has a phone number. No paid SMS gateway.
+    if (!skipStockDeduction && !waAfterSaveSent.current && savedNumber && client?.phone && getPref('waAfterSave')) {
+      waAfterSaveSent.current = true;
+      setWaNonce(n => n + 1);
+    }
     if (moved.length) {
       setProducts(await getAllProducts());
       if (!skipStockDeduction) {
@@ -3106,6 +3120,10 @@ export default function InvoiceGenerator({ onBack, profile: profileProp, editing
       })
       .catch(() => {});
   };
+  // Opens the prefilled WhatsApp message once after a manual save (setting).
+  useEffect(() => {
+    if (waNonce > waHandled.current) { waHandled.current = waNonce; shareWhatsApp(); }
+  }, [waNonce]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const exportEWayBill = () => {
     if (!profile?.gstin) { toast(i18nT('ui.setYourGstinInSettingsFirst'), 'warning'); return; }

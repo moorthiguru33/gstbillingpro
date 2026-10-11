@@ -10,6 +10,8 @@ export const MODULES = Object.freeze({
   crm: Object.freeze({ id: 'crm', view: 'crm', minTier: 'starter' }),
   accounting: Object.freeze({ id: 'accounting', view: 'accounts', minTier: 'pro' }),
   payroll: Object.freeze({ id: 'payroll', view: 'payroll', minTier: 'pro' }),
+  // Payment-out, returns, orders, cheques, cash, loans (009): core billing, every plan.
+  docs: Object.freeze({ id: 'docs', view: 'txn', minTier: 'free' }),
 });
 
 /** True when `tier` (free | starter | pro | business) includes module `mod`. */
