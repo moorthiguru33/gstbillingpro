@@ -139,3 +139,18 @@ ${row('Payment ID', order.razorpay_payment_id || '')}
     text: `${title} ${order.receipt_number || order.order_id}\nSeller: ${COMPANY.owner} (${COMPANY.product}), GSTIN: ${gstin || 'not registered'}\nPlan: ${label}\nTaxable: ${formatPlanPrice(taxable)}  GST: ${formatPlanPrice(gst)}  Total paid: ${formatPlanPrice(total)}\nPayment ID: ${order.razorpay_payment_id || ''}\n`,
   };
 }
+
+export function staffInviteEmail({ businessName, role, link, appUrl, inviterEmail }) {
+  const url = appUrl || COMPANY.site;
+  const roleLabel = { manager: 'Manager', biller: 'Biller (billing & POS)', accountant: 'Accountant / CA (read-only)' }[role] || role;
+  const biz = businessName || 'a business';
+  return {
+    subject: `You are invited to ${biz} on ${COMPANY.product}`,
+    html: layout({ title: 'Invitation', appUrl: url, body: `${hello('')}
+<p>${esc(inviterEmail || 'The owner')} has invited you to join <strong>${esc(biz)}</strong> on ${esc(COMPANY.product)} as <strong>${esc(roleLabel)}</strong>.</p>
+<p>Open the link below and sign up (or log in) with this e-mail address to accept. The link is valid for 14 days.</p>
+${button(link, 'Accept invitation')}
+<p style="font-size:13px;color:#64748b">If you did not expect this, you can ignore this e-mail.</p>` }),
+    text: `You have been invited to join ${biz} on ${COMPANY.product} as ${roleLabel}.\n\nAccept (valid 14 days): ${link}\n`,
+  };
+}

@@ -63,7 +63,7 @@ export const TIER_IDS = Object.freeze(Object.keys(TIERS));
 export const FEATURES = deepFreeze({
   removeBranding: { soon: false },
   multiBusiness: { soon: false },
-  staffUsers: { soon: true },
+  staffUsers: { soon: false },
   whatsappAutomation: { soon: true },
   eInvoice: { soon: true },
   prioritySupport: { soon: false },

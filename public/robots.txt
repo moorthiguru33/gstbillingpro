@@ -2,5 +2,6 @@ User-agent: *
 Allow: /
 Disallow: /admin
 Disallow: /api/
+Disallow: /b/
 
 Sitemap: https://gst-billing-pro.pages.dev/sitemap.xml

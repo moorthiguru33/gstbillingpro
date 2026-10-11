@@ -4,6 +4,7 @@ import { signIn, signUp, resetPassword, signInWithGoogle } from '../lib/supabase
 import { LEGAL_LINKS } from '../../shared/company.js';
 import { t as tr } from '../i18n';
 import LandingSections, { LandingTopBar } from './LandingSections';
+import { pendingInvite, peekInvite } from '../lib/org';
 
 // ============================================================
 // AuthPage — Beautiful Login / Register / Forgot Password
@@ -18,6 +19,20 @@ export default function AuthPage({ onAuth, onStartDemo }) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
+  // Staff invite (/?invite=…): say whose business they are joining.
+  const [invite, setInvite] = useState(null);
+  useEffect(() => {
+    const token = pendingInvite();
+    if (!token) return;
+    let off = false;
+    peekInvite(token).then(info => {
+      if (off || !info) return;
+      setInvite(info);
+      setTab('register');
+      if (info.email) setEmail(info.email);
+    });
+    return () => { off = true; };
+  }, []);
 
   const handleGoogleSignIn = async () => {
     setError('');
@@ -350,6 +365,11 @@ export default function AuthPage({ onAuth, onStartDemo }) {
             </div>
           )}
 
+          {invite && (
+            <div style={{ background: '#ecfdf5', border: '1px solid #a7f3d0', color: '#065f46', borderRadius: 10, padding: '0.7rem 0.9rem', marginBottom: '0.9rem', fontSize: '0.88rem' }}>
+              {tr('staff.inviteBanner', { business: invite.business || '—', role: tr(`staff.role_${invite.role}`) })}
+            </div>
+          )}
           {/* Form */}
           <form onSubmit={tab === 'login' ? handleLogin : tab === 'register' ? handleRegister : handleForgot}>
             {/* Email */}

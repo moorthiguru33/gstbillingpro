@@ -2,7 +2,9 @@ import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Zap, X, RefreshCw } from 'lucide-react';
 import { getSubscription, getMyPlanUsage } from '../lib/supabase.js';
-import { setPlanFromSubscription, PLAN_LIMIT_EVENT } from '../lib/planState';
+import { setPlanFromSubscription, setPlanFromTier, PLAN_LIMIT_EVENT } from '../lib/planState';
+import { loadOrgs, getOrgPlan, acceptPendingInvite } from '../lib/org';
+import { toast } from './Toast';
 import { PlanContext } from '../lib/planContext';
 import { claimReferral, requestWelcomeEmail } from '../lib/payments';
 import UpgradeModal from './plans/UpgradeModal';
@@ -23,6 +25,7 @@ export default function SubscriptionGuard({ user, children, onSignOut }) {
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState(null);
   const [upgrade, setUpgrade] = useState({ open: false, reason: null });
+  const [org, setOrg] = useState(null); // { ownerId, role, orgTier } when working in someone else's business
 
   // Subscription status ALWAYS comes from the database. If it cannot be
   // read we show a retry screen — we never invent a plan in the browser.
@@ -31,6 +34,20 @@ export default function SubscriptionGuard({ user, children, onSignOut }) {
     try {
       const s = await getSubscription(user.id);
       if (!s) throw new Error('No subscription record found for this account.');
+      // Staff & CA (003): accept a pending invite, then pick the business.
+      const accepted = await acceptPendingInvite(user);
+      if (accepted?.ok) toast(t('staff.joined'), 'success', 5000);
+      else if (accepted && accepted.message) toast(accepted.message, 'error', 7000);
+      const o = await loadOrgs(user);
+      if (o.ownerId && o.ownerId !== user.id) {
+        const op = await getOrgPlan(o.ownerId);
+        setOrg({ ownerId: o.ownerId, role: o.role, orgTier: op?.tier || 'free' });
+        setSub(s);
+        setPlanFromTier(op?.tier || 'free');
+        setUsage(op);
+        return;
+      }
+      setOrg(null);
       setSub(s);
       setPlanFromSubscription(s);
       setUsage(await getMyPlanUsage());
@@ -63,7 +80,7 @@ export default function SubscriptionGuard({ user, children, onSignOut }) {
 
   // DB limit hit anywhere in the app → open the upgrade modal.
   useEffect(() => {
-    const onLimit = (e) => { setUpgrade({ open: true, reason: e.detail?.kind || null }); getMyPlanUsage().then(setUsage); };
+    const onLimit = (e) => { setUpgrade({ open: true, reason: e.detail?.kind || null }); if (!org) getMyPlanUsage().then(setUsage); };
     window.addEventListener(PLAN_LIMIT_EVENT, onLimit);
     // Deep link from e-mails: /?view=pricing
     try {
@@ -74,13 +91,17 @@ export default function SubscriptionGuard({ user, children, onSignOut }) {
       }
     } catch { /* ignore */ }
     return () => window.removeEventListener(PLAN_LIMIT_EVENT, onLimit);
-  }, []);
+  }, [org]);
 
-  const plan = useMemo(() => (sub ? setPlanFromSubscription(sub) : null), [sub]);
+  const plan = useMemo(() => {
+    if (org) return setPlanFromTier(org.orgTier);
+    return sub ? setPlanFromSubscription(sub) : null;
+  }, [sub, org]);
   const ctx = useMemo(() => ({
-    plan, sub, usage, refresh,
-    openUpgrade: (reason = null) => setUpgrade({ open: true, reason }),
-  }), [plan, sub, usage, refresh]);
+    plan, sub, usage, refresh, org,
+    // Staff cannot buy a plan for the owner's business.
+    openUpgrade: (reason = null) => (org ? toast(t('staff.askOwner'), 'info', 6000) : setUpgrade({ open: true, reason })),
+  }), [plan, sub, usage, refresh, org, t]);
 
   if (loading) {
     return (
@@ -108,9 +129,9 @@ export default function SubscriptionGuard({ user, children, onSignOut }) {
 
   return (
     <PlanContext.Provider value={ctx}>
-      {plan && <PlanBanner plan={plan} usage={usage} onUpgrade={() => ctx.openUpgrade()} />}
-      <UpgradeModal open={upgrade.open} reason={upgrade.reason} plan={plan} usage={usage} user={user}
-        onClose={() => setUpgrade({ open: false, reason: null })} onPaid={refresh} />
+      {plan && !org && <PlanBanner plan={plan} usage={usage} onUpgrade={() => ctx.openUpgrade()} />}
+      {org ? (upgrade.open && <StaffLimitNote reason={upgrade.reason} onClose={() => setUpgrade({ open: false, reason: null })} />) : <UpgradeModal open={upgrade.open} reason={upgrade.reason} plan={plan} usage={usage} user={user}
+        onClose={() => setUpgrade({ open: false, reason: null })} onPaid={refresh} />}
       {children}
     </PlanContext.Provider>
   );
@@ -135,6 +156,20 @@ function PlanBanner({ plan, usage, onUpgrade }) {
       <Zap size={16} /><span>{text}</span>
       <button type="button" onClick={onUpgrade} style={{ background: '#fff', color: urgent ? '#b91c1c' : '#b45309', border: 'none', borderRadius: 20, padding: '0.2rem 0.85rem', fontWeight: 700, cursor: 'pointer' }}>{t('plans.seePlans')}</button>
       <button type="button" aria-label={t('common.close')} onClick={() => setDismissed(true)} style={{ background: 'none', border: 'none', color: 'rgba(255,255,255,0.8)', cursor: 'pointer' }}><X size={16} /></button>
+    </div>
+  );
+}
+
+// Staff hit the owner's plan limit: they cannot pay, so just explain.
+function StaffLimitNote({ reason, onClose }) {
+  const { t } = useTranslation();
+  return (
+    <div className="modal-overlay" style={{ zIndex: 9995 }} onClick={onClose}>
+      <div className="modal-content" style={{ maxWidth: 420 }} onClick={e => e.stopPropagation()}>
+        <h3 style={{ marginTop: 0 }}>{t(reason === 'businesses' ? 'plans.businessLimitTitle' : 'plans.limitTitle')}</h3>
+        <p>{t('staff.askOwner')}</p>
+        <button type="button" className="btn btn-primary" onClick={onClose}>{t('common.close')}</button>
+      </div>
     </div>
   );
 }

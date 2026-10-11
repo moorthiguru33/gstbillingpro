@@ -27,6 +27,8 @@ import QuickPOS from './components/QuickPOS';
 import ToastContainer, { toast } from './components/Toast';
 import ConfirmModalContainer from './components/ConfirmModal';
 import OnboardingWizard from './components/OnboardingWizard';
+import OrgSwitcher from './components/staff/OrgSwitcher';
+import { roleCanView, isStaffMode } from './lib/org';
 import { UsageMeter } from './components/plans/PlanSettings';
 const SettingsView = lazy(() => import('./components/SettingsView'));
 const ClientsView = lazy(() => import('./components/ClientsView'));
@@ -79,7 +81,7 @@ function BillingApp({ authUser, onSignOut, isDemoMode, onExitDemo }) {
   const showResumeSetupPill = !showWizard && (() => {
     try { return !getPrintSettings()?.onboardingComplete; } catch { return false; }
   })();
-  const [currentView, setCurrentView] = useState(() => {
+  const [requestedView, setCurrentView] = useState(() => {
     // PWA manifest "shortcuts" deep-link in via ?view=X (e.g. right-clicking
     // the pinned taskbar icon → "New Invoice" opens /?view=new). Honour that
     // before falling back to whatever the user was last looking at.
@@ -110,6 +112,8 @@ function BillingApp({ authUser, onSignOut, isDemoMode, onExitDemo }) {
     return localStorage.getItem('freegstbill_theme') === 'dark';
   });
   const [showWelcome, setShowWelcome] = useState(false);
+  // Staff roles (003): billers/CAs fall back to the dashboard for views their role cannot open.
+  const currentView = roleCanView(requestedView) ? requestedView : 'dashboard';
   const [showInstallBanner, setShowInstallBanner] = useState(false);
   const [serverDown, setServerDown] = useState(false);
   const deferredPrompt = useRef(null);
@@ -318,7 +322,7 @@ function BillingApp({ authUser, onSignOut, isDemoMode, onExitDemo }) {
           const p = await getProfile();
           if (cancelled) return;
           setProfile(p);
-          if (!p?.businessName && !localStorage.getItem('freegstbill_onboarded')) {
+          if (!isStaffMode() && !p?.businessName && !localStorage.getItem('freegstbill_onboarded')) {
             setShowWelcome(true);
           }
         }
@@ -832,7 +836,7 @@ function BillingApp({ authUser, onSignOut, isDemoMode, onExitDemo }) {
         </div>
 
         <nav className="sidebar-nav">
-          {navItems.map(item => (
+          {navItems.filter(item => roleCanView(item.id)).map(item => (
             <button
               key={item.id}
               className={`nav-btn ${currentView === item.id ? 'nav-btn-active' : ''}`}
@@ -926,6 +930,7 @@ function BillingApp({ authUser, onSignOut, isDemoMode, onExitDemo }) {
               {serverStatus === 'online' ? 'App Ready' : serverStatus === 'offline' ? 'App Not Running' : 'Connecting...'}
             </div>
           </div>
+          <OrgSwitcher />
           <UsageMeter />
         </nav>
       </div>

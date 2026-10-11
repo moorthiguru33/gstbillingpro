@@ -1,9 +1,11 @@
 import { useState, useEffect, useMemo } from 'react';
 import { FileText, Trash2, Plus, IndianRupee, Receipt, Edit3, TrendingUp, Search, Copy, X, CheckCircle, Clock, AlertTriangle, MessageCircle, Mail, StickyNote, Send, Package, Download, Printer, Ban, Zap } from 'lucide-react';
 import HelpButton from './HelpButton';
+import { isDemoModeActive } from '../store-supabase';
 import { getAllBills, saveBill, deleteBill, getAllProducts, applyStockChanges, getProfile, getAllClients, getStockAlertSettings, saveReceipt, deleteReceipt, getAllReceipts } from '../store';
 import { formatCurrency, INVOICE_TYPES, getFYOptions, numberToWords, belongsToProfile, salesSign, isCancelledBill, markPaidPatch, stockEffect, appliedStock, stockDelta, SALES_INVOICE_TYPES, localDateISO } from '../utils';
 import { shareOnWhatsApp } from '../utils/share';
+import { createBillLink, billShareMessage, reminderMessage } from '../lib/billLink';
 import PageHeader from './PageHeader';
 import SupportNudge from './SupportNudge';
 import { toast } from './Toast';
@@ -1028,7 +1030,26 @@ export default function Dashboard({ onNew, onEdit, onDuplicate, onConvert, onOpe
     return lines.join('\n');
   };
 
+  // Phase 3: WhatsApp a link to a hosted copy of the bill (/b/<token>) with
+  // view/download + UPI pay, in the customer's language. Falls back to the
+  // PDF share sheet / text message when offline, in demo mode or on error.
   const shareWhatsApp = async (bill) => {
+    if (!isDemoModeActive()) {
+      try {
+        toast(tr('share.preparing'), 'info', 2000);
+        const blob = await generateSingleBillPdfBlob(bill);
+        const link = await createBillLink(bill, blob, profile);
+        const message = await billShareMessage(bill, profile, link);
+        await shareOnWhatsApp({ phone: bill.clientPhone || bill.data?.client?.phone, message, ask: promptAction, customerName: bill.clientName });
+        return;
+      } catch (e) {
+        console.warn('Bill link failed, using PDF/text share:', e);
+      }
+    }
+    return shareWhatsAppLegacy(bill);
+  };
+
+  const shareWhatsAppLegacy = async (bill) => {
     const msg = buildShareMessage(bill);
     // v1.10.22 — try the native Web Share API first, with the actual PDF
     // attached. On mobile Chrome / Safari the share sheet lets the user
@@ -1094,8 +1115,6 @@ export default function Dashboard({ onNew, onEdit, onDuplicate, onConvert, onOpe
   const sendReminder = (bill) => {
     const clientPhone = bill.clientPhone || bill.data?.client?.phone || '';
     const clientName = bill.clientName || 'Sir/Madam';
-    const dueDate = bill.data?.details?.dueDate ? new Date(bill.data.details.dueDate).toLocaleDateString('en-IN') : 'N/A';
-    const businessName = profile?.businessName || 'Our Company';
     const outstanding = (bill.totalAmount || 0) - (bill.paidAmount || 0);
     // v1.10.23 — don't send a payment reminder for overpaid or already-paid
     // bills. The old message read "Hi X, kindly arrange the payment of -₹1"
@@ -1104,19 +1123,10 @@ export default function Dashboard({ onNew, onEdit, onDuplicate, onConvert, onOpe
       toast('This invoice has no outstanding balance — no reminder to send.', 'info');
       return;
     }
-    const outstandingStr = formatCurrency(outstanding, bill.currency);
-    const totalStr = formatCurrency(bill.totalAmount || 0, bill.currency);
-    // v1.10.12 — Status-aware message. Prior code said "due on X" even
-    // for partial invoices, which read oddly ("paid Rs. 5000 was due
-    // on...") to clients. Now the wording matches the actual state.
-    const isPartial = (bill.paidAmount || 0) > 0.01 && outstanding > 0.01;
-    const isOverdueDate = bill.data?.details?.dueDate && new Date(bill.data.details.dueDate) < new Date();
-    const msg = isPartial
-      ? `Hi ${clientName}, this is a gentle reminder that a balance of ${outstandingStr} is pending on Invoice ${bill.invoiceNumber} (total ${totalStr}). Kindly clear the remaining amount at your earliest convenience. Thank you! - ${businessName}`
-      : isOverdueDate
-        ? `Hi ${clientName}, this is a gentle reminder that Invoice ${bill.invoiceNumber} for ${outstandingStr} was due on ${dueDate}. Kindly arrange the payment at your earliest convenience. Thank you! - ${businessName}`
-        : `Hi ${clientName}, this is a gentle reminder about the pending payment of ${outstandingStr} on Invoice ${bill.invoiceNumber}. Kindly arrange the payment at your earliest convenience. Thank you! - ${businessName}`;
-    shareOnWhatsApp({ phone: clientPhone, message: msg, ask: promptAction, customerName: clientName }).catch(() => {});
+    // Phase 3: polite reminder in the customer-message language.
+    reminderMessage({ clientName: bill.clientName, business: profile?.businessName, amount: outstanding, invoices: [bill.invoiceNumber] })
+      .then(message => shareOnWhatsApp({ phone: clientPhone, message, ask: promptAction, customerName: clientName }))
+      .catch(() => {});
   };
 
   const getClientPhone = (bill) => {
