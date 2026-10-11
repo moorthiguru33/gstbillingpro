@@ -1,11 +1,13 @@
 // ============================================================
 // Supabase Client — GST Billing SaaS
-// Replace VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY in .env
+// Set VITE_SUPABASE_URL and VITE_SUPABASE_PUBLISHABLE_KEY (sb_publishable_…,
+// preferred) or the legacy VITE_SUPABASE_ANON_KEY in .env
 // ============================================================
 import { createClient } from '@supabase/supabase-js';
 
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
-const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
+// New Supabase API keys: the publishable key replaces the legacy anon JWT.
+const supabaseAnonKey = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY || import.meta.env.VITE_SUPABASE_ANON_KEY;
 
 if (!supabaseUrl || !supabaseAnonKey) {
   console.error('❌ Missing Supabase env vars. Create .env file from .env.example');
