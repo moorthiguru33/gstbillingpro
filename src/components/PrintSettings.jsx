@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
+import { t as tr } from '../i18n';
 import { Printer, TestTube, RotateCcw, Info, Save as SaveIcon, Trash2 } from 'lucide-react';
 import { toast } from './Toast';
 import { confirmAction } from './ConfirmModal';
@@ -198,6 +199,7 @@ const DESIGN_PRESETS = [
 export default function PrintSettings() {
   const [settings, setSettings] = useState(getPrintSettings);
   const [showTestPreview, setShowTestPreview] = useState(false);
+  const [showAdvanced, setShowAdvanced] = useState(false);
   const [profile, setProfile] = useState(null);
   const previewRef = useRef(null);
   // v1.9.8 — preview mode toggle so users see the right layout for the
@@ -672,6 +674,13 @@ export default function PrintSettings() {
         </div>
       </div>
 
+      {/* Phase 3: everyday options above; the rest (70+) behind one toggle. */}
+      <button type="button" className="btn btn-secondary print-advanced-toggle" aria-expanded={showAdvanced}
+        onClick={() => setShowAdvanced(v => !v)}
+        style={{ width: '100%', justifyContent: 'center', margin: '0 0 1.25rem', padding: '0.7rem', fontWeight: 700 }}>
+        {showAdvanced ? tr('settingsHome.hideAdvanced') : tr('settingsHome.showAdvanced')}
+      </button>
+      {showAdvanced && (<>
       {/* ============================================================
           RETAIL MRP & SAVINGS DISPLAY SETTINGS
           ============================================================ */}
@@ -1369,6 +1378,7 @@ export default function PrintSettings() {
            above the SAVED TEMPLATES section. Notification bell still
            surfaces overdue bills using `reminderEnabled` alone. */}
 
+        </>)}
         </div>{/* end .print-settings-body */}
 
         {/* v1.9.8 — Sticky preview pane. Stays in view while user scrolls

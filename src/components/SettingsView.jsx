@@ -19,6 +19,14 @@ import HelpButton from './HelpButton';
 import { getTrashedBills, restoreTrashedBill, purgeTrashedBill } from '../store';
 import { t as tr } from '../i18n';
 import PlanSettings from './plans/PlanSettings';
+import SettingsHome, { SettingsPageHeader } from './settings/SettingsHome';
+import { SETTINGS_PAGES } from './settings/pages';
+import PrinterPanel from './settings/PrinterPanel';
+import StaffSettings from './settings/StaffSettings';
+import LanguagePicker from './LanguagePicker';
+import { roleCan } from '../lib/org';
+
+const SETTINGS_PAGE_KEY = 'gbp_settings_page';
 
 // v1.10.36 — Section order for the jump-nav pill bar. Keeping this at
 // module scope so the scroll-spy effect below can reference it without
@@ -48,6 +56,21 @@ export default function SettingsView({ onSaved }) {
   // IntersectionObserver — a single observer watching all 11 sections;
   // fires when any crosses the top-of-viewport band.
   const [activeSection, setActiveSection] = useState(JUMP_NAV_SECTIONS[0][0]);
+  // Phase 3: card-based settings home → one page per topic. All the old
+  // sections stay mounted (forms keep state); CSS shows the page's ones.
+  const canSettings = roleCan('settings');
+  const canStaff = roleCan('manageStaff');
+  const allowedPages = canSettings
+    ? SETTINGS_PAGES.map(p => p.id).filter(id => id !== 'staff' || canStaff).filter(id => id !== 'plan' || roleCan('billing'))
+    : ['bills', 'help'];
+  const [page, setPage] = useState(() => {
+    try { const v = sessionStorage.getItem(SETTINGS_PAGE_KEY); return v && allowedPages.includes(v) ? v : 'home'; } catch { return 'home'; }
+  });
+  const openPage = (id) => {
+    setPage(id);
+    try { sessionStorage.setItem(SETTINGS_PAGE_KEY, id); } catch { /* ignore */ }
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
 
   // v1.10.55 — reported (#43, @sangwanmail-eng): "Some time details not save
   // after update in setting tab", and the title said there was no save button
@@ -823,6 +846,31 @@ export default function SettingsView({ onSaved }) {
 
   return (
     <div className="settings-container">
+      {page === 'home'
+        ? <SettingsHome onOpen={openPage} allowed={allowedPages} />
+        : <SettingsPageHeader page={page} onBack={() => openPage('home')} />}
+      {page === 'bills' && <PrinterPanel businessName={profile.businessName} />}
+      {page === 'staff' && canStaff && <StaffSettings />}
+      {page === 'gst' && canSettings && (
+        <div className="glass-panel p-6 mb-6">
+          <h3 className="section-title">{tr('settingsHome.gstNumbers')}</h3>
+          <div className="settings-row"><span>GSTIN</span><strong>{profile.gstin || tr('settingsHome.notSet')}</strong></div>
+          <div className="settings-row"><span>{tr('settingsHome.state')}</span><strong>{profile.state || tr('settingsHome.notSet')}</strong></div>
+          <p className="settings-help">{tr('settingsHome.gstHelp')}</p>
+          <button type="button" className="btn btn-secondary" onClick={() => openPage('business')}>{tr('settingsHome.editGst')}</button>
+        </div>
+      )}
+      {page === 'help' && (
+        <div className="glass-panel p-6 mb-6">
+          <h3 className="section-title">{tr('settingsHome.appLanguage')}</h3>
+          <p className="settings-help">{tr('settingsHome.appLanguageHelp')}</p>
+          <LanguagePicker />
+          <hr style={{ border: 0, borderTop: '1px solid var(--border)', margin: '1.25rem 0' }} />
+          <h3 className="section-title">{tr('settingsHome.needHelp')}</h3>
+          <p className="settings-help">{tr('settingsHome.needHelpText')}</p>
+        </div>
+      )}
+      <div className="settings-pages" data-page={page} hidden={page === 'home' || !canSettings}>
       {/* v1.10.36 — Header lifted with a soft primary-accent gradient
            card, gear glyph in a rounded badge for visual identity, and
            a subtle count chip showing how many sections there are so
@@ -876,7 +924,7 @@ export default function SettingsView({ onSaved }) {
            History: v1.10.36/37 scroll-spy pills; v1.10.55 (#43) unsaved
            Company edits made visible; v1.10.67 (#66 item 9) one Save always
            on screen. */}
-      <PlanSettings />
+      <div id="section-plan"><PlanSettings /></div>
       <div ref={saveBarRef} className="settings-bar" style={{
           position: 'sticky',
           zIndex: 30,
@@ -2026,6 +2074,7 @@ export default function SettingsView({ onSaved }) {
         <button type="button" className="btn btn-primary" disabled={saving || invNumSaving || stockAlertsSaving} onClick={saveAll} style={{ fontSize: '0.85rem' }}>
           <Save size={16} /> {saving || invNumSaving || stockAlertsSaving ? 'Saving…' : 'Save all changes'}
         </button>
+      </div>
       </div>
     </div>
   );
