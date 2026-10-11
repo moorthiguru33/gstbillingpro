@@ -19,6 +19,12 @@ import InvoicePreview from './InvoicePreview';
 import { t as tr } from '../i18n';
 import { printDirect, savedPrinter } from '../utils/thermalPrinter';
 import { receiptBytes } from '../utils/escpos';
+import AiBillButton from './ai/AiBillButton';
+import { t as i18nT } from '../i18n';
+
+// Unique ids for AI-added items that are not in the catalogue (module scope, not render).
+let aiSeq = Date.now();
+const nextAiSeq = () => ++aiSeq;
 
 // Web Audio API Sound Synthesizer for Counter Scanners (100% Offline, Zero-Latency)
 const playAudioFeedback = (type = 'beep', soundEnabled = true) => {
@@ -125,9 +131,9 @@ export default function QuickPOS({ onBackToDashboard, onPrintInvoice }) {
           await saveProfile(updated);
           setProfile(updated);
         }
-        toast('✅ Shop UPI QR Code uploaded successfully!', 'success');
+        toast(i18nT('ui.shopUpiQrCodeUploadedSuccessfully'), 'success');
       } catch {
-        toast('QR Code saved locally', 'info');
+        toast(i18nT('ui.qrCodeSavedLocally'), 'info');
       }
     };
     reader.readAsDataURL(file);
@@ -241,6 +247,16 @@ export default function QuickPOS({ onBackToDashboard, onPrintInvoice }) {
     if (!products.length) return [];
     return products.slice(0, 6);
   }, [products]);
+
+  // AI voice/photo bill → cart (matched catalogue items keep their id).
+  const applyAi = ({ items, customer }) => {
+    const base = nextAiSeq();
+    items.forEach((it, i) => addToCart(it.product
+      ? { ...it.product, ...(it.rate ? { sellingPrice: it.rate } : {}) }
+      : { id: `ai-${base}-${i}`, name: it.name, sellingPrice: it.rate, unit: 'PCS', taxRate: it.gst || 0, hsn: it.hsn || '' }, it.qty));
+    if (customer?.name) setCustomerName(customer.name);
+    if (customer?.phone) setCustomerPhone(customer.phone);
+  };
 
   // Add item to cart with optional multiplier
   const addToCart = (product, qty = 1) => {
@@ -426,7 +442,7 @@ export default function QuickPOS({ onBackToDashboard, onPrintInvoice }) {
         setHeldBills((prev) => prev.slice(0, -1));
         toast(`Recalled Bill #${latest.id}`, 'info');
       } else {
-        toast('Cart is empty. Nothing to hold.', 'info');
+        toast(i18nT('ui.cartIsEmptyNothingToHold'), 'info');
       }
       return;
     }
@@ -587,7 +603,7 @@ export default function QuickPOS({ onBackToDashboard, onPrintInvoice }) {
   // Complete & Save Bill (Guarantees 100% IDENTICAL data schema with InvoiceGenerator)
   const handleCompleteSale = async () => {
     if (cart.length === 0) {
-      toast('Cart is empty. Add items to bill.', 'error');
+      toast(i18nT('ui.cartIsEmptyAddItemsTo'), 'error');
       return;
     }
 
@@ -900,7 +916,7 @@ export default function QuickPOS({ onBackToDashboard, onPrintInvoice }) {
     e.preventDefault();
     const amt = parseFloat(newExpenseAmount);
     if (!newExpenseTitle.trim() || isNaN(amt) || amt <= 0) {
-      toast('Enter expense reason and amount', 'error');
+      toast(i18nT('ui.enterExpenseReasonAndAmount'), 'error');
       return;
     }
 
@@ -990,7 +1006,7 @@ export default function QuickPOS({ onBackToDashboard, onPrintInvoice }) {
               </span>
             </div>
             <span style={{ fontSize: '0.74rem', color: '#94a3b8' }}>
-              {profile?.businessName || 'GST Billing Pro'} • Press <strong>F3</strong> to switch GST/Non-GST
+              {profile?.businessName || 'GST Billing Pro'} {i18nT('ui.press')} <strong>F3</strong> {i18nT('ui.toSwitchGstNonGst')}
             </span>
           </div>
         </div>
@@ -1049,7 +1065,7 @@ export default function QuickPOS({ onBackToDashboard, onPrintInvoice }) {
                 fontSize: '0.78rem', fontWeight: 700, cursor: 'pointer',
               }}
             >
-              🧾 GST (F3)
+              {i18nT('ui.gstF3')}
             </button>
             <button
               type="button"
@@ -1061,7 +1077,7 @@ export default function QuickPOS({ onBackToDashboard, onPrintInvoice }) {
                 fontSize: '0.78rem', fontWeight: 700, cursor: 'pointer',
               }}
             >
-              📝 Non-GST (F3)
+              {i18nT('ui.nonGstF3')}
             </button>
           </div>
 
@@ -1076,7 +1092,7 @@ export default function QuickPOS({ onBackToDashboard, onPrintInvoice }) {
               fontSize: '0.8rem', fontWeight: 700, cursor: 'pointer',
               display: 'flex', alignItems: 'center', gap: 5,
             }}
-            title="Hold current sale or recall parked bill (F4)"
+            title={i18nT('ui.holdCurrentSaleOrRecallParked')}
           >
             {heldBills.length > 0 ? <PlayCircle size={15} /> : <PauseCircle size={15} />}
             {heldBills.length > 0 ? `Recall (${heldBills.length}) (F4)` : 'Hold (F4)'}
@@ -1092,9 +1108,9 @@ export default function QuickPOS({ onBackToDashboard, onPrintInvoice }) {
               fontSize: '0.8rem', fontWeight: 700, cursor: 'pointer',
               display: 'flex', alignItems: 'center', gap: 5,
             }}
-            title="Scan barcode and add stock instantly (Alt+S)"
+            title={i18nT('ui.scanBarcodeAndAddStockInstantly')}
           >
-            <Package size={15} /> Stock In (Alt+S)
+            <Package size={15} /> {i18nT('ui.stockInAltS')}
           </button>
 
           {/* Master Catalog 1 Lakh+ Database */}
@@ -1107,9 +1123,9 @@ export default function QuickPOS({ onBackToDashboard, onPrintInvoice }) {
               fontSize: '0.8rem', fontWeight: 700, cursor: 'pointer',
               display: 'flex', alignItems: 'center', gap: 5,
             }}
-            title="Browse & add items from 1 Lakh+ catalog (F8 / Alt+B)"
+            title={i18nT('ui.browseAndAddItemsFrom1')}
           >
-            <Sparkles size={15} /> 1 Lakh+ Catalog
+            <Sparkles size={15} /> {i18nT('ui.n1LakhCatalog')}
           </button>
 
           {/* Day Register Summary */}
@@ -1123,7 +1139,7 @@ export default function QuickPOS({ onBackToDashboard, onPrintInvoice }) {
               display: 'flex', alignItems: 'center', gap: 5,
             }}
           >
-            <TrendingUp size={15} /> Register (₹{dayStats.totalSales.toLocaleString()})
+            <TrendingUp size={15} /> {i18nT('ui.register')}{dayStats.totalSales.toLocaleString()})
           </button>
 
           {/* Bills History (Edit, Delete, Print) */}
@@ -1136,9 +1152,9 @@ export default function QuickPOS({ onBackToDashboard, onPrintInvoice }) {
               fontSize: '0.8rem', fontWeight: 600, cursor: 'pointer',
               display: 'flex', alignItems: 'center', gap: 5,
             }}
-            title="View past bills, edit or delete bills (Alt+H)"
+            title={i18nT('ui.viewPastBillsEditOrDelete')}
           >
-            <FileText size={15} /> Bills History
+            <FileText size={15} /> {i18nT('ui.billsHistory')}
           </button>
 
           <button
@@ -1151,7 +1167,7 @@ export default function QuickPOS({ onBackToDashboard, onPrintInvoice }) {
               display: 'flex', alignItems: 'center', gap: 5,
             }}
           >
-            <Camera size={15} /> Camera
+            <Camera size={15} /> {i18nT('ui.camera')}
           </button>
 
           {onBackToDashboard && (
@@ -1161,7 +1177,7 @@ export default function QuickPOS({ onBackToDashboard, onPrintInvoice }) {
               className="btn btn-secondary"
               style={{ fontSize: '0.8rem', padding: '0.45rem 0.8rem' }}
             >
-              Exit
+              {i18nT('ui.exit')}
             </button>
           )}
         </div>
@@ -1177,9 +1193,9 @@ export default function QuickPOS({ onBackToDashboard, onPrintInvoice }) {
           }}
         >
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-            <span>✏️ Currently Editing Bill <strong>#{editingBillId}</strong></span>
+            <span>{i18nT('ui.currentlyEditingBill')} <strong>#{editingBillId}</strong></span>
             <span style={{ fontSize: '0.75rem', background: '#fef3c7', padding: '2px 8px', borderRadius: 4, border: '1px solid #fde68a' }}>
-              Pressing Save / Checkout (F2) will update this existing bill
+              {i18nT('ui.pressingSaveCheckoutF2WillUpdate')}
             </span>
           </div>
           <button
@@ -1194,7 +1210,7 @@ export default function QuickPOS({ onBackToDashboard, onPrintInvoice }) {
               padding: '0.25rem 0.6rem', fontSize: '0.75rem', fontWeight: 700, cursor: 'pointer',
             }}
           >
-            Cancel Editing
+            {i18nT('ui.cancelEditing')}
           </button>
         </div>
       )}
@@ -1212,7 +1228,7 @@ export default function QuickPOS({ onBackToDashboard, onPrintInvoice }) {
           {quickPicks.length > 0 && (
             <div style={{ display: 'flex', gap: '0.4rem', overflowX: 'auto', paddingBottom: 2 }}>
               <span style={{ fontSize: '0.75rem', fontWeight: 700, color: '#64748b', display: 'flex', alignItems: 'center', gap: 3, paddingRight: 4 }}>
-                <Sparkles size={13} color="#2563eb" /> Quick:
+                <Sparkles size={13} color="#2563eb" /> {i18nT('ui.quick')}
               </span>
               {quickPicks.map((item) => (
                 <button
@@ -1250,7 +1266,7 @@ export default function QuickPOS({ onBackToDashboard, onPrintInvoice }) {
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
                 onKeyDown={handleSearchKeyDown}
-                placeholder="Scan barcode or type name (↑ ↓ to pick, Enter to add, 5*item for 5 qty)"
+                placeholder={i18nT('ui.scanBarcodeOrTypeNameTo')}
                 style={{
                   flex: 1, border: 'none', outline: 'none',
                   fontSize: '1rem', fontWeight: 600, color: '#0f172a',
@@ -1265,6 +1281,9 @@ export default function QuickPOS({ onBackToDashboard, onPrintInvoice }) {
                   <X size={18} />
                 </button>
               )}
+              {/* Phase 3b: speak the bill / photo of a handwritten bill */}
+              <AiBillButton mode="voice" compact products={products} onApply={applyAi} />
+              <AiBillButton mode="photo" compact products={products} onApply={applyAi} />
             </div>
 
             {/* Live Autocomplete with Keyboard Arrow Selection */}
@@ -1299,7 +1318,7 @@ export default function QuickPOS({ onBackToDashboard, onPrintInvoice }) {
                         </div>
                         <div style={{ fontSize: '0.75rem', color: '#64748b' }}>
                           {p.barcode ? `Barcode: ${p.barcode} • ` : ''}
-                          {p.hsn ? `HSN: ${p.hsn} • ` : ''}Stock: <strong>{p.stock ?? '∞'}</strong>
+                          {p.hsn ? `HSN: ${p.hsn} • ` : ''}{i18nT('ui.stock')} <strong>{p.stock ?? '∞'}</strong>
                         </div>
                       </div>
                       <div style={{ textAlign: 'right' }}>
@@ -1339,10 +1358,10 @@ export default function QuickPOS({ onBackToDashboard, onPrintInvoice }) {
                 fontSize: '0.78rem', color: '#64748b', textTransform: 'uppercase',
               }}
             >
-              <div>Item Description</div>
-              <div style={{ textAlign: 'center' }}>Qty</div>
-              <div style={{ textAlign: 'right' }}>Rate {printSettings.showMRP !== false ? '/ MRP' : ''}</div>
-              <div style={{ textAlign: 'right' }}>Amount</div>
+              <div>{i18nT('ui.itemDescription')}</div>
+              <div style={{ textAlign: 'center' }}>{i18nT('ui.qty')}</div>
+              <div style={{ textAlign: 'right' }}>{i18nT('ui.rate')} {printSettings.showMRP !== false ? '/ MRP' : ''}</div>
+              <div style={{ textAlign: 'right' }}>{i18nT('ui.amount')}</div>
               <div></div>
             </div>
 
@@ -1356,9 +1375,9 @@ export default function QuickPOS({ onBackToDashboard, onPrintInvoice }) {
                   }}
                 >
                   <ShoppingCart size={48} strokeWidth={1.5} style={{ marginBottom: '0.5rem', opacity: 0.5 }} />
-                  <p style={{ margin: 0, fontWeight: 700, fontSize: '1rem' }}>Cart is empty</p>
+                  <p style={{ margin: 0, fontWeight: 700, fontSize: '1rem' }}>{i18nT('ui.cartIsEmpty')}</p>
                   <span style={{ fontSize: '0.82rem', marginTop: 4 }}>
-                    Scan barcode or type item name above. (Press F1 to search)
+                    {i18nT('ui.scanBarcodeOrTypeItemName')}
                   </span>
                   {products.length === 0 && (
                     <button
@@ -1367,7 +1386,7 @@ export default function QuickPOS({ onBackToDashboard, onPrintInvoice }) {
                       className="btn btn-primary"
                       style={{ marginTop: '1rem', fontSize: '0.82rem', display: 'flex', alignItems: 'center', gap: 6 }}
                     >
-                      <Sparkles size={16} /> Load Products from 1 Lakh+ Catalog
+                      <Sparkles size={16} /> {i18nT('ui.loadProductsFrom1LakhCatalog')}
                     </button>
                   )}
                 </div>
@@ -1390,7 +1409,7 @@ export default function QuickPOS({ onBackToDashboard, onPrintInvoice }) {
                           <span>{billType === 'gst' && item.hsn ? `HSN ${item.hsn} • GST ${item.taxRate}%` : 'Non-GST'}</span>
                           {hasSavings && printSettings.showMRP !== false && (
                             <span style={{ color: '#059669', fontWeight: 700 }}>
-                              Save ₹{((item.mrp - item.price) * item.qty).toFixed(0)}
+                              {i18nT('ui.save2')}{((item.mrp - item.price) * item.qty).toFixed(0)}
                             </span>
                           )}
                         </div>
@@ -1437,7 +1456,7 @@ export default function QuickPOS({ onBackToDashboard, onPrintInvoice }) {
                             type="number"
                             value={item.price}
                             onChange={(e) => setItemExactPrice(item.id, e.target.value)}
-                            title="Click to edit selling price"
+                            title={i18nT('ui.clickToEditSellingPrice')}
                             style={{
                               width: 65, textAlign: 'right', fontWeight: 700, fontSize: '0.88rem',
                               border: '1px solid #cbd5e1', borderRadius: 4, padding: '2px 4px',
@@ -1453,7 +1472,7 @@ export default function QuickPOS({ onBackToDashboard, onPrintInvoice }) {
                               value={item.mrp || ''}
                               placeholder="MRP"
                               onChange={(e) => setItemExactMrp(item.id, e.target.value)}
-                              title="Click to edit MRP"
+                              title={i18nT('ui.clickToEditMrp')}
                               style={{
                                 width: 58, textAlign: 'right', fontWeight: 600, fontSize: '0.74rem',
                                 border: '1px dashed #cbd5e1', borderRadius: 4, padding: '1px 3px',
@@ -1492,7 +1511,7 @@ export default function QuickPOS({ onBackToDashboard, onPrintInvoice }) {
                   display: 'flex', justifyContent: 'space-between', alignItems: 'center',
                 }}
               >
-                <span>🎉 Customer Total Savings Today:</span>
+                <span>{i18nT('ui.customerTotalSavingsToday')}</span>
                 <span style={{ fontSize: '0.95rem', fontWeight: 800 }}>{formatCurrency(totals.totalSavings)}</span>
               </div>
             )}
@@ -1511,7 +1530,7 @@ export default function QuickPOS({ onBackToDashboard, onPrintInvoice }) {
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.5rem' }}>
             <div>
               <label style={{ fontSize: '0.74rem', fontWeight: 700, color: '#64748b', display: 'block', marginBottom: 3 }}>
-                Customer Phone
+                {i18nT('ui.customerPhone')}
               </label>
               <input
                 type="tel"
@@ -1524,13 +1543,13 @@ export default function QuickPOS({ onBackToDashboard, onPrintInvoice }) {
             </div>
             <div>
               <label style={{ fontSize: '0.74rem', fontWeight: 700, color: '#64748b', display: 'block', marginBottom: 3 }}>
-                Customer Name
+                {i18nT('ui.customerName')}
               </label>
               <input
                 type="text"
                 value={customerName}
                 onChange={(e) => setCustomerName(e.target.value)}
-                placeholder="Cash Customer"
+                placeholder={i18nT('ui.cashCustomer')}
                 className="form-input"
                 style={{ fontSize: '0.85rem', padding: '0.45rem 0.6rem' }}
               />
@@ -1541,7 +1560,7 @@ export default function QuickPOS({ onBackToDashboard, onPrintInvoice }) {
           <div>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 5 }}>
               <label style={{ fontSize: '0.74rem', fontWeight: 700, color: '#64748b', margin: 0 }}>
-                Payment Mode
+                {i18nT('ui.paymentMode')}
               </label>
               <button
                 type="button"
@@ -1552,7 +1571,7 @@ export default function QuickPOS({ onBackToDashboard, onPrintInvoice }) {
                   display: 'flex', alignItems: 'center', gap: 3,
                 }}
               >
-                <Percent size={12} /> Discount (F7)
+                <Percent size={12} /> {i18nT('ui.discountF7')}
               </button>
             </div>
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '0.5rem' }}>
@@ -1594,7 +1613,7 @@ export default function QuickPOS({ onBackToDashboard, onPrintInvoice }) {
                 <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6 }}>
                   <img
                     src={uploadedQr}
-                    alt="Shop UPI QR"
+                    alt={i18nT('ui.shopUpiQr')}
                     style={{
                       width: 150, height: 150, objectFit: 'contain',
                       borderRadius: 8, border: '1px solid #cbd5e1', background: '#fff', padding: 4,
@@ -1611,7 +1630,7 @@ export default function QuickPOS({ onBackToDashboard, onPrintInvoice }) {
                       fontWeight: 700, cursor: 'pointer', textDecoration: 'underline',
                     }}
                   >
-                    Change Shop QR Image
+                    {i18nT('ui.changeShopQrImage')}
                   </button>
                 </div>
               ) : (
@@ -1625,10 +1644,10 @@ export default function QuickPOS({ onBackToDashboard, onPrintInvoice }) {
                 >
                   <QrCode size={34} color="#2563eb" />
                   <div style={{ fontSize: '0.82rem', fontWeight: 800, color: '#0f172a' }}>
-                    Upload Shop UPI QR Code
+                    {i18nT('ui.uploadShopUpiQrCode')}
                   </div>
                   <span style={{ fontSize: '0.72rem', color: '#64748b' }}>
-                    Click to select GPay, PhonePe, Paytm, or BharatPe QR image
+                    {i18nT('ui.clickToSelectGpayPhonepePaytm')}
                   </span>
                 </div>
               )}
@@ -1640,13 +1659,13 @@ export default function QuickPOS({ onBackToDashboard, onPrintInvoice }) {
                 onChange={handleQrUpload}
               />
               <div style={{ fontSize: '0.75rem', color: '#334155', fontWeight: 700 }}>
-                Scan QR to Pay {formatCurrency(totals.total)}
+                {i18nT('ui.scanQrToPay')} {formatCurrency(totals.total)}
               </div>
               <input
                 type="text"
                 value={upiDetails.utr}
                 onChange={(e) => setUpiDetails({ utr: e.target.value })}
-                placeholder="Optional: UTR / UPI Ref #"
+                placeholder={i18nT('ui.optionalUtrUpiRef')}
                 className="form-input"
                 style={{ fontSize: '0.75rem', padding: '0.3rem 0.5rem', width: '90%', textAlign: 'center' }}
               />
@@ -1682,7 +1701,7 @@ export default function QuickPOS({ onBackToDashboard, onPrintInvoice }) {
 
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.4rem' }}>
                 <div>
-                  <label style={{ fontSize: '0.7rem', fontWeight: 700, color: '#64748b' }}>Last 4 Digits</label>
+                  <label style={{ fontSize: '0.7rem', fontWeight: 700, color: '#64748b' }}>{i18nT('ui.last4Digits')}</label>
                   <input
                     type="text"
                     maxLength={4}
@@ -1694,12 +1713,12 @@ export default function QuickPOS({ onBackToDashboard, onPrintInvoice }) {
                   />
                 </div>
                 <div>
-                  <label style={{ fontSize: '0.7rem', fontWeight: 700, color: '#64748b' }}>RRN / Auth Ref</label>
+                  <label style={{ fontSize: '0.7rem', fontWeight: 700, color: '#64748b' }}>{i18nT('ui.rrnAuthRef')}</label>
                   <input
                     type="text"
                     value={cardDetails.rrn}
                     onChange={(e) => setCardDetails(prev => ({ ...prev, rrn: e.target.value }))}
-                    placeholder="Ref # / 981245"
+                    placeholder={i18nT('ui.ref981245')}
                     className="form-input"
                     style={{ fontSize: '0.8rem', padding: '0.35rem' }}
                   />
@@ -1741,7 +1760,7 @@ export default function QuickPOS({ onBackToDashboard, onPrintInvoice }) {
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.5rem' }}>
                 <div>
                   <label style={{ fontSize: '0.74rem', fontWeight: 700, color: '#64748b', display: 'block', marginBottom: 3 }}>
-                    Cash Received (₹)
+                    {i18nT('ui.cashReceived')}
                   </label>
                   <input
                     type="number"
@@ -1754,7 +1773,7 @@ export default function QuickPOS({ onBackToDashboard, onPrintInvoice }) {
                 </div>
                 <div>
                   <label style={{ fontSize: '0.74rem', fontWeight: 700, color: '#64748b', display: 'block', marginBottom: 3 }}>
-                    Change Return
+                    {i18nT('ui.changeReturn')}
                   </label>
                   <div
                     style={{
@@ -1778,24 +1797,24 @@ export default function QuickPOS({ onBackToDashboard, onPrintInvoice }) {
             }}
           >
             <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.82rem', color: '#64748b', marginBottom: 3 }}>
-              <span>Taxable Value</span>
+              <span>{i18nT('ui.taxableValue')}</span>
               <span>{formatCurrency(totals.subtotal)}</span>
             </div>
             {totals.billDiscount > 0 && (
               <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.82rem', color: '#dc2626', marginBottom: 3 }}>
-                <span>Discount on Total</span>
+                <span>{i18nT('ui.discountOnTotal')}</span>
                 <span>-{formatCurrency(totals.billDiscount)}</span>
               </div>
             )}
             {billType === 'gst' ? (
               <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.82rem', color: '#64748b', marginBottom: 5 }}>
-                <span>GST Total</span>
+                <span>{i18nT('ui.gstTotal')}</span>
                 <span>{formatCurrency(totals.taxAmount)}</span>
               </div>
             ) : (
               <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.8rem', color: '#059669', marginBottom: 5 }}>
-                <span>Tax Mode</span>
-                <span>Non-GST (₹0 Tax)</span>
+                <span>{i18nT('ui.taxMode')}</span>
+                <span>{i18nT('ui.nonGst0Tax')}</span>
               </div>
             )}
             <div
@@ -1804,7 +1823,7 @@ export default function QuickPOS({ onBackToDashboard, onPrintInvoice }) {
                 borderTop: '2px dashed #cbd5e1', paddingTop: 6, marginTop: 4,
               }}
             >
-              <span style={{ fontSize: '1.05rem', fontWeight: 800, color: '#0f172a' }}>Grand Total</span>
+              <span style={{ fontSize: '1.05rem', fontWeight: 800, color: '#0f172a' }}>{i18nT('ui.grandTotal')}</span>
               <span style={{ fontSize: '1.6rem', fontWeight: 900, color: billType === 'gst' ? '#2563eb' : '#059669' }}>
                 {formatCurrency(totals.total)}
               </span>
@@ -1824,7 +1843,7 @@ export default function QuickPOS({ onBackToDashboard, onPrintInvoice }) {
               style={{ flex: 1, padding: '0.8rem' }}
               disabled={cart.length === 0}
             >
-              Clear (Esc)
+              {i18nT('ui.clearEsc')}
             </button>
             <button
               type="button"
@@ -1851,17 +1870,17 @@ export default function QuickPOS({ onBackToDashboard, onPrintInvoice }) {
           alignItems: 'center', borderTop: '1px solid #334155',
         }}
       >
-        <span><strong style={{ color: '#fff' }}>F1</strong>: Search</span>
-        <span><strong style={{ color: '#fff' }}>↑ ↓</strong>: Pick</span>
-        <span><strong style={{ color: '#fff' }}>Enter</strong>: Add</span>
-        <span><strong style={{ color: '#fff' }}>F2</strong>: Tender/Print</span>
-        <span><strong style={{ color: '#fff' }}>F3</strong>: GST/Non-GST</span>
-        <span><strong style={{ color: '#fff' }}>F4</strong>: Hold/Recall</span>
-        <span><strong style={{ color: '#fff' }}>F7</strong>: Discount</span>
-        <span><strong style={{ color: '#fff' }}>Alt+S</strong>: Stock In</span>
-        <span><strong style={{ color: '#fff' }}>Alt+P</strong>: Paper ({paperSize})</span>
-        <span><strong style={{ color: '#fff' }}>Alt+C</strong>: Exact Cash</span>
-        <span><strong style={{ color: '#fff' }}>Esc</strong>: Reset</span>
+        <span><strong style={{ color: '#fff' }}>F1</strong>{i18nT('ui.search')}</span>
+        <span><strong style={{ color: '#fff' }}>↑ ↓</strong>{i18nT('ui.pick')}</span>
+        <span><strong style={{ color: '#fff' }}>{i18nT('ui.enter')}</strong>{i18nT('ui.add')}</span>
+        <span><strong style={{ color: '#fff' }}>F2</strong>{i18nT('ui.tenderPrint')}</span>
+        <span><strong style={{ color: '#fff' }}>F3</strong>{i18nT('ui.gstNonGst')}</span>
+        <span><strong style={{ color: '#fff' }}>F4</strong>{i18nT('ui.holdRecall')}</span>
+        <span><strong style={{ color: '#fff' }}>F7</strong>{i18nT('ui.discount2')}</span>
+        <span><strong style={{ color: '#fff' }}>{i18nT('ui.altS')}</strong>{i18nT('ui.stockIn')}</span>
+        <span><strong style={{ color: '#fff' }}>{i18nT('ui.altP')}</strong>{i18nT('ui.paper')}{paperSize})</span>
+        <span><strong style={{ color: '#fff' }}>{i18nT('ui.altC')}</strong>{i18nT('ui.exactCash')}</span>
+        <span><strong style={{ color: '#fff' }}>{i18nT('ui.esc')}</strong>{i18nT('ui.reset')}</span>
       </div>
 
       {/* Hidden container for bit-accurate direct vector thermal printing */}
@@ -1908,10 +1927,10 @@ export default function QuickPOS({ onBackToDashboard, onPrintInvoice }) {
             >
               <div>
                 <h3 style={{ margin: 0, fontSize: '1.1rem', fontWeight: 800, display: 'flex', alignItems: 'center', gap: 6 }}>
-                  <CheckCircle size={18} color="#059669" /> Bill {completedBill.invoiceNumber} Ready!
+                  <CheckCircle size={18} color="#059669" /> {i18nT('ui.bill')} {completedBill.invoiceNumber} {i18nT('ui.ready')}
                 </h3>
                 <span style={{ fontSize: '0.75rem', color: '#64748b' }}>
-                  Grand Total: <strong>{formatCurrency(completedBill.total)}</strong> • Paid via {completedBill.paymentMode?.toUpperCase()}
+                  {i18nT('ui.grandTotal2')} <strong>{formatCurrency(completedBill.total)}</strong> {i18nT('ui.paidVia')} {completedBill.paymentMode?.toUpperCase()}
                 </span>
               </div>
 
@@ -1977,7 +1996,7 @@ export default function QuickPOS({ onBackToDashboard, onPrintInvoice }) {
                 className="btn btn-secondary"
                 style={{ flex: 1, fontWeight: 700 }}
               >
-                Next Customer (Space)
+                {i18nT('ui.nextCustomerSpace')}
               </button>
               {onPrintInvoice && (
                 <button
@@ -1989,7 +2008,7 @@ export default function QuickPOS({ onBackToDashboard, onPrintInvoice }) {
                   className="btn btn-secondary"
                   style={{ flex: 1, fontSize: '0.82rem' }}
                 >
-                  <FileText size={15} /> Open in Invoice Editor
+                  <FileText size={15} /> {i18nT('ui.openInInvoiceEditor')}
                 </button>
               )}
               <button
@@ -1997,9 +2016,9 @@ export default function QuickPOS({ onBackToDashboard, onPrintInvoice }) {
                 onClick={() => handleWhatsAppShare(completedBill)}
                 className="btn btn-secondary"
                 style={{ flex: 1, color: '#16a34a', borderColor: '#86efac', fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}
-                title="Send receipt to customer phone on WhatsApp"
+                title={i18nT('ui.sendReceiptToCustomerPhoneOn')}
               >
-                <Share2 size={15} /> WhatsApp Bill
+                <Share2 size={15} /> {i18nT('ui.whatsappBill')}
               </button>
               <button
                 type="button"
@@ -2007,7 +2026,7 @@ export default function QuickPOS({ onBackToDashboard, onPrintInvoice }) {
                 className="btn btn-primary"
                 style={{ flex: 1.5, fontSize: '0.95rem', fontWeight: 800, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}
               >
-                <Printer size={18} /> Print Bill (F2)
+                <Printer size={18} /> {i18nT('ui.printBillF2')}
               </button>
             </div>
           </div>
@@ -2033,7 +2052,7 @@ export default function QuickPOS({ onBackToDashboard, onPrintInvoice }) {
           >
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.75rem' }}>
               <h3 style={{ margin: 0, fontSize: '1.05rem', fontWeight: 800, display: 'flex', alignItems: 'center', gap: 6 }}>
-                <Percent size={18} color="#2563eb" /> Apply Bill Discount
+                <Percent size={18} color="#2563eb" /> {i18nT('ui.applyBillDiscount')}
               </h3>
               <button onClick={() => setShowDiscountModal(false)} style={{ background: 'none', border: 'none', cursor: 'pointer' }}>
                 <X size={18} />
@@ -2052,7 +2071,7 @@ export default function QuickPOS({ onBackToDashboard, onPrintInvoice }) {
                   cursor: 'pointer',
                 }}
               >
-                Flat Amount (₹)
+                {i18nT('ui.flatAmount')}
               </button>
               <button
                 type="button"
@@ -2065,7 +2084,7 @@ export default function QuickPOS({ onBackToDashboard, onPrintInvoice }) {
                   cursor: 'pointer',
                 }}
               >
-                Percentage (%)
+                {i18nT('ui.percentage')}
               </button>
             </div>
 
@@ -2085,7 +2104,7 @@ export default function QuickPOS({ onBackToDashboard, onPrintInvoice }) {
               className="btn btn-primary"
               style={{ width: '100%', justifyContent: 'center' }}
             >
-              Apply Discount
+              {i18nT('ui.applyDiscount')}
             </button>
           </div>
         </div>
@@ -2130,7 +2149,7 @@ export default function QuickPOS({ onBackToDashboard, onPrintInvoice }) {
               <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                 <TrendingUp size={22} color="#2563eb" />
                 <h3 style={{ margin: 0, fontSize: '1.15rem', fontWeight: 800 }}>
-                  Today's Counter Day Register
+                  {i18nT('ui.todaySCounterDayRegister')}
                 </h3>
               </div>
               <button onClick={() => setShowDaySummary(false)} style={{ background: 'none', border: 'none', cursor: 'pointer' }}>
@@ -2141,25 +2160,25 @@ export default function QuickPOS({ onBackToDashboard, onPrintInvoice }) {
             {/* Sales Grid */}
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.6rem', marginBottom: '1rem' }}>
               <div style={{ padding: '0.75rem', background: '#eff6ff', borderRadius: 8, border: '1px solid #bfdbfe' }}>
-                <span style={{ fontSize: '0.75rem', color: '#1e40af', fontWeight: 600 }}>🧾 GST Sales</span>
+                <span style={{ fontSize: '0.75rem', color: '#1e40af', fontWeight: 600 }}>{i18nT('ui.gstSales')}</span>
                 <div style={{ fontSize: '1.25rem', fontWeight: 800, color: '#1d4ed8' }}>
                   {formatCurrency(dayStats.gstSales)}
                 </div>
               </div>
               <div style={{ padding: '0.75rem', background: '#f0fdf4', borderRadius: 8, border: '1px solid #bbf7d0' }}>
-                <span style={{ fontSize: '0.75rem', color: '#166534', fontWeight: 600 }}>📝 Non-GST Sales</span>
+                <span style={{ fontSize: '0.75rem', color: '#166534', fontWeight: 600 }}>{i18nT('ui.nonGstSales')}</span>
                 <div style={{ fontSize: '1.25rem', fontWeight: 800, color: '#15803d' }}>
                   {formatCurrency(dayStats.nonGstSales)}
                 </div>
               </div>
               <div style={{ padding: '0.75rem', background: '#f8fafc', borderRadius: 8, border: '1px solid #e2e8f0' }}>
-                <span style={{ fontSize: '0.75rem', color: '#475569', fontWeight: 600 }}>💵 Total Cash Received</span>
+                <span style={{ fontSize: '0.75rem', color: '#475569', fontWeight: 600 }}>{i18nT('ui.totalCashReceived')}</span>
                 <div style={{ fontSize: '1.15rem', fontWeight: 800, color: '#0f172a' }}>
                   {formatCurrency(dayStats.cash)}
                 </div>
               </div>
               <div style={{ padding: '0.75rem', background: '#f8fafc', borderRadius: 8, border: '1px solid #e2e8f0' }}>
-                <span style={{ fontSize: '0.75rem', color: '#475569', fontWeight: 600 }}>📱 Digital Payments</span>
+                <span style={{ fontSize: '0.75rem', color: '#475569', fontWeight: 600 }}>{i18nT('ui.digitalPayments')}</span>
                 <div style={{ fontSize: '1.15rem', fontWeight: 800, color: '#0f172a' }}>
                   {formatCurrency(dayStats.upi + dayStats.card)}
                 </div>
@@ -2169,15 +2188,15 @@ export default function QuickPOS({ onBackToDashboard, onPrintInvoice }) {
             {/* Cash in Hand Calculation */}
             <div style={{ padding: '0.85rem', background: '#fef3c7', borderRadius: 10, border: '1px solid #fde68a', marginBottom: '1rem' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem', marginBottom: 4 }}>
-                <span>Counter Cash In:</span>
+                <span>{i18nT('ui.counterCashIn')}</span>
                 <strong>{formatCurrency(dayStats.cash)}</strong>
               </div>
               <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem', marginBottom: 4, color: '#b45309' }}>
-                <span>Less: Petty Cash / Counter Spents:</span>
+                <span>{i18nT('ui.lessPettyCashCounterSpents')}</span>
                 <strong>- {formatCurrency(dayStats.totalSpent)}</strong>
               </div>
               <div style={{ display: 'flex', justifyContent: 'space-between', borderTop: '1px dashed #d97706', paddingTop: 6, fontSize: '1rem', fontWeight: 800, color: '#92400e' }}>
-                <span>Actual Cash in Drawer:</span>
+                <span>{i18nT('ui.actualCashInDrawer')}</span>
                 <span>{formatCurrency(dayStats.netCashInDrawer)}</span>
               </div>
             </div>
@@ -2185,14 +2204,14 @@ export default function QuickPOS({ onBackToDashboard, onPrintInvoice }) {
             {/* Quick Petty Cash Record */}
             <form onSubmit={handleAddCounterExpense} style={{ marginBottom: '1rem' }}>
               <label style={{ fontSize: '0.78rem', fontWeight: 700, color: '#475569', display: 'block', marginBottom: 4 }}>
-                Record Counter Spent (Tea, Transport, Helper)
+                {i18nT('ui.recordCounterSpentTeaTransportHelper')}
               </label>
               <div style={{ display: 'flex', gap: '0.4rem' }}>
                 <input
                   type="text"
                   value={newExpenseTitle}
                   onChange={(e) => setNewExpenseTitle(e.target.value)}
-                  placeholder="e.g. Tea / Snacks"
+                  placeholder={i18nT('ui.eGTeaSnacks')}
                   className="form-input"
                   style={{ flex: 1, fontSize: '0.82rem' }}
                 />
@@ -2200,12 +2219,12 @@ export default function QuickPOS({ onBackToDashboard, onPrintInvoice }) {
                   type="number"
                   value={newExpenseAmount}
                   onChange={(e) => setNewExpenseAmount(e.target.value)}
-                  placeholder="₹ Amount"
+                  placeholder={i18nT('ui.amount2')}
                   className="form-input"
                   style={{ width: 90, fontSize: '0.82rem' }}
                 />
                 <button type="submit" className="btn btn-secondary" style={{ fontSize: '0.8rem' }}>
-                  Add
+                  {i18nT('ui.add2')}
                 </button>
               </div>
             </form>
@@ -2215,7 +2234,7 @@ export default function QuickPOS({ onBackToDashboard, onPrintInvoice }) {
               className="btn btn-primary"
               style={{ width: '100%', justifyContent: 'center' }}
             >
-              Close Register
+              {i18nT('ui.closeRegister')}
             </button>
           </div>
         </div>
@@ -2250,10 +2269,10 @@ export default function QuickPOS({ onBackToDashboard, onPrintInvoice }) {
                 <FileText size={24} color="#2563eb" />
                 <div>
                   <h3 style={{ margin: 0, fontSize: '1.2rem', fontWeight: 800, color: '#0f172a' }}>
-                    📋 Bills History & Management
+                    {i18nT('ui.billsHistoryAndManagement')}
                   </h3>
                   <span style={{ fontSize: '0.78rem', color: '#64748b' }}>
-                    Edit existing bills, delete bills, or re-print thermal / sheet receipts
+                    {i18nT('ui.editExistingBillsDeleteBillsOr')}
                   </span>
                 </div>
               </div>
@@ -2303,7 +2322,7 @@ export default function QuickPOS({ onBackToDashboard, onPrintInvoice }) {
                   type="text"
                   value={historySearch}
                   onChange={(e) => setHistorySearch(e.target.value)}
-                  placeholder="Search by Bill #, Customer name, Phone..."
+                  placeholder={i18nT('ui.searchByBillCustomerNamePhone')}
                   className="form-input"
                   style={{ paddingLeft: '2.2rem', fontSize: '0.84rem', width: '100%' }}
                 />
@@ -2315,19 +2334,19 @@ export default function QuickPOS({ onBackToDashboard, onPrintInvoice }) {
               {filteredHistoryBills.length === 0 ? (
                 <div style={{ textAlign: 'center', padding: '3.5rem 1rem', color: '#94a3b8' }}>
                   <FileText size={42} style={{ opacity: 0.4, margin: '0 auto 0.5rem' }} />
-                  <p style={{ margin: 0, fontWeight: 700, fontSize: '0.95rem' }}>No bills found matching your filter</p>
+                  <p style={{ margin: 0, fontWeight: 700, fontSize: '0.95rem' }}>{i18nT('ui.noBillsFoundMatchingYourFilter')}</p>
                 </div>
               ) : (
                 <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.84rem' }}>
                   <thead>
                     <tr style={{ borderBottom: '2px solid #e2e8f0', color: '#64748b', textAlign: 'left' }}>
-                      <th style={{ padding: '0.65rem 0.5rem' }}>Bill #</th>
-                      <th style={{ padding: '0.65rem 0.5rem' }}>Date</th>
-                      <th style={{ padding: '0.65rem 0.5rem' }}>Customer</th>
-                      <th style={{ padding: '0.65rem 0.5rem', textAlign: 'center' }}>Items</th>
-                      <th style={{ padding: '0.65rem 0.5rem', textAlign: 'right' }}>Total Amount</th>
-                      <th style={{ padding: '0.65rem 0.5rem', textAlign: 'center' }}>Mode</th>
-                      <th style={{ padding: '0.65rem 0.5rem', textAlign: 'center' }}>Actions</th>
+                      <th style={{ padding: '0.65rem 0.5rem' }}>{i18nT('ui.bill2')}</th>
+                      <th style={{ padding: '0.65rem 0.5rem' }}>{i18nT('ui.date')}</th>
+                      <th style={{ padding: '0.65rem 0.5rem' }}>{i18nT('ui.customer')}</th>
+                      <th style={{ padding: '0.65rem 0.5rem', textAlign: 'center' }}>{i18nT('ui.items')}</th>
+                      <th style={{ padding: '0.65rem 0.5rem', textAlign: 'right' }}>{i18nT('ui.totalAmount')}</th>
+                      <th style={{ padding: '0.65rem 0.5rem', textAlign: 'center' }}>{i18nT('ui.mode')}</th>
+                      <th style={{ padding: '0.65rem 0.5rem', textAlign: 'center' }}>{i18nT('ui.actions')}</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -2391,9 +2410,9 @@ export default function QuickPOS({ onBackToDashboard, onPrintInvoice }) {
                                 onClick={() => handleEditExistingBill(b)}
                                 className="btn btn-secondary"
                                 style={{ padding: '0.25rem 0.55rem', fontSize: '0.74rem', fontWeight: 700 }}
-                                title="Load bill into counter to edit items and prices"
+                                title={i18nT('ui.loadBillIntoCounterToEdit')}
                               >
-                                ✏️ Edit
+                                {i18nT('ui.edit')}
                               </button>
 
                               {/* Print Bill */}
@@ -2402,9 +2421,9 @@ export default function QuickPOS({ onBackToDashboard, onPrintInvoice }) {
                                 onClick={() => printDirectly(b)}
                                 className="btn btn-secondary"
                                 style={{ padding: '0.25rem 0.5rem', fontSize: '0.74rem' }}
-                                title="Re-print Bill"
+                                title={i18nT('ui.rePrintBill')}
                               >
-                                🖨️ Print
+                                {i18nT('ui.print2')}
                               </button>
 
                               {/* Delete Bill */}
@@ -2413,7 +2432,7 @@ export default function QuickPOS({ onBackToDashboard, onPrintInvoice }) {
                                 onClick={() => handleDeleteBillFromPOS(b)}
                                 className="btn btn-secondary"
                                 style={{ padding: '0.25rem 0.45rem', fontSize: '0.74rem', color: '#ef4444' }}
-                                title="Delete Bill"
+                                title={i18nT('ui.deleteBill')}
                               >
                                 <Trash2 size={13} />
                               </button>
@@ -2435,7 +2454,7 @@ export default function QuickPOS({ onBackToDashboard, onPrintInvoice }) {
               }}
             >
               <span style={{ fontSize: '0.76rem', color: '#64748b' }}>
-                Showing {filteredHistoryBills.length} bills
+                {i18nT('ui.showing')} {filteredHistoryBills.length} {i18nT('ui.bills')}
               </span>
               <button
                 type="button"
@@ -2443,7 +2462,7 @@ export default function QuickPOS({ onBackToDashboard, onPrintInvoice }) {
                 className="btn btn-secondary"
                 style={{ fontSize: '0.82rem' }}
               >
-                Close
+                {i18nT('ui.close')}
               </button>
             </div>
           </div>

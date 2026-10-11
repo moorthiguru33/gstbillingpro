@@ -19,6 +19,8 @@ import ClientModal from './ClientModal';
 import { toast } from './Toast';
 import BarcodeScannerModal from './BarcodeScannerModal';
 import { t as tr } from '../i18n';
+import AiBillButton from './ai/AiBillButton';
+import { t as i18nT } from '../i18n';
 
 // Rich text editor component that works with contentEditable properly
 function RichEditor({ value, onChange, placeholder, toolbar = false }) {
@@ -59,26 +61,26 @@ function RichEditor({ value, onChange, placeholder, toolbar = false }) {
     <>
       {toolbar && (
         <div style={{ display: 'flex', gap: '0.25rem', flexWrap: 'wrap', marginBottom: '0.4rem' }}>
-          <button type="button" onClick={() => applyFormat('bold')}        title="Bold (Ctrl+B)"      style={{ ...btnStyle, fontWeight: 700 }}>B</button>
-          <button type="button" onClick={() => applyFormat('italic')}      title="Italic (Ctrl+I)"    style={{ ...btnStyle, fontStyle: 'italic' }}>I</button>
-          <button type="button" onClick={() => applyFormat('underline')}   title="Underline (Ctrl+U)" style={{ ...btnStyle, textDecoration: 'underline' }}>U</button>
+          <button type="button" onClick={() => applyFormat('bold')}        title={i18nT('ui.boldCtrlB')}      style={{ ...btnStyle, fontWeight: 700 }}>B</button>
+          <button type="button" onClick={() => applyFormat('italic')}      title={i18nT('ui.italicCtrlI')}    style={{ ...btnStyle, fontStyle: 'italic' }}>I</button>
+          <button type="button" onClick={() => applyFormat('underline')}   title={i18nT('ui.underlineCtrlU')} style={{ ...btnStyle, textDecoration: 'underline' }}>U</button>
           <span style={{ width: 1, background: 'var(--border-color)', margin: '0 0.2rem' }} />
-          <button type="button" onClick={() => applyFormat('insertUnorderedList')} title="Bullet list"  style={btnStyle}>•&nbsp;List</button>
-          <button type="button" onClick={() => applyFormat('insertOrderedList')}   title="Numbered list" style={btnStyle}>1.&nbsp;List</button>
+          <button type="button" onClick={() => applyFormat('insertUnorderedList')} title={i18nT('ui.bulletList')}  style={btnStyle}>{i18nT('ui.list')}</button>
+          <button type="button" onClick={() => applyFormat('insertOrderedList')}   title={i18nT('ui.numberedList')} style={btnStyle}>{i18nT('ui.n1List')}</button>
           <span style={{ width: 1, background: 'var(--border-color)', margin: '0 0.2rem' }} />
-          <button type="button" onClick={() => applyFormat('formatBlock', '<h4>')}  title="Heading"   style={{ ...btnStyle, fontWeight: 700, fontSize: '0.85rem' }}>H</button>
-          <button type="button" onClick={() => applyFormat('formatBlock', '<p>')}   title="Paragraph" style={btnStyle}>¶</button>
+          <button type="button" onClick={() => applyFormat('formatBlock', '<h4>')}  title={i18nT('ui.heading')}   style={{ ...btnStyle, fontWeight: 700, fontSize: '0.85rem' }}>H</button>
+          <button type="button" onClick={() => applyFormat('formatBlock', '<p>')}   title={i18nT('ui.paragraph')} style={btnStyle}>¶</button>
           <button type="button" onClick={async () => {
             const url = await promptAction({
-              title: 'Insert link',
-              message: 'Paste the URL to link to. Selected text will become the link.',
+              title: i18nT('ui.insertLink'),
+              message: i18nT('ui.pasteTheUrlToLinkTo'),
               placeholder: 'https://example.com',
-              confirmLabel: 'Insert',
+              confirmLabel: i18nT('ui.insert'),
             });
             if (url) applyFormat('createLink', url);
-          }} title="Insert link" style={btnStyle}>🔗</button>
+          }} title={i18nT('ui.insertLink')} style={btnStyle}>🔗</button>
           <span style={{ width: 1, background: 'var(--border-color)', margin: '0 0.2rem' }} />
-          <button type="button" onClick={() => applyFormat('removeFormat')} title="Clear formatting" style={btnStyle}>✕</button>
+          <button type="button" onClick={() => applyFormat('removeFormat')} title={i18nT('ui.clearFormatting')} style={btnStyle}>✕</button>
         </div>
       )}
       <div ref={ref} contentEditable suppressContentEditableWarning
@@ -255,7 +257,7 @@ function SuggestingInput({ item, suggestions, onFieldChange, onSelectProduct, on
   return (
     <>
       <input type="text" className="form-input" value={item.name}
-        placeholder="Item"
+        placeholder={i18nT('ui.item')}
         onChange={(e) => onFieldChange(item.id, 'name', e.target.value)}
         onBlur={() => setTimeout(() => onSetProductSearch({ itemId: null, query: '' }), 200)}
         onKeyDown={handleKey}
@@ -311,7 +313,7 @@ const LineItem = memo(function LineItem({
           row wraps instead of squeezing the name to a few characters. */}
       <div className="line-item-field line-item-name" style={{ flex: '3 1 240px', minWidth: 180, position: 'relative' }}>
         {/* v1.10.74 - was "Description", which clashed with "+ Add description" below. */}
-        <label className="form-label">Item</label>
+        <label className="form-label">{i18nT('ui.item')}</label>
         {/* v1.10.37 — Keyboard nav on product suggestions. Reported:
             "20 invoices/day is slow because product picker forces the
             mouse." Now: ArrowDown / ArrowUp cycles suggestions, Enter
@@ -329,7 +331,7 @@ const LineItem = memo(function LineItem({
       </div>
       {invoiceOptions.showHSN && (
         <div className="line-item-field" style={{ flex: 1, position: 'relative' }}>
-          <label className="form-label">HSN/SAC</label>
+          <label className="form-label">{i18nT('ui.hsnSac')}</label>
           <input type="text" className="form-input" value={item.hsn}
             onChange={(e) => {
               const val = e.target.value;
@@ -357,13 +359,13 @@ const LineItem = memo(function LineItem({
         </div>
       )}
       <div className="line-item-field" style={{ flex: 0.7 }}>
-        <label className="form-label">Qty</label>
+        <label className="form-label">{i18nT('ui.qty')}</label>
         <input type="number" min="0" step="any" className="form-input" value={item.quantity}
           onFocus={(e) => e.target.select()}
           onChange={(e) => onFieldChange(item.id, 'quantity', clampNonNeg(e.target.value))} />
       </div>
       <div className="line-item-field" style={{ flex: 0.9 }}>
-        <label className="form-label">Unit</label>
+        <label className="form-label">{i18nT('ui.unit')}</label>
         <select className="form-input" value={item.unit || 'Nos'}
           onChange={(e) => {
             if (e.target.value === '__custom__') { onAddCustomUnit(item.id); return; }
@@ -386,21 +388,21 @@ const LineItem = memo(function LineItem({
               </>
             );
           })()}
-          <option value="__custom__">＋ Add custom…</option>
+          <option value="__custom__">{i18nT('ui.addCustom')}</option>
           {units.some(u => u.custom) && units.filter(u => u.custom).map(u => (
-            <option key={`rm-${u.label}`} value={`__remove__::${u.label}`}>− Remove "{u.label}"</option>
+            <option key={`rm-${u.label}`} value={`__remove__::${u.label}`}>{i18nT('ui.remove')}{u.label}"</option>
           ))}
         </select>
       </div>
       <div className="line-item-field" style={{ flex: 1.2 }}>
-        <label className="form-label">Rate</label>
+        <label className="form-label">{i18nT('ui.rate')}</label>
         <input type="number" min="0" step="any" className="form-input" value={item.rate}
           onFocus={(e) => e.target.select()}
           onChange={(e) => onFieldChange(item.id, 'rate', clampNonNeg(e.target.value))} />
       </div>
       {invoiceOptions.showDiscount && (
         <div className="line-item-field" style={{ flex: 1.8, minWidth: 200 }}>
-          <label className="form-label">Discount</label>
+          <label className="form-label">{i18nT('ui.discount')}</label>
           {/* v1.10.22 — two-mode discount: fixed rupees OR percent-of-line.
               v1.10.23 — wider min-width so value + mode selector stay
               readable on narrow rows.
@@ -417,7 +419,7 @@ const LineItem = memo(function LineItem({
               value={item.discountType === 'percent' ? 'percent' : 'fixed'}
               onChange={(e) => onFieldChange(item.id, 'discountType', e.target.value)}
               style={{ width: 52, padding: '0.4rem 0.3rem', fontSize: '0.82rem' }}
-              title="Discount mode: fixed amount or percent of line">
+              title={i18nT('ui.discountModeFixedAmountOrPercent')}>
               <option value="fixed">{currencySymbolFor(currency)}</option>
               <option value="percent">%</option>
             </select>
@@ -430,9 +432,9 @@ const LineItem = memo(function LineItem({
                 onChange={(e) => onFieldChange(item.id, 'discountBase', e.target.value)}
                 style={{ width: 78, padding: '0.4rem 0.3rem', fontSize: '0.75rem' }}
                 title="What the ₹ discount applies to. Net = qty×rate (default). Unit = ₹X off each unit. WithTax = ₹X off tax-inclusive total.">
-                <option value="net">Net</option>
-                <option value="unit">Unit</option>
-                <option value="with-tax">W/Tax</option>
+                <option value="net">{i18nT('ui.net')}</option>
+                <option value="unit">{i18nT('ui.unit')}</option>
+                <option value="with-tax">{i18nT('ui.wTax')}</option>
               </select>
             )}
           </div>
@@ -451,11 +453,11 @@ const LineItem = memo(function LineItem({
                   defaultValue: String(item.taxPercent || 0),
                   placeholder: 'e.g. 7.5',
                   inputType: 'number',
-                  confirmLabel: 'Apply rate',
+                  confirmLabel: i18nT('ui.applyRate'),
                 });
                 if (raw === null) return;
                 const n = parseFloat(raw);
-                if (!isFinite(n) || n < 0 || n > 100) { toast('Tax rate must be between 0 and 100', 'warning'); return; }
+                if (!isFinite(n) || n < 0 || n > 100) { toast(i18nT('ui.taxRateMustBeBetween0'), 'warning'); return; }
                 onFieldChange(item.id, 'taxPercent', n);
                 onFieldChange(item.id, 'taxManual', true);
               } else {
@@ -472,7 +474,7 @@ const LineItem = memo(function LineItem({
       )}
       {showGST && invoiceOptions.showCess && (profileCountry || 'India') === 'India' && (
         <div className="line-item-field" style={{ flex: 0.8 }}>
-          <label className="form-label" title="GST Compensation Cess (tobacco / auto / coal etc.)">Cess %</label>
+          <label className="form-label" title={i18nT('ui.gstCompensationCessTobaccoAutoCoal')}>{i18nT('ui.cess')}</label>
           <input type="number" min="0" max="500" step="any" className="form-input"
             value={item.cessPercent || 0}
             onChange={(e) => onFieldChange(item.id, 'cessPercent', clampNonNeg(e.target.value))} />
@@ -492,7 +494,7 @@ const LineItem = memo(function LineItem({
           <textarea
             className="form-input"
             rows={2}
-            placeholder="Description (optional, shown under this line in the PDF)"
+            placeholder={i18nT('ui.descriptionOptionalShownUnderThisLine')}
             value={item.description || ''}
             onChange={(e) => onFieldChange(item.id, 'description', e.target.value)}
             style={{ fontSize: '0.82rem', resize: 'vertical', minHeight: 40 }} />
@@ -500,8 +502,8 @@ const LineItem = memo(function LineItem({
           <button type="button" className="btn btn-secondary"
             onClick={() => onFieldChange(item.id, '_descOpen', true)}
             style={{ fontSize: '0.72rem', padding: '0.2rem 0.5rem', color: 'var(--text-muted)' }}
-            title="Add a description that will show under this line in the PDF">
-            + Add description
+            title={i18nT('ui.addADescriptionThatWillShow')}>
+            {i18nT('ui.addDescription')}
           </button>
         )}
       </div>
@@ -945,12 +947,12 @@ export default function InvoiceGenerator({ onBack, profile: profileProp, editing
         setAutoSaveStatus('saving');
         const no = await saveInvoiceToDB();
         if (!no) { setAutoSaveStatus('idle'); return; }
-        toast('Invoice saved', 'success');
+        toast(i18nT('ui.invoiceSaved'), 'success');
         clearDraft();
         setLeaveModal(false);
         onBack();
       } catch {
-        toast('Save failed — staying on the page so you can retry', 'error');
+        toast(i18nT('ui.saveFailedStayingOnThePage'), 'error');
       }
     },
     discardAndExit: () => {
@@ -1285,7 +1287,7 @@ export default function InvoiceGenerator({ onBack, profile: profileProp, editing
     if (!profile?.state && client?.state) {
       const key = `gst_stateWarning_${profile?.businessName || 'profile'}`;
       if (!sessionStorage.getItem(key)) {
-        toast('Set your business State in Settings — required for correct CGST/SGST vs IGST split.', 'warning');
+        toast(i18nT('ui.setYourBusinessStateInSettings'), 'warning');
         sessionStorage.setItem(key, '1');
       }
     }
@@ -1353,6 +1355,20 @@ export default function InvoiceGenerator({ onBack, profile: profileProp, editing
     });
   };
 
+  // Phase 3b: AI voice / photo bill → invoice rows (review before saving).
+  const applyAi = ({ items: aiItems, customer }) => {
+    const base = Date.now();
+    const unit = getDefaultUnitForMode(invoiceOptions.invoiceMode);
+    const rows = aiItems.map((it, i) => ({
+      id: `${base}-${i}`, name: it.name, hsn: it.hsn || it.product?.hsn || '', quantity: it.qty,
+      unit: it.product?.unit || unit, rate: it.rate, discount: 0,
+      taxPercent: showGST ? (it.gst ?? defaultTaxRate) : 0, cessPercent: 0,
+      ...(it.product ? { productId: it.product.id } : {}),
+    }));
+    setItems(prev => (prev.length === 1 && !prev[0].name && !Number(prev[0].rate) ? rows : [...prev, ...rows]));
+    if (customer?.name && !client?.name) setClient(prev => ({ ...prev, name: customer.name, ...(customer.phone ? { phone: customer.phone } : {}) }));
+  };
+
   const handleBarcodeScanned = useCallback((code) => {
     const trimmed = String(code).trim().toLowerCase();
     const match = products.find(p =>
@@ -1394,15 +1410,15 @@ export default function InvoiceGenerator({ onBack, profile: profileProp, editing
   // v1.10.7 — useCallback for the LineItem memoization benefit.
   const handleAddCustomUnit = useCallback(async (itemId) => {
     const label = await promptAction({
-      title: 'Add custom unit',
-      message: 'Enter a short unit label. Saved for reuse across future invoices.',
-      placeholder: 'e.g. Carat, Bundle, Bushel',
-      confirmLabel: 'Add unit',
+      title: i18nT('ui.addCustomUnit'),
+      message: i18nT('ui.enterAShortUnitLabelSaved'),
+      placeholder: i18nT('ui.eGCaratBundleBushel'),
+      confirmLabel: i18nT('ui.addUnit'),
     });
     if (!label) return;
     const trimmed = label.trim();
     if (!trimmed) return;
-    if (trimmed.length > 20) { toast('Unit name must be 20 characters or fewer', 'warning'); return; }
+    if (trimmed.length > 20) { toast(i18nT('ui.unitNameMustBe20Characters'), 'warning'); return; }
     const ok = addCustomUnit(trimmed);
     setUnits(getAllUnits());
     if (!ok) {
@@ -1416,8 +1432,8 @@ export default function InvoiceGenerator({ onBack, profile: profileProp, editing
   const handleRemoveCustomUnit = useCallback(async (label) => {
     if (!await confirmAction({
       title: `Remove custom unit "${label}"?`,
-      message: 'Existing invoices keep this label unchanged. It just no longer appears in the unit dropdowns.',
-      confirmLabel: 'Remove unit',
+      message: i18nT('ui.existingInvoicesKeepThisLabelUnchanged'),
+      confirmLabel: i18nT('ui.removeUnit'),
       tone: 'danger',
     })) return;
     removeCustomUnit(label);
@@ -1575,8 +1591,8 @@ export default function InvoiceGenerator({ onBack, profile: profileProp, editing
     confirmAction({
       title: fresh.length === 1 ? 'Add this item to Products?' : `Add ${fresh.length} new items to Products?`,
       message: `These items are not in your product list yet:\n${list}\n\nSave them with their rate, HSN and GST % so you can pick them next time.`,
-      confirmLabel: 'Add to Products',
-      cancelLabel: 'Not now',
+      confirmLabel: i18nT('ui.addToProducts'),
+      cancelLabel: i18nT('ui.notNow'),
     }).then(async (ok) => {
       if (!ok) {
         fresh.forEach((p) => declinedCatalogNames.current.add(productNameKey(p.name)));
@@ -1759,7 +1775,7 @@ export default function InvoiceGenerator({ onBack, profile: profileProp, editing
           setCreditToApply(0);
         } catch (creditErr) {
           console.error('Source-bill credit patch failed:', creditErr);
-          toast('Credit applied on this bill, but source bill update failed. Please review Client ledger.', 'warning');
+          toast(i18nT('ui.creditAppliedOnThisBillBut'), 'warning');
         }
       }
       // v1.10.35 — Reported: "if user has selected thermal or any paper
@@ -1914,7 +1930,7 @@ export default function InvoiceGenerator({ onBack, profile: profileProp, editing
         });
       } catch (err) {
         console.error('Failed to save recurring template:', err);
-        toast('Invoice saved, but recurring template failed to save', 'warning');
+        toast(i18nT('ui.invoiceSavedButRecurringTemplateFailed'), 'warning');
       }
     }
 
@@ -1981,7 +1997,7 @@ export default function InvoiceGenerator({ onBack, profile: profileProp, editing
 
       const hasToken = await ensureToken(clientId);
       if (!hasToken) {
-        toast('Google Drive: Please reconnect in Settings', 'warning');
+        toast(i18nT('ui.googleDrivePleaseReconnectInSettings'), 'warning');
         return;
       }
 
@@ -2678,7 +2694,7 @@ export default function InvoiceGenerator({ onBack, profile: profileProp, editing
       if (e.key === 's' || e.key === 'S') {
         if (!isMeaningfulInvoice()) return; // nothing to save
         e.preventDefault();
-        saveInvoiceToDB().then(async (no) => { if (no) { toast('Invoice saved', 'success'); await refreshSavedPdf(no); } }).catch(() => toast('Save failed', 'error'));
+        saveInvoiceToDB().then(async (no) => { if (no) { toast(i18nT('ui.invoiceSaved'), 'success'); await refreshSavedPdf(no); } }).catch(() => toast(i18nT('ui.saveFailed'), 'error'));
       } else if (e.key === 'p' || e.key === 'P') {
         e.preventDefault();
         // Defer to the next tick so the keydown doesn't race the PDF render.
@@ -2943,11 +2959,11 @@ export default function InvoiceGenerator({ onBack, profile: profileProp, editing
           printViaIframe(blob);
         } catch (err) {
           console.error('Print failed', err);
-          toast('Print failed — try Download PDF instead', 'error');
+          toast(i18nT('ui.printFailedTryDownloadPdfInstead'), 'error');
         }
       });
     } catch {
-      toast('Print failed — try Download PDF instead', 'error');
+      toast(i18nT('ui.printFailedTryDownloadPdfInstead'), 'error');
     } finally {
       setSaving(false);
     }
@@ -2990,10 +3006,10 @@ export default function InvoiceGenerator({ onBack, profile: profileProp, editing
     try {
       const pdf = await withPreviewOnScreen(() => buildPDF({ archive: true }));
       await saveToInvoicesFolder(pdf.output('blob'), `${typeConfig.prefix}_${savedNumber.replace(/\//g, '-')}.pdf`);
-      toast('The PDF in Saved Invoices is updated too', 'info');
+      toast(i18nT('ui.thePdfInSavedInvoicesIs'), 'info');
     } catch (err) {
       console.error('Saved Invoices PDF refresh failed:', err);
-      toast('Invoice saved, but its PDF in Saved Invoices could not be updated. Use Save & Download.', 'warning');
+      toast(i18nT('ui.invoiceSavedButItsPdfIn'), 'warning');
     }
   };
 
@@ -3033,7 +3049,7 @@ export default function InvoiceGenerator({ onBack, profile: profileProp, editing
       }
     } catch (err) {
       console.error(err);
-      toast('Failed to generate PDF.', 'error');
+      toast(i18nT('ui.failedToGeneratePdf'), 'error');
     } finally {
       setSaving(false);
     }
@@ -3086,10 +3102,10 @@ export default function InvoiceGenerator({ onBack, profile: profileProp, editing
   };
 
   const exportEWayBill = () => {
-    if (!profile?.gstin) { toast('Set your GSTIN in Settings first', 'warning'); return; }
+    if (!profile?.gstin) { toast(i18nT('ui.setYourGstinInSettingsFirst'), 'warning'); return; }
     // v1.10.74 - a blank invoice made an E-Way Bill JSON the portal rejects.
     if (!items.some(i => (i.name || '').trim() && (i.quantity || 0) * (i.rate || 0) > 0)) {
-      toast('Add at least one item with a quantity and rate first.', 'warning');
+      toast(i18nT('ui.addAtLeastOneItemWith'), 'warning');
       return;
     }
     // v1.10.1 — Pass taxInclusive so back-calc taxable value on line items.
@@ -3102,23 +3118,23 @@ export default function InvoiceGenerator({ onBack, profile: profileProp, editing
     a.download = `EWB-${details.invoiceNumber?.replace(/\//g, '-') || 'draft'}.json`;
     a.click();
     URL.revokeObjectURL(url);
-    toast('E-Way Bill JSON downloaded', 'success');
+    toast(i18nT('ui.eWayBillJsonDownloaded'), 'success');
   };
 
   return (
     <div className="generator-container">
       <div className="generator-toolbar">
         <div className="flex gap-2 items-center">
-          <button className="btn btn-secondary" onClick={handleBack}><ArrowLeft size={18} /> Back</button>
-          <HelpButton title="Invoice Generator — how to use" doc="invoices">
+          <button className="btn btn-secondary" onClick={handleBack}><ArrowLeft size={18} /> {i18nT('ui.back')}</button>
+          <HelpButton title={i18nT('ui.invoiceGeneratorHowToUse')} doc="invoices">
             <ul style={{ paddingLeft: '1.1rem', margin: 0 }}>
-              <li><strong>Invoice type</strong> — Tax Invoice / Proforma / Bill of Supply / Composition / Credit Note / Delivery Challan. Switching type refreshes the number to that type's counter (or your custom prefix from Print Settings).</li>
-              <li><strong>Line items</strong> — start typing to auto-complete from your Products list. HSN autofills the GST rate for common codes. Click "+ Add description" for a detailed note under the item name.</li>
-              <li><strong>Discount</strong> — per line: pick ₹ (fixed) or % of the line. Below the items: whole-bill discount, applied after tax.</li>
-              <li><strong>Customize</strong> — toggle columns and sections on/off, pick paper size (A4, A5, Letter, Legal, B5, thermal rolls or a custom size), currency, TDS / TCS, recurring, the invoice title and PDF style. Changes are remembered for your next invoice.</li>
-              <li><strong>Hide Preview</strong> — gives the form the full width for long invoices. Show Preview brings it back.</li>
-              <li><strong>Keyboard</strong> — Ctrl+S save · Ctrl+P PDF · Ctrl+Enter add row · Ctrl+Shift+D duplicate last row · Esc close leave modal.</li>
-              <li><strong>Saving</strong> — a new invoice is stored when you first click Save, Save &amp; Download or Print. After that, changes save automatically. Leaving with unsaved changes asks first.</li>
+              <li><strong>{i18nT('ui.invoiceType')}</strong> — Tax Invoice / Proforma / Bill of Supply / Composition / Credit Note / Delivery Challan. Switching type refreshes the number to that type's counter (or your custom prefix from Print Settings).</li>
+              <li><strong>{i18nT('ui.lineItems')}</strong> — start typing to auto-complete from your Products list. HSN autofills the GST rate for common codes. Click "+ Add description" for a detailed note under the item name.</li>
+              <li><strong>{i18nT('ui.discount')}</strong> {i18nT('ui.perLinePickFixedOrOf')}</li>
+              <li><strong>{i18nT('ui.customize')}</strong> — toggle columns and sections on/off, pick paper size (A4, A5, Letter, Legal, B5, thermal rolls or a custom size), currency, TDS / TCS, recurring, the invoice title and PDF style. Changes are remembered for your next invoice.</li>
+              <li><strong>{i18nT('ui.hidePreview')}</strong> {i18nT('ui.givesTheFormTheFullWidth')}</li>
+              <li><strong>{i18nT('ui.keyboard')}</strong> {i18nT('ui.ctrlSSaveCtrlPPdf')}</li>
+              <li><strong>{i18nT('ui.saving')}</strong> {i18nT('ui.aNewInvoiceIsStoredWhen')}</li>
             </ul>
           </HelpButton>
           {/* v1.10.37 — Auto-save status pill. Reported: prior plain
@@ -3204,22 +3220,22 @@ export default function InvoiceGenerator({ onBack, profile: profileProp, editing
               const no = await saveInvoiceToDB();
               if (!no) return;
               clearDraft();
-              toast('Invoice saved', 'success');
+              toast(i18nT('ui.invoiceSaved'), 'success');
               await refreshSavedPdf(no);
             } catch (err) {
               if (err?.status !== 409) {  // 409 already handled by retry inside saveInvoiceToDB
                 console.error('Save failed', err);
-                toast('Save failed — try again', 'error');
+                toast(i18nT('ui.saveFailedTryAgain'), 'error');
               }
             } finally {
               setSaving(false);
             }
           }} disabled={saving}
-          title="Save the invoice without downloading (Ctrl+S)">
+          title={i18nT('ui.saveTheInvoiceWithoutDownloadingCtrl')}>
             <Check size={18} /> {saving ? 'Saving…' : 'Save'}
           </button>
           <button className="btn btn-secondary" onClick={generatePDF} disabled={saving}
-            title="Save + download the PDF">
+            title={i18nT('ui.saveDownloadThePdf')}>
             <Download size={18} /> {saving ? 'Generating...' : 'Save & Download'}
           </button>
           <button className="btn btn-secondary" onClick={directPrint} disabled={saving}
@@ -3228,14 +3244,14 @@ export default function InvoiceGenerator({ onBack, profile: profileProp, editing
                 ? 'Send directly to your thermal printer'
                 : 'Open browser print dialog (skip the PDF download)'
             }>
-            <Printer size={18} /> Print
+            <Printer size={18} /> {i18nT('ui.print')}
           </button>
           <button className="btn btn-secondary" onClick={shareWhatsApp} disabled={saving} style={{ background: '#25d366', color: '#fff', borderColor: '#25d366' }}>
-            <MessageCircle size={18} /> WhatsApp
+            <MessageCircle size={18} /> {i18nT('ui.whatsapp')}
           </button>
           {(invoiceType === 'tax-invoice' || invoiceType === 'delivery-challan') && (
-            <button className="btn btn-secondary" onClick={exportEWayBill} disabled={saving} title="Download E-Way Bill JSON for NIC portal upload">
-              <Truck size={18} /> E-Way Bill
+            <button className="btn btn-secondary" onClick={exportEWayBill} disabled={saving} title={i18nT('ui.downloadEWayBillJsonFor')}>
+              <Truck size={18} /> {i18nT('ui.eWayBill')}
             </button>
           )}
           {/* v1.10.65 — requested (#58 item 2, @sangwanmail-eng): "to access
@@ -3260,7 +3276,7 @@ export default function InvoiceGenerator({ onBack, profile: profileProp, editing
           <button className="btn btn-secondary" type="button"
             onClick={() => setPreviewCollapsed(v => !v)}
             title={previewCollapsed ? 'Show the live preview' : 'Hide the preview and use the full width for entry'}>
-            {previewCollapsed ? <><Eye size={18} /> Show Preview</> : <><EyeOff size={18} /> Hide Preview</>}
+            {previewCollapsed ? <><Eye size={18} /> {i18nT('ui.showPreview')}</> : <><EyeOff size={18} /> {i18nT('ui.hidePreview')}</>}
           </button>
         </div>
       </div>
@@ -3278,7 +3294,7 @@ export default function InvoiceGenerator({ onBack, profile: profileProp, editing
                 toolbar. Two buttons doing the same thing would only raise the
                 question of whether they do. */}
             <div className="flex justify-between items-center">
-              <h3 className="section-title" style={{ margin: 0 }}>Invoice Type</h3>
+              <h3 className="section-title" style={{ margin: 0 }}>{i18nT('ui.invoiceType2')}</h3>
             </div>
             <div className="type-selector" style={{ marginTop: '0.75rem' }}>
               {Object.entries(INVOICE_TYPES).map(([key, val]) => (
@@ -3291,7 +3307,7 @@ export default function InvoiceGenerator({ onBack, profile: profileProp, editing
             </div>
             {isIssuedInvoice && (
               <p className="type-desc" style={{ color: 'var(--text-muted)' }}>
-                Saved as a {typeConfig?.label || invoiceType}. The type stays fixed so the number series and tax treatment keep matching what the customer already has - use Duplicate to raise a different document.
+                {i18nT('ui.savedAsA')} {typeConfig?.label || invoiceType}{i18nT('ui.theTypeStaysFixedSoThe')}
               </p>
             )}
             <p className="type-desc">{typeConfig?.description}</p>
@@ -3300,7 +3316,7 @@ export default function InvoiceGenerator({ onBack, profile: profileProp, editing
                 (Hrs vs Nos) and filters the unit dropdown. Stays out of the way
                 for users who never touch services. */}
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginTop: '0.5rem', flexWrap: 'wrap' }}>
-              <span style={{ fontSize: '0.78rem', color: 'var(--text-muted)', marginRight: '0.25rem' }}>This invoice is for:</span>
+              <span style={{ fontSize: '0.78rem', color: 'var(--text-muted)', marginRight: '0.25rem' }}>{i18nT('ui.thisInvoiceIsFor')}</span>
               {[
                 { id: 'goods',    label: '📦 Goods',    desc: 'Physical products — defaults to Nos / Kg / Pcs units' },
                 { id: 'services', label: '⏱ Services', desc: 'Time / work-based — defaults to Hrs and surfaces Session / Visit / Month units' },
@@ -3316,7 +3332,7 @@ export default function InvoiceGenerator({ onBack, profile: profileProp, editing
               ))}
               {invoiceOptions.invoiceMode === 'services' && (
                 <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)', marginLeft: 'auto' }}>
-                  💡 Use a <strong>SAC code</strong> (services accounting code) in the HSN field
+                  {i18nT('ui.useA')} <strong>{i18nT('ui.sacCode')}</strong> {i18nT('ui.servicesAccountingCodeInTheHsn')}
                 </span>
               )}
             </div>
@@ -3325,13 +3341,13 @@ export default function InvoiceGenerator({ onBack, profile: profileProp, editing
             {showOptions && (
               <div className="invoice-options">
                 <div className="form-group" style={{ marginBottom: '0.75rem' }}>
-                  <label className="form-label">Invoice Title</label>
+                  <label className="form-label">{i18nT('ui.invoiceTitle')}</label>
                   <input type="text" className="form-input" value={invoiceOptions.customTitle}
                     onChange={(e) => setInvoiceOptions(prev => ({ ...prev, customTitle: e.target.value }))}
                     placeholder={typeConfig?.title || 'TAX INVOICE'} />
                 </div>
                 <div className="form-group" style={{ marginBottom: '0.75rem' }}>
-                  <label className="form-label">Currency</label>
+                  <label className="form-label">{i18nT('ui.currency')}</label>
                   <select className="form-input" value={invoiceOptions.currency}
                     onChange={(e) => setInvoiceOptions(prev => ({ ...prev, currency: e.target.value }))}>
                     {/* Deduped currencies pulled from the region-filtered country list. */}
@@ -3342,12 +3358,12 @@ export default function InvoiceGenerator({ onBack, profile: profileProp, editing
                 </div>
                 {invoiceOptions.currency !== 'INR' && (
                   <div className="form-group" style={{ marginBottom: '0.75rem' }}>
-                    <label className="form-label">Exchange Rate (optional, snapshot)</label>
+                    <label className="form-label">{i18nT('ui.exchangeRateOptionalSnapshot')}</label>
                     <input type="number" step="any" min="0" className="form-input"
                       value={invoiceOptions.exchangeRate}
                       onChange={(e) => setInvoiceOptions(prev => ({ ...prev, exchangeRate: e.target.value }))}
                       placeholder={`1 ${invoiceOptions.currency} = ? INR`} />
-                    <small style={{ color: '#94a3b8', fontSize: '0.7rem' }}>Stored on this invoice — historical reports stay accurate even if rates change.</small>
+                    <small style={{ color: '#94a3b8', fontSize: '0.7rem' }}>{i18nT('ui.storedOnThisInvoiceHistoricalReports')}</small>
                   </div>
                 )}
 
@@ -3387,64 +3403,64 @@ export default function InvoiceGenerator({ onBack, profile: profileProp, editing
                       <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.82rem', cursor: 'pointer' }}>
                         <input type="checkbox" checked={isOn} onChange={toggle}
                           style={{ width: 16, height: 16, accentColor: 'var(--primary)' }} />
-                        <strong>🔁 Make this a recurring invoice</strong>
+                        <strong>{i18nT('ui.makeThisARecurringInvoice')}</strong>
                         <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>
-                          (auto-generate a new invoice on schedule, same items, new number)
+                          {i18nT('ui.autoGenerateANewInvoiceOn')}
                         </span>
                       </label>
                       {isOn && (
                         <div style={{ marginTop: '0.6rem', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.5rem' }}>
                           <div className="form-group" style={{ margin: 0 }}>
-                            <label className="form-label">Frequency</label>
+                            <label className="form-label">{i18nT('ui.frequency')}</label>
                             <select className="form-input" value={rec.frequency}
                               onChange={e => set('frequency', e.target.value)}>
-                              <option value="weekly">Weekly</option>
-                              <option value="monthly">Monthly</option>
-                              <option value="quarterly">Quarterly</option>
-                              <option value="yearly">Yearly</option>
+                              <option value="weekly">{i18nT('ui.weekly')}</option>
+                              <option value="monthly">{i18nT('ui.monthly')}</option>
+                              <option value="quarterly">{i18nT('ui.quarterly')}</option>
+                              <option value="yearly">{i18nT('ui.yearly')}</option>
                             </select>
                           </div>
                           <div className="form-group" style={{ margin: 0 }}>
-                            <label className="form-label">Every N (interval)</label>
+                            <label className="form-label">{i18nT('ui.everyNInterval')}</label>
                             <input type="number" min="1" max="12" className="form-input"
                               value={rec.interval || 1}
                               onChange={e => set('interval', parseInt(e.target.value) || 1)} />
                           </div>
                           <div className="form-group" style={{ margin: 0 }}>
-                            <label className="form-label">Next invoice date</label>
+                            <label className="form-label">{i18nT('ui.nextInvoiceDate')}</label>
                             <input type="date" className="form-input" value={rec.nextDate || ''}
                               onChange={e => set('nextDate', e.target.value)} />
                           </div>
                           <div className="form-group" style={{ margin: 0 }}>
-                            <label className="form-label">End condition</label>
+                            <label className="form-label">{i18nT('ui.endCondition')}</label>
                             <select className="form-input" value={rec.endMode || 'never'}
                               onChange={e => set('endMode', e.target.value)}>
-                              <option value="never">Never (until I stop it)</option>
-                              <option value="onDate">On a specific date</option>
-                              <option value="afterN">After N invoices</option>
+                              <option value="never">{i18nT('ui.neverUntilIStopIt')}</option>
+                              <option value="onDate">{i18nT('ui.onASpecificDate')}</option>
+                              <option value="afterN">{i18nT('ui.afterNInvoices')}</option>
                             </select>
                           </div>
                           {rec.endMode === 'onDate' && (
                             <div className="form-group" style={{ margin: 0, gridColumn: 'span 2' }}>
-                              <label className="form-label">Stop generating after this date</label>
+                              <label className="form-label">{i18nT('ui.stopGeneratingAfterThisDate')}</label>
                               <input type="date" className="form-input" value={rec.endDate || ''}
                                 onChange={e => set('endDate', e.target.value)} />
                             </div>
                           )}
                           {rec.endMode === 'afterN' && (
                             <div className="form-group" style={{ margin: 0, gridColumn: 'span 2' }}>
-                              <label className="form-label">Stop after this many invoices have been generated</label>
+                              <label className="form-label">{i18nT('ui.stopAfterThisManyInvoicesHave')}</label>
                               <input type="number" min="1" className="form-input"
                                 value={rec.maxOccurrences || ''}
                                 onChange={e => set('maxOccurrences', parseInt(e.target.value) || '')}
-                                placeholder="e.g. 12 for a 1-year monthly contract" />
+                                placeholder={i18nT('ui.eG12ForA1')} />
                             </div>
                           )}
                           <div style={{ gridColumn: 'span 2', fontSize: '0.7rem', color: 'var(--text-muted)', lineHeight: 1.5 }}>
                             Auto-generation fires every time you open the app (or daily if it stays running).
                             Future invoices get fresh sequential numbers, today's date as their invoice date,
                             and the same client + items + amounts as this one. Edit or pause the template any
-                            time via <strong>Recurring</strong> in the sidebar.
+                            time via <strong>{i18nT('ui.recurring')}</strong> {i18nT('ui.inTheSidebar')}
                           </div>
                         </div>
                       )}
@@ -3467,8 +3483,8 @@ export default function InvoiceGenerator({ onBack, profile: profileProp, editing
                             : { ...prev, showTCS: turningOn };
                         })}
                         style={{ width: 16, height: 16, accentColor: 'var(--primary)' }} />
-                      <strong>TCS — Tax Collected at Source</strong>
-                      <span style={{ fontSize: '0.7rem', color: '#94a3b8' }}>(Adds to invoice total)</span>
+                      <strong>{i18nT('ui.tcsTaxCollectedAtSource')}</strong>
+                      <span style={{ fontSize: '0.7rem', color: '#94a3b8' }}>{i18nT('ui.addsToInvoiceTotal')}</span>
                     </label>
                     {invoiceOptions.showTCS && (
                       <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '0.5rem', marginTop: '0.5rem' }}>
@@ -3486,7 +3502,7 @@ export default function InvoiceGenerator({ onBack, profile: profileProp, editing
                         <input type="number" step="any" min="0" max="100" className="form-input"
                           value={invoiceOptions.tcsRate}
                           onChange={(e) => setInvoiceOptions(prev => ({ ...prev, tcsRate: e.target.value }))}
-                          placeholder="Rate %" />
+                          placeholder={i18nT('ui.rate2')} />
                       </div>
                     )}
                   </div>
@@ -3499,8 +3515,8 @@ export default function InvoiceGenerator({ onBack, profile: profileProp, editing
                       <input type="checkbox" checked={!!invoiceOptions.showTDS}
                         onChange={() => setInvoiceOptions(prev => ({ ...prev, showTDS: !prev.showTDS }))}
                         style={{ width: 16, height: 16, accentColor: 'var(--primary)' }} />
-                      <strong>TDS — Tax Deducted at Source</strong>
-                      <span style={{ fontSize: '0.7rem', color: '#94a3b8' }}>(Buyer deducts; informational)</span>
+                      <strong>{i18nT('ui.tdsTaxDeductedAtSource')}</strong>
+                      <span style={{ fontSize: '0.7rem', color: '#94a3b8' }}>{i18nT('ui.buyerDeductsInformational')}</span>
                     </label>
                     {invoiceOptions.showTDS && (
                       <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '0.5rem', marginTop: '0.5rem' }}>
@@ -3515,7 +3531,7 @@ export default function InvoiceGenerator({ onBack, profile: profileProp, editing
                         <input type="number" step="any" min="0" max="100" className="form-input"
                           value={invoiceOptions.tdsRate}
                           onChange={(e) => setInvoiceOptions(prev => ({ ...prev, tdsRate: e.target.value }))}
-                          placeholder="Rate %" />
+                          placeholder={i18nT('ui.rate2')} />
                       </div>
                     )}
                   </div>
@@ -3530,7 +3546,7 @@ export default function InvoiceGenerator({ onBack, profile: profileProp, editing
                   const resolved = getAccountById(profile, invoiceOptions.selectedAccountId);
                   return (
                     <div className="form-group" style={{ marginBottom: '0.75rem' }}>
-                      <label className="form-label">Payment account on this invoice</label>
+                      <label className="form-label">{i18nT('ui.paymentAccountOnThisInvoice')}</label>
                       <select className="form-input" value={resolved?.id || ''}
                         onChange={(e) => {
                           // v1.10.21 — reported: "working but on select it is not
@@ -3555,14 +3571,13 @@ export default function InvoiceGenerator({ onBack, profile: profileProp, editing
                         ))}
                       </select>
                       <small style={{ color: 'var(--text-muted)', fontSize: '0.7rem' }}>
-                        Bank details and UPI QR on the PDF come from the selected account.
-                        Manage accounts in Settings → Payment Accounts.
+                        {i18nT('ui.bankDetailsAndUpiQrOn')}
                       </small>
                     </div>
                   );
                 })()}
                 <div className="form-group" style={{ marginBottom: '0.75rem' }}>
-                  <label className="form-label">PDF Style</label>
+                  <label className="form-label">{i18nT('ui.pdfStyle')}</label>
                   <div style={{ display: 'flex', gap: '0.5rem' }}>
                     {PDF_STYLES.map(s => (
                       <button key={s.id} type="button"
@@ -3573,9 +3588,9 @@ export default function InvoiceGenerator({ onBack, profile: profileProp, editing
                   </div>
                 </div>
                 <div className="form-group" style={{ marginBottom: '0.75rem' }}>
-                  <label className="form-label">Accent Color</label>
+                  <label className="form-label">{i18nT('ui.accentColor')}</label>
                   <div style={{ display: 'flex', gap: '0.4rem', flexWrap: 'wrap', alignItems: 'center' }}>
-                    <button type="button" title="Auto (match invoice type)"
+                    <button type="button" title={i18nT('ui.autoMatchInvoiceType')}
                       style={{ width: '28px', height: '28px', borderRadius: '50%', border: !invoiceOptions.accentColor ? '2.5px solid #334155' : '2px solid #cbd5e1', background: 'conic-gradient(#1e40af, #7c3aed, #0f766e, #be123c, #1e40af)', cursor: 'pointer', position: 'relative' }}
                       onClick={() => setInvoiceOptions(prev => ({ ...prev, accentColor: '' }))}>
                       {!invoiceOptions.accentColor && <span style={{ position: 'absolute', inset: '3px', borderRadius: '50%', border: '2px solid white' }} />}
@@ -3658,7 +3673,7 @@ export default function InvoiceGenerator({ onBack, profile: profileProp, editing
                   if (section.group === '__PAPER_SIZE__') {
                     return (
                       <div key="paper-size" style={{ marginBottom: '0.6rem' }}>
-                        <div style={{ fontSize: '0.7rem', fontWeight: 700, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '0.3rem' }}>Paper / print size</div>
+                        <div style={{ fontSize: '0.7rem', fontWeight: 700, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '0.3rem' }}>{i18nT('ui.paperPrintSize')}</div>
                         <select className="form-input" style={{ fontSize: '0.85rem' }}
                           value={invoiceOptions.paperSize || 'a4'}
                           onChange={e => {
@@ -3682,25 +3697,25 @@ export default function InvoiceGenerator({ onBack, profile: profileProp, editing
                         {invoiceOptions.paperSize === 'custom' && (
                           <div style={{ marginTop: '0.5rem', padding: '0.55rem 0.65rem', background: 'var(--bg-secondary)', borderRadius: 6, display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.5rem' }}>
                             <div>
-                              <label style={{ fontSize: '0.72rem', fontWeight: 600, display: 'block', marginBottom: 3 }}>Width (mm)</label>
+                              <label style={{ fontSize: '0.72rem', fontWeight: 600, display: 'block', marginBottom: 3 }}>{i18nT('ui.widthMm')}</label>
                               <input type="number" min="30" max="500" step="1"
                                 value={invoiceOptions.customPaperWidth || 80}
                                 onChange={e => setInvoiceOptions(prev => ({ ...prev, customPaperWidth: parseInt(e.target.value, 10) || 80 }))}
                                 className="form-input" style={{ fontSize: '0.8rem', padding: '0.35rem' }} />
                             </div>
                             <div>
-                              <label style={{ fontSize: '0.72rem', fontWeight: 600, display: 'block', marginBottom: 3 }}>Height (mm)</label>
+                              <label style={{ fontSize: '0.72rem', fontWeight: 600, display: 'block', marginBottom: 3 }}>{i18nT('ui.heightMm')}</label>
                               <input type="number" min="50" max="1200" step="1"
                                 value={invoiceOptions.customPaperHeight || 297}
                                 onChange={e => setInvoiceOptions(prev => ({ ...prev, customPaperHeight: parseInt(e.target.value, 10) || 297 }))}
                                 className="form-input" style={{ fontSize: '0.8rem', padding: '0.35rem' }} />
                             </div>
                             <p style={{ fontSize: '0.7rem', color: 'var(--text-muted)', gridColumn: 'span 2', margin: 0 }}>
-                              Tip: enter your printer's <strong>printable</strong> width, not the roll width. Most 58mm thermals print at 48mm; 80mm print at 72mm. <strong>Below 100mm width auto-switches to thermal receipt layout</strong> — same rendering as the 58/80mm presets, just at your exact size.
+                              {i18nT('ui.tipEnterYourPrinterS')} <strong>{i18nT('ui.printable')}</strong> {i18nT('ui.widthNotTheRollWidthMost')} <strong>{i18nT('ui.below100mmWidthAutoSwitchesTo')}</strong> {i18nT('ui.sameRenderingAsThe5880mm')}
                             </p>
                             {/* v1.10.30 — quick-pick chips for uncommon thermal rolls. */}
                             <div style={{ gridColumn: 'span 2', display: 'flex', gap: '0.35rem', flexWrap: 'wrap', marginTop: 4 }}>
-                              <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)', alignSelf: 'center' }}>Quick-pick:</span>
+                              <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)', alignSelf: 'center' }}>{i18nT('ui.quickPick')}</span>
                               {[
                                 { label: '40mm', w: 32 },
                                 { label: '76mm', w: 68 },
@@ -3726,18 +3741,18 @@ export default function InvoiceGenerator({ onBack, profile: profileProp, editing
                         {getPaperSize(invoiceOptions.paperSize, invoiceOptions).kind === 'thermal' && (
                           <div style={{ marginTop: '0.6rem', padding: '0.6rem', background: 'var(--bg-secondary)', borderRadius: 6 }}>
                             <div style={{ fontSize: '0.68rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '0.4rem' }}>
-                              Thermal printer settings
+                              {i18nT('ui.thermalPrinterSettings')}
                             </div>
 
                             <label style={{ display: 'block', fontSize: '0.78rem', marginBottom: '0.35rem' }}>
-                              <span style={{ fontWeight: 600 }}>Font size</span>
+                              <span style={{ fontWeight: 600 }}>{i18nT('ui.fontSize')}</span>
                               <select className="form-input"
                                 style={{ fontSize: '0.78rem', marginTop: 2 }}
                                 value={invoiceOptions.thermalFontSize || 'medium'}
                                 onChange={e => setInvoiceOptions(prev => ({ ...prev, thermalFontSize: e.target.value }))}>
-                                <option value="small">Small (fits more per page)</option>
-                                <option value="medium">Medium (recommended)</option>
-                                <option value="large">Large (easier to read)</option>
+                                <option value="small">{i18nT('ui.smallFitsMorePerPage')}</option>
+                                <option value="medium">{i18nT('ui.mediumRecommended')}</option>
+                                <option value="large">{i18nT('ui.largeEasierToRead')}</option>
                               </select>
                             </label>
 
@@ -3746,9 +3761,9 @@ export default function InvoiceGenerator({ onBack, profile: profileProp, editing
                                 onChange={e => setInvoiceOptions(prev => ({ ...prev, thermalCompact: e.target.checked }))}
                                 style={{ marginTop: 2, accentColor: 'var(--primary)' }} />
                               <span>
-                                <strong>Compact mode</strong>
+                                <strong>{i18nT('ui.compactMode')}</strong>
                                 <span style={{ display: 'block', fontSize: '0.7rem', color: 'var(--text-muted)' }}>
-                                  Tighter item rows, to save paper on long orders. Whether HSN and the quantity × rate line print is set in Print Settings.
+                                  {i18nT('ui.tighterItemRowsToSavePaper')}
                                 </span>
                               </span>
                             </label>
@@ -3758,9 +3773,9 @@ export default function InvoiceGenerator({ onBack, profile: profileProp, editing
                                 onChange={e => setInvoiceOptions(prev => ({ ...prev, thermalCutMark: e.target.checked }))}
                                 style={{ marginTop: 2, accentColor: 'var(--primary)' }} />
                               <span>
-                                <strong>Cut mark at bottom</strong>
+                                <strong>{i18nT('ui.cutMarkAtBottom')}</strong>
                                 <span style={{ display: 'block', fontSize: '0.7rem', color: 'var(--text-muted)' }}>
-                                  Prints a CUT HERE line to tear against. Turn it off if your printer cuts the paper itself.
+                                  {i18nT('ui.printsACutHereLineTo')}
                                 </span>
                               </span>
                             </label>
@@ -3791,7 +3806,7 @@ export default function InvoiceGenerator({ onBack, profile: profileProp, editing
                 })}
                 {invoiceOptionOn(invoiceOptions, 'showDeclaration') && (
                   <div className="form-group" style={{ marginTop: '0.4rem' }}>
-                    <label className="form-label" style={{ fontSize: '0.78rem' }}>Declaration text</label>
+                    <label className="form-label" style={{ fontSize: '0.78rem' }}>{i18nT('ui.declarationText')}</label>
                     <textarea className="form-input" rows={2}
                       value={invoiceOptions.declarationText ?? DEFAULT_DECLARATION}
                       onChange={e => setInvoiceOptions(prev => ({ ...prev, declarationText: e.target.value }))} />
@@ -3804,7 +3819,7 @@ export default function InvoiceGenerator({ onBack, profile: profileProp, editing
                       setInvoiceOptions(prev => { const out = { ...prev }; allKeys.forEach(k => { out[k] = false; }); return out; });
                     }}
                     style={{ fontSize: '0.72rem', padding: '0.3rem 0.6rem' }}>
-                    Hide all
+                    {i18nT('ui.hideAll')}
                   </button>
                   <button type="button" className="btn btn-secondary"
                     onClick={() => setInvoiceOptions(prev => ({
@@ -3822,7 +3837,7 @@ export default function InvoiceGenerator({ onBack, profile: profileProp, editing
                       selectedAccountId: prev.selectedAccountId,
                     }))}
                     style={{ fontSize: '0.72rem', padding: '0.3rem 0.6rem' }}>
-                    Reset to default
+                    {i18nT('ui.resetToDefault')}
                   </button>
                 </div>
               </div>
@@ -3850,9 +3865,9 @@ export default function InvoiceGenerator({ onBack, profile: profileProp, editing
               }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '0.5rem' }}>
                   <div>
-                    <strong style={{ color: '#0369a1' }}>💳 Client has {formatCurrency(clientCredit.available, invoiceOptions.currency || 'INR')} credit</strong>
+                    <strong style={{ color: '#0369a1' }}>{i18nT('ui.clientHas')} {formatCurrency(clientCredit.available, invoiceOptions.currency || 'INR')} {i18nT('ui.credit')}</strong>
                     <span style={{ color: 'var(--text-muted)', marginLeft: 8 }}>
-                      from {clientCredit.sources.length} prior overpayment{clientCredit.sources.length > 1 ? 's' : ''}
+                      {i18nT('ui.from')} {clientCredit.sources.length} {i18nT('ui.priorOverpayment')}{clientCredit.sources.length > 1 ? 's' : ''}
                       {' '}({clientCredit.sources.map(s => s.invoiceNumber).slice(0, 3).join(', ')}
                       {clientCredit.sources.length > 3 ? '…' : ''})
                     </span>
@@ -3869,34 +3884,34 @@ export default function InvoiceGenerator({ onBack, profile: profileProp, editing
                     <button type="button" className="btn btn-secondary"
                       style={{ fontSize: '0.78rem', padding: '0.3rem 0.6rem' }}
                       onClick={() => setCreditToApply(Math.min(clientCredit.available, Number(totals.total) || 0))}>
-                      Apply full
+                      {i18nT('ui.applyFull')}
                     </button>
                     {creditToApply > 0 && (
                       <button type="button" className="btn btn-secondary"
                         style={{ fontSize: '0.78rem', padding: '0.3rem 0.6rem', color: '#dc2626', borderColor: '#fca5a5' }}
                         onClick={() => setCreditToApply(0)}>
-                        Skip
+                        {i18nT('ui.skip')}
                       </button>
                     )}
                   </div>
                 </div>
                 {creditToApply > 0.005 && (
                   <div style={{ marginTop: 6, fontSize: '0.78rem', color: '#0369a1' }}>
-                    → Will apply {formatCurrency(creditToApply, invoiceOptions.currency || 'INR')} as advance from prior overpayment
+                    {i18nT('ui.willApply')} {formatCurrency(creditToApply, invoiceOptions.currency || 'INR')} {i18nT('ui.asAdvanceFromPriorOverpayment')}
                     {creditToApply < clientCredit.available ? ` (${formatCurrency(clientCredit.available - creditToApply, invoiceOptions.currency || 'INR')} credit will remain)` : ''}.
                   </div>
                 )}
                 <label style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 6, fontSize: '0.72rem', color: 'var(--text-muted)' }}>
                   <input type="checkbox" checked={!!invoiceOptions.autoApplyClientCredit}
                     onChange={e => setInvoiceOptions(prev => ({ ...prev, autoApplyClientCredit: e.target.checked }))} />
-                  Auto-apply available client credit on future invoices
+                  {i18nT('ui.autoApplyAvailableClientCreditOn')}
                 </label>
               </div>
             )}
 
             <div className="grid grid-cols-2 gap-4">
               <div className="form-group full-width" style={{ position: 'relative' }}>
-                <label className="form-label">Client Name</label>
+                <label className="form-label">{i18nT('ui.clientName')}</label>
                 <div style={{ display: 'flex', gap: '0.4rem' }}>
                   <input type="text" className="form-input" style={{ flex: 1 }} value={client.name} ref={clientNameRef}
                     onChange={(e) => {
@@ -3930,9 +3945,9 @@ export default function InvoiceGenerator({ onBack, profile: profileProp, editing
                         setShowClientSuggestions(false);
                       }
                     }}
-                    placeholder="Type client name to search or add new" autoComplete="off" />
+                    placeholder={i18nT('ui.typeClientNameToSearchOr')} autoComplete="off" />
                   {selectedClientId && (
-                    <button type="button" className="btn-client-edit" onClick={() => openEditClientModal(savedClients.find(c => c.id === selectedClientId))} title="Edit saved client">
+                    <button type="button" className="btn-client-edit" onClick={() => openEditClientModal(savedClients.find(c => c.id === selectedClientId))} title={i18nT('ui.editSavedClient')}>
                       <Pencil size={14} />
                     </button>
                   )}
@@ -3951,29 +3966,29 @@ export default function InvoiceGenerator({ onBack, profile: profileProp, editing
                           </div>
                           <span>{cli.state}{cli.gstin ? ` · ${cli.gstin}` : ''}</span>
                         </button>
-                        <button type="button" className="client-suggestion-edit" onClick={() => { openEditClientModal(cli); setShowClientSuggestions(false); }} title="Edit client">
+                        <button type="button" className="client-suggestion-edit" onClick={() => { openEditClientModal(cli); setShowClientSuggestions(false); }} title={i18nT('ui.editClient')}>
                           <Pencil size={12} />
                         </button>
                       </div>
                     ))}
                     {client.name.trim() && (
                       <button type="button" className="client-suggestion-save" onClick={openAddClientModal}>
-                        <UserPlus size={14} /> Save "{client.name.trim()}" as new client
+                        <UserPlus size={14} /> {i18nT('ui.save')}{client.name.trim()}{i18nT('ui.asNewClient')}
                       </button>
                     )}
                     {filteredClients.length === 0 && !client.name.trim() && (
-                      <div className="client-picker-empty">Type to search clients</div>
+                      <div className="client-picker-empty">{i18nT('ui.typeToSearchClients')}</div>
                     )}
                   </div>
                 )}
               </div>
               <div className="form-group full-width">
-                <label className="form-label">Billing Address</label>
+                <label className="form-label">{i18nT('ui.billingAddress')}</label>
                 <input type="text" className="form-input" value={client.address}
-                  onChange={(e) => setClient({ ...client, address: e.target.value })} placeholder="Street address, locality" />
+                  onChange={(e) => setClient({ ...client, address: e.target.value })} placeholder={i18nT('ui.streetAddressLocality')} />
               </div>
               <div className="form-group">
-                <label className="form-label">Country</label>
+                <label className="form-label">{i18nT('ui.country')}</label>
                 <select className="form-input" value={client.country || profile?.country || 'India'}
                   onChange={(e) => setClient({ ...client, country: e.target.value, state: '' })}>
                   {(() => {
@@ -3988,14 +4003,14 @@ export default function InvoiceGenerator({ onBack, profile: profileProp, editing
                 </select>
               </div>
               <div className="form-group">
-                <label className="form-label">City</label>
+                <label className="form-label">{i18nT('ui.city')}</label>
                 <input type="text" className="form-input" value={client.city}
-                  onChange={(e) => setClient({ ...client, city: e.target.value })} placeholder="e.g. Mumbai" />
+                  onChange={(e) => setClient({ ...client, city: e.target.value })} placeholder={i18nT('ui.eGMumbai')} />
               </div>
               <div className="form-group">
                 {(() => { const cc = getCountryConfig(client.country || profile?.country); return <label className="form-label">{cc.postalLabel}</label>; })()}
                 <input type="text" className="form-input" value={client.pin}
-                  onChange={(e) => setClient({ ...client, pin: e.target.value })} placeholder="Postal / PIN code" />
+                  onChange={(e) => setClient({ ...client, pin: e.target.value })} placeholder={i18nT('ui.postalPinCode')} />
               </div>
               {invoiceOptions.showState && (() => {
                 const cc = getCountryConfig(client.country || profile?.country);
@@ -4005,7 +4020,7 @@ export default function InvoiceGenerator({ onBack, profile: profileProp, editing
                     <label className="form-label">{cc.stateLabel}</label>
                     {stateOpts.length > 0 ? (
                       <select className="form-input" value={client.state} onChange={(e) => setClient({ ...client, state: e.target.value })}>
-                        <option value="">Select {cc.stateLabel}</option>
+                        <option value="">{i18nT('ui.select')} {cc.stateLabel}</option>
                         {stateOpts.map(s => <option key={s} value={s}>{s}</option>)}
                       </select>
                     ) : (
@@ -4023,7 +4038,7 @@ export default function InvoiceGenerator({ onBack, profile: profileProp, editing
                     <input type="text" className="form-input" value={client.gstin}
                       // v1.10.74 - drop the old hint on edit; it is re-checked on blur.
                       onChange={(e) => { setClient({ ...client, gstin: e.target.value.toUpperCase() }); setGstinHint(null); }}
-                      onBlur={handleClientGstinBlur} placeholder="Optional" maxLength={20} />
+                      onBlur={handleClientGstinBlur} placeholder={i18nT('ui.optional')} maxLength={20} />
                     {gstinHint && (
                       <small style={{ color: gstinHint.tone === 'warn' ? '#d97706' : '#16a34a', fontSize: '0.7rem', display: 'block', marginTop: '0.2rem' }}>
                         {gstinHint.tone === 'warn' ? '⚠' : '✓'} {gstinHint.message}
@@ -4040,17 +4055,17 @@ export default function InvoiceGenerator({ onBack, profile: profileProp, editing
             <h3 className="section-title">{tr('invoice.invoiceDetails')}</h3>
             <div className="grid grid-cols-2 gap-4">
               <div className="form-group">
-                <label className="form-label">Invoice Number</label>
+                <label className="form-label">{i18nT('ui.invoiceNumber')}</label>
                 <input type="text" className="form-input" value={details.invoiceNumber}
                   onChange={(e) => setDetails({ ...details, invoiceNumber: e.target.value })} />
               </div>
               <div className="form-group">
-                <label className="form-label">Invoice Date</label>
+                <label className="form-label">{i18nT('ui.invoiceDate')}</label>
                 <input type="date" className="form-input" value={details.invoiceDate}
                   onChange={(e) => setDetails({ ...details, invoiceDate: e.target.value })} />
               </div>
               <div className="form-group">
-                <label className="form-label">Due Date</label>
+                <label className="form-label">{i18nT('ui.dueDate')}</label>
                 <input type="date" className="form-input" value={details.dueDate}
                   onChange={(e) => setDetails({ ...details, dueDate: e.target.value })} />
               </div>
@@ -4058,25 +4073,25 @@ export default function InvoiceGenerator({ onBack, profile: profileProp, editing
                 const posOpts = getStatesForCountry(profile?.country);
                 return (
                   <div className="form-group">
-                    <label className="form-label">Place of Supply</label>
+                    <label className="form-label">{i18nT('ui.placeOfSupply')}</label>
                     {posOpts.length > 0 ? (
                       <select className="form-input" value={details.placeOfSupply}
                         onChange={(e) => setDetails({ ...details, placeOfSupply: e.target.value })}>
-                        <option value="">Defaults to Client State</option>
+                        <option value="">{i18nT('ui.defaultsToClientState')}</option>
                         {posOpts.map(s => <option key={s} value={s}>{s}</option>)}
                       </select>
                     ) : (
                       <input type="text" className="form-input" value={details.placeOfSupply}
-                        onChange={(e) => setDetails({ ...details, placeOfSupply: e.target.value })} placeholder="State / Region" />
+                        onChange={(e) => setDetails({ ...details, placeOfSupply: e.target.value })} placeholder={i18nT('ui.stateRegion')} />
                     )}
                   </div>
                 );
               })()}
               {invoiceType === 'credit-note' && (
                 <div className="form-group full-width">
-                  <label className="form-label">Original Invoice Reference</label>
+                  <label className="form-label">{i18nT('ui.originalInvoiceReference')}</label>
                   <input type="text" className="form-input" value={details.originalInvoiceRef}
-                    onChange={(e) => setDetails({ ...details, originalInvoiceRef: e.target.value })} placeholder="e.g. INV/2025-26/0001" />
+                    onChange={(e) => setDetails({ ...details, originalInvoiceRef: e.target.value })} placeholder={i18nT('ui.eGInv2025260001')} />
                 </div>
               )}
 
@@ -4088,41 +4103,41 @@ export default function InvoiceGenerator({ onBack, profile: profileProp, editing
                   <input type="checkbox" checked={details.shipToSameAsBilling !== false}
                     onChange={e => setDetails({ ...details, shipToSameAsBilling: e.target.checked })}
                     style={{ width: 16, height: 16, accentColor: 'var(--primary)' }} />
-                  <span><strong>Ship to</strong> same as bill-to address</span>
+                  <span><strong>{i18nT('ui.shipTo')}</strong> {i18nT('ui.sameAsBillToAddress')}</span>
                 </label>
                 {details.shipToSameAsBilling === false && (
                   <div className="grid grid-cols-2 gap-3" style={{ marginTop: '0.6rem' }}>
                     <div className="form-group full-width">
-                      <label className="form-label" style={{ fontSize: '0.78rem' }}>Shipping Address</label>
+                      <label className="form-label" style={{ fontSize: '0.78rem' }}>{i18nT('ui.shippingAddress')}</label>
                       <textarea className="form-input" rows={2} value={details.shippingAddress || ''}
                         onChange={e => setDetails({ ...details, shippingAddress: e.target.value })}
-                        placeholder="Delivery address / warehouse / consignee location" />
+                        placeholder={i18nT('ui.deliveryAddressWarehouseConsigneeLocatio')} />
                     </div>
                     <div className="form-group">
-                      <label className="form-label" style={{ fontSize: '0.78rem' }}>Shipping City</label>
+                      <label className="form-label" style={{ fontSize: '0.78rem' }}>{i18nT('ui.shippingCity')}</label>
                       <input type="text" className="form-input" value={details.shippingCity || ''}
                         onChange={e => setDetails({ ...details, shippingCity: e.target.value })} />
                     </div>
                     <div className="form-group">
-                      <label className="form-label" style={{ fontSize: '0.78rem' }}>Shipping PIN</label>
+                      <label className="form-label" style={{ fontSize: '0.78rem' }}>{i18nT('ui.shippingPin')}</label>
                       <input type="text" className="form-input" value={details.shippingPin || ''}
                         onChange={e => setDetails({ ...details, shippingPin: e.target.value })}
-                        placeholder="6-digit PIN" maxLength={6} />
+                        placeholder={i18nT('ui.n6DigitPin')} maxLength={6} />
                     </div>
                     <div className="form-group full-width">
-                      <label className="form-label" style={{ fontSize: '0.78rem' }}>Shipping State</label>
+                      <label className="form-label" style={{ fontSize: '0.78rem' }}>{i18nT('ui.shippingState')}</label>
                       {(() => {
                         const posOpts = getStatesForCountry(profile?.country);
                         return posOpts.length > 0 ? (
                           <select className="form-input" value={details.shippingState || ''}
                             onChange={e => setDetails({ ...details, shippingState: e.target.value })}>
-                            <option value="">Same as billing state</option>
+                            <option value="">{i18nT('ui.sameAsBillingState')}</option>
                             {posOpts.map(s => <option key={s} value={s}>{s}</option>)}
                           </select>
                         ) : (
                           <input type="text" className="form-input" value={details.shippingState || ''}
                             onChange={e => setDetails({ ...details, shippingState: e.target.value })}
-                            placeholder="Delivery state / region" />
+                            placeholder={i18nT('ui.deliveryStateRegion')} />
                         );
                       })()}
                     </div>
@@ -4139,8 +4154,8 @@ export default function InvoiceGenerator({ onBack, profile: profileProp, editing
                   <details className="form-group full-width" open={filled > 0 || undefined}
                     style={{ padding: '0.6rem 0.85rem', background: 'var(--bg-secondary)', borderRadius: 6 }}>
                     <summary style={{ cursor: 'pointer', fontSize: '0.88rem', userSelect: 'none' }}>
-                      <strong>Order, dispatch &amp; reference details</strong>
-                      <span style={{ color: 'var(--text-muted)' }}> (optional{filled ? `, ${filled} filled` : ''}) - buyer's order no, vehicle no, service period, work details</span>
+                      <strong>{i18nT('ui.orderDispatchAndReferenceDetails')}</strong>
+                      <span style={{ color: 'var(--text-muted)' }}> {i18nT('ui.optional2')}{filled ? `, ${filled} filled` : ''}{i18nT('ui.buyerSOrderNoVehicleNo')}</span>
                     </summary>
                     <div className="grid grid-cols-2 gap-3" style={{ marginTop: '0.6rem' }}>
                       {ORDER_DETAIL_FIELDS.map(f => (
@@ -4154,7 +4169,7 @@ export default function InvoiceGenerator({ onBack, profile: profileProp, editing
                     </div>
                     {periodBackwards && (
                       <p style={{ margin: '0.4rem 0 0', fontSize: '0.78rem', color: 'var(--warn-text, #b45309)' }}>
-                        ⚠ The service period ends before it starts. Check the two dates.
+                        {i18nT('ui.theServicePeriodEndsBeforeIt')}
                       </p>
                     )}
                   </details>
@@ -4171,7 +4186,7 @@ export default function InvoiceGenerator({ onBack, profile: profileProp, editing
                 <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.82rem', cursor: 'pointer', userSelect: 'none' }}>
                   <input type="checkbox" checked={taxInclusive} onChange={e => setTaxInclusive(e.target.checked)}
                     style={{ width: 16, height: 16, accentColor: 'var(--primary)', cursor: 'pointer' }} />
-                  <span style={{ fontWeight: 500 }}>Prices include tax</span>
+                  <span style={{ fontWeight: 500 }}>{i18nT('ui.pricesIncludeTax')}</span>
                 </label>
               )}
             </div>
@@ -4203,9 +4218,11 @@ export default function InvoiceGenerator({ onBack, profile: profileProp, editing
               />
             ))}
             <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', marginTop: '0.5rem' }}>
-              <button type="button" className="btn btn-secondary" onClick={addItem}><Plus size={18} /> Add Item</button>
-              <button type="button" className="btn btn-secondary" onClick={() => setShowBarcodeScanner(true)} title="Scan product barcode with camera or scanner">
-                <Camera size={18} /> Scan Barcode
+              <button type="button" className="btn btn-secondary" onClick={addItem}><Plus size={18} /> {i18nT('ui.addItem')}</button>
+              <AiBillButton mode="voice" products={products} onApply={applyAi} />
+              <AiBillButton mode="photo" products={products} onApply={applyAi} />
+              <button type="button" className="btn btn-secondary" onClick={() => setShowBarcodeScanner(true)} title={i18nT('ui.scanProductBarcodeWithCameraOr')}>
+                <Camera size={18} /> {i18nT('ui.scanBarcode')}
               </button>
             </div>
 
@@ -4213,7 +4230,7 @@ export default function InvoiceGenerator({ onBack, profile: profileProp, editing
                 the line items so it reads as "…and then take X off the
                 whole bill". Zero value = no line renders in the preview. */}
             <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: '0.75rem', flexWrap: 'wrap' }}>
-              <label style={{ fontSize: '0.82rem', color: 'var(--text-muted)' }}>Discount on total (whole bill)</label>
+              <label style={{ fontSize: '0.82rem', color: 'var(--text-muted)' }}>{i18nT('ui.discountOnTotalWholeBill')}</label>
               <input type="number" min="0" step="any" className="form-input"
                 value={invoiceOptions.invoiceDiscountValue || ''}
                 onFocus={(e) => e.target.select()}
@@ -4223,11 +4240,11 @@ export default function InvoiceGenerator({ onBack, profile: profileProp, editing
                 value={invoiceOptions.invoiceDiscountType === 'percent' ? 'percent' : 'fixed'}
                 onChange={(e) => setInvoiceOptions(prev => ({ ...prev, invoiceDiscountType: e.target.value }))}
                 style={{ width: 128 }}>
-                <option value="fixed">{currencySymbolFor(invoiceOptions.currency)} (fixed)</option>
-                <option value="percent">% of total</option>
+                <option value="fixed">{currencySymbolFor(invoiceOptions.currency)} {i18nT('ui.fixed')}</option>
+                <option value="percent">{i18nT('ui.ofTotal')}</option>
               </select>
               <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)', fontStyle: 'italic' }}>
-                Applied after tax. For GST-compliant pre-tax discount, use per-line discount instead.
+                {i18nT('ui.appliedAfterTaxForGstCompliant')}
               </span>
             </div>
           </div>
@@ -4235,7 +4252,7 @@ export default function InvoiceGenerator({ onBack, profile: profileProp, editing
           {/* Terms */}
           <div className="glass-panel p-6 mb-6">
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.75rem', flexWrap: 'wrap', gap: '0.75rem' }}>
-              <h3 className="section-title" style={{ margin: 0 }}>Terms & Conditions</h3>
+              <h3 className="section-title" style={{ margin: 0 }}>{i18nT('ui.termsAndConditions')}</h3>
               {/* v1.10.37 — Terms rendering mode picker. Reported: PDF was
                   showing terms as compact all-caps run-together block —
                   users wanted an option for normal formatted output too.
@@ -4244,7 +4261,7 @@ export default function InvoiceGenerator({ onBack, profile: profileProp, editing
                   Formatted = 0.78rem, mixed case, list styles preserved,
                   reads like a document paragraph. */}
               <div style={{ display: 'flex', gap: '0.35rem', alignItems: 'center' }}>
-                <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em', fontWeight: 700 }}>PDF layout</span>
+                <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em', fontWeight: 700 }}>{i18nT('ui.pdfLayout')}</span>
                 {[
                   { id: 'compact', label: 'Compact', hint: 'Tiny footer text — saves paper' },
                   { id: 'formatted', label: 'Formatted', hint: 'Larger readable paragraphs' },
@@ -4276,7 +4293,7 @@ export default function InvoiceGenerator({ onBack, profile: profileProp, editing
             </div>
             <div style={{ display: 'grid', gridTemplateColumns: termsTemplates.length > 0 ? '1fr 1fr' : '1fr', gap: '0.75rem', marginBottom: '0.5rem' }}>
               <div className="form-group" style={{ marginBottom: 0 }}>
-                <label className="form-label">Insert preset (by business type)</label>
+                <label className="form-label">{i18nT('ui.insertPresetByBusinessType')}</label>
                 <select className="form-input" defaultValue=""
                   onChange={async (e) => {
                     if (!e.target.value) return;
@@ -4290,9 +4307,9 @@ export default function InvoiceGenerator({ onBack, profile: profileProp, editing
                       const skipConfirm = sessionStorage.getItem('gst_termsPresetConfirmed') === '1';
                       if (!skipConfirm) {
                         const proceed = await confirmAction({
-                          title: 'Replace current Terms?',
-                          message: 'Your existing Terms text will be lost. Subsequent preset swaps this session will happen silently — this confirmation is shown once.',
-                          confirmLabel: 'Replace',
+                          title: i18nT('ui.replaceCurrentTerms'),
+                          message: i18nT('ui.yourExistingTermsTextWillBe'),
+                          confirmLabel: i18nT('ui.replace'),
                           tone: 'warning',
                         });
                         if (!proceed) { e.target.value = ''; return; }
@@ -4304,79 +4321,79 @@ export default function InvoiceGenerator({ onBack, profile: profileProp, editing
                     e.target.value = '';
                     if (preset.body) toast(`Inserted "${preset.label}" preset`, 'success');
                   }}>
-                  <option value="">— Pick a business type —</option>
+                  <option value="">{i18nT('ui.pickABusinessType')}</option>
                   {TERMS_PRESETS.map(p => <option key={p.id} value={p.id}>{p.label}</option>)}
                 </select>
-                <small style={{ color: '#94a3b8', fontSize: '0.7rem' }}>India-specific starter wording. Edit freely.</small>
+                <small style={{ color: '#94a3b8', fontSize: '0.7rem' }}>{i18nT('ui.indiaSpecificStarterWordingEditFreely')}</small>
               </div>
               {termsTemplates.length > 0 && (
                 <div className="form-group" style={{ marginBottom: 0 }}>
-                  <label className="form-label">Load saved template</label>
+                  <label className="form-label">{i18nT('ui.loadSavedTemplate')}</label>
                   <select className="form-input" value={selectedTermsId} onChange={(e) => handleTermsSelect(e.target.value)}>
-                    <option value="">— Custom —</option>
+                    <option value="">{i18nT('ui.custom')}</option>
                     {termsTemplates.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
                   </select>
                 </div>
               )}
             </div>
             <div className="form-group">
-              <label className="form-label">Terms (appears on invoice — supports rich formatting)</label>
+              <label className="form-label">{i18nT('ui.termsAppearsOnInvoiceSupportsRich')}</label>
               <RichEditor toolbar value={customTerms}
                 onChange={(v) => { setCustomTerms(v); setSelectedTermsId(''); }}
-                placeholder="Enter or paste your terms & conditions..." />
+                placeholder={i18nT('ui.enterOrPasteYourTermsAnd')} />
             </div>
             <div className="form-group">
-              <label className="form-label">Notes / Remarks (optional)</label>
+              <label className="form-label">{i18nT('ui.notesRemarksOptional')}</label>
               <RichEditor toolbar value={customNotes}
                 onChange={(v) => setCustomNotes(v)}
-                placeholder="Project details, special instructions, additional notes..." />
+                placeholder={i18nT('ui.projectDetailsSpecialInstructionsAdditio')} />
             </div>
             <div className="form-group" style={{ background: '#fefce8', border: '1px dashed #ca8a04', borderRadius: 8, padding: '0.75rem 1rem' }}>
               <label className="form-label" style={{ color: '#92400e', fontSize: '0.78rem', fontWeight: 600, display: 'flex', alignItems: 'center', gap: 6 }}>
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M12 8v4m0 4h.01"/></svg>
-                Private Note (not shown on invoice)
+                {i18nT('ui.privateNoteNotShownOnInvoice')}
               </label>
               <textarea rows="2" className="form-input note-textarea" value={internalNote}
                 onChange={(e) => setInternalNote(e.target.value)}
                 style={{ fontSize: '0.82rem' }}
-                placeholder="e.g. Client asked for 15-day credit, follow up on 20th, referred by Ravi..." />
+                placeholder={i18nT('ui.eGClientAskedFor15')} />
             </div>
           </div>
 
           {/* Extra Sections */}
           <div className="glass-panel p-6 mb-6">
             <div className="flex justify-between items-center mb-4">
-              <h3 className="section-title" style={{ margin: 0 }}>Additional Pages / Sections</h3>
+              <h3 className="section-title" style={{ margin: 0 }}>{i18nT('ui.additionalPagesSections')}</h3>
               <button type="button" className="btn btn-secondary" style={{ padding: '0.4rem 0.75rem', fontSize: '0.8rem' }}
                 onClick={() => setExtraSections(prev => [...prev, { id: Date.now().toString(), title: '', content: '' }])}>
-                <Plus size={15} /> Add Section
+                <Plus size={15} /> {i18nT('ui.addSection')}
               </button>
             </div>
             <p className="text-muted" style={{ fontSize: '0.8rem', marginBottom: '1rem' }}>
-              Add extra sections that appear after the invoice footer. You can paste formatted HTML content (bold, lists, tables, etc.).
+              {i18nT('ui.addExtraSectionsThatAppearAfter')}
             </p>
             {extraSections.length === 0 ? (
-              <p className="text-muted" style={{ fontSize: '0.85rem' }}>No extra sections. Click "Add Section" to create one.</p>
+              <p className="text-muted" style={{ fontSize: '0.85rem' }}>{i18nT('ui.noExtraSectionsClickAddSection')}</p>
             ) : (
               extraSections.map((section, idx) => (
                 <div key={section.id} className="extra-section-editor">
                   <div className="flex gap-2 items-center mb-2">
                     <input type="text" className="form-input" value={section.title}
                       onChange={(e) => setExtraSections(prev => prev.map(s => s.id === section.id ? { ...s, title: e.target.value } : s))}
-                      placeholder="Section title (e.g. Scope of Work, Delivery Timeline)" style={{ flex: 1 }} />
+                      placeholder={i18nT('ui.sectionTitleEGScopeOf')} style={{ flex: 1 }} />
                     <button className="icon-btn" onClick={() => {
                       if (idx > 0) setExtraSections(prev => { const arr = [...prev]; [arr[idx - 1], arr[idx]] = [arr[idx], arr[idx - 1]]; return arr; });
-                    }} title="Move up" disabled={idx === 0}><ChevronUp size={14} /></button>
+                    }} title={i18nT('ui.moveUp')} disabled={idx === 0}><ChevronUp size={14} /></button>
                     <button className="icon-btn" onClick={() => {
                       if (idx < extraSections.length - 1) setExtraSections(prev => { const arr = [...prev]; [arr[idx], arr[idx + 1]] = [arr[idx + 1], arr[idx]]; return arr; });
-                    }} title="Move down" disabled={idx === extraSections.length - 1}><ChevronDown size={14} /></button>
-                    <button className="icon-btn icon-btn-red" onClick={() => setExtraSections(prev => prev.filter(s => s.id !== section.id))} title="Remove"><Trash2 size={14} /></button>
+                    }} title={i18nT('ui.moveDown')} disabled={idx === extraSections.length - 1}><ChevronDown size={14} /></button>
+                    <button className="icon-btn icon-btn-red" onClick={() => setExtraSections(prev => prev.filter(s => s.id !== section.id))} title={i18nT('ui.remove2')}><Trash2 size={14} /></button>
                   </div>
                   <div className="form-group" style={{ marginBottom: '0.5rem' }}>
                     <RichEditor
                       value={section.content}
                       onChange={(html) => setExtraSections(prev => prev.map(s => s.id === section.id ? { ...s, content: html } : s))}
-                      placeholder="Type or paste formatted content here (supports bold, lists, tables from Word/Docs)..." />
+                      placeholder={i18nT('ui.typeOrPasteFormattedContentHere')} />
                   </div>
                 </div>
               ))
@@ -4416,7 +4433,7 @@ export default function InvoiceGenerator({ onBack, profile: profileProp, editing
           }}>
             <span style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', fontSize: '0.75rem', color: 'var(--text-muted)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.04em', minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
               <span style={{ fontSize: '0.85rem' }}>👁</span>
-              Live preview
+              {i18nT('ui.livePreview')}
             </span>
             <span style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
               {/* Segmented zoom cluster — three cells welded into one pill */}
@@ -4427,17 +4444,17 @@ export default function InvoiceGenerator({ onBack, profile: profileProp, editing
                 borderRadius: 999,
                 overflow: 'hidden',
               }}>
-                <button type="button" title="Zoom out"
+                <button type="button" title={i18nT('ui.zoomOut')}
                   onClick={() => setPreviewZoom(z => Math.max(50, z - 10))}
                   style={{ padding: '0.25rem 0.7rem', border: 'none', background: 'transparent', cursor: 'pointer', fontSize: '0.9rem', fontWeight: 700, color: 'var(--text)', lineHeight: 1 }}>−</button>
                 <span style={{ padding: '0.25rem 0.55rem', fontSize: '0.72rem', fontWeight: 700, color: 'var(--text)', minWidth: 42, textAlign: 'center', borderLeft: '1px solid var(--border)', borderRight: '1px solid var(--border)' }}>{previewZoom}%</span>
-                <button type="button" title="Zoom in"
+                <button type="button" title={i18nT('ui.zoomIn')}
                   onClick={() => setPreviewZoom(z => Math.min(200, z + 10))}
                   style={{ padding: '0.25rem 0.7rem', border: 'none', background: 'transparent', cursor: 'pointer', fontSize: '0.9rem', fontWeight: 700, color: 'var(--text)', lineHeight: 1 }}>+</button>
               </div>
               {/* v1.10.33 — REAL fit-to-width. Prior code was
                   setPreviewZoom(100), which just set 100%, not "fit". */}
-              <button type="button" title="Fit preview to the pane width"
+              <button type="button" title={i18nT('ui.fitPreviewToThePaneWidth')}
                 onClick={handleFitToWidth}
                 style={{
                   padding: '0.28rem 0.75rem',
@@ -4448,7 +4465,7 @@ export default function InvoiceGenerator({ onBack, profile: profileProp, editing
                   fontSize: '0.72rem', fontWeight: 700,
                   borderRadius: 999,
                   letterSpacing: '0.02em',
-                }}>Fit</button>
+                }}>{i18nT('ui.fit')}</button>
             </span>
           </div>
           {/* v1.10.48 — The frame reserves the SCALED size (natural × zoom)
@@ -4508,19 +4525,19 @@ export default function InvoiceGenerator({ onBack, profile: profileProp, editing
       {leaveModal && (
         <div className="modal-overlay" onClick={leaveActions.cancel}>
           <div className="modal-content" onClick={e => e.stopPropagation()} style={{ maxWidth: '460px' }}>
-            <h3 style={{ marginTop: 0 }}>Unsaved changes</h3>
+            <h3 style={{ marginTop: 0 }}>{i18nT('ui.unsavedChanges')}</h3>
             <p style={{ fontSize: '0.9rem', color: 'var(--text-muted)', marginBottom: '1.25rem' }}>
-              This invoice has changes that haven't been saved yet. What do you want to do?
+              {i18nT('ui.thisInvoiceHasChangesThatHaven')}
             </p>
             <div style={{ display: 'flex', gap: '0.5rem', justifyContent: 'flex-end', flexWrap: 'wrap' }}>
               <button className="btn btn-secondary" onClick={leaveActions.cancel}>
-                Keep editing
+                {i18nT('ui.keepEditing')}
               </button>
               <button className="btn btn-secondary" style={{ color: '#dc2626', borderColor: '#fca5a5' }} onClick={leaveActions.discardAndExit}>
-                Discard &amp; leave
+                {i18nT('ui.discardAndLeave')}
               </button>
               <button className="btn btn-primary" onClick={leaveActions.saveAndExit}>
-                Save &amp; leave
+                {i18nT('ui.saveAndLeave')}
               </button>
             </div>
           </div>

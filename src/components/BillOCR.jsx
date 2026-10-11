@@ -30,7 +30,10 @@ import { getAllProducts } from '../store';
  * to browser cache; subsequent runs are instant.
  */
 
-import { heuristicParseBill } from '../utils/ocrParse';
+import { heuristicParseBill, aiPhotoToParsed } from '../utils/ocrParse';
+import { aiPhotoBill } from '../lib/ai';
+import { t as tr } from '../i18n';
+import { t as i18nT } from '../i18n';
 
 
 export default function BillOCR({ onClose, onExtracted }) {
@@ -53,11 +56,11 @@ export default function BillOCR({ onClose, onExtracted }) {
   const pickFile = (f) => {
     if (!f) return;
     if (!f.type.startsWith('image/')) {
-      toast('Please upload an image (PNG, JPG, WebP).', 'warning');
+      toast(i18nT('ui.pleaseUploadAnImagePngJpg'), 'warning');
       return;
     }
     if (f.size > 8 * 1024 * 1024) {
-      toast('Image is over 8MB — please compress first (or take a smaller photo).', 'warning');
+      toast(i18nT('ui.imageIsOver8mbPleaseCompress'), 'warning');
       return;
     }
     setFile(f);
@@ -160,6 +163,25 @@ export default function BillOCR({ onClose, onExtracted }) {
     }
   };
 
+  // Phase 3b: Workers AI vision reads the bill first (better with photos,
+  // handwriting and Indian layouts); Tesseract stays as the offline fallback.
+  const runSmart = async () => {
+    if (!file) return;
+    if (typeof navigator !== 'undefined' && navigator.onLine === false) { runOCR(); return; }
+    setStatus('ocr');
+    setProgress(0);
+    try {
+      const r = await aiPhotoBill(file, 'purchase');
+      setRawText('');
+      setParsed(aiPhotoToParsed(r, catalog));
+      setStatus('done');
+      toast(tr('ai.photoDone'), 'success');
+    } catch (e) {
+      toast(`${e.message} ${tr('ai.fallbackOcr')}`, 'info', 6000);
+      runOCR();
+    }
+  };
+
   const applyToForm = () => {
     if (!parsed) return;
     // v1.10.35 — Also ship line items + tax breakdown to the parent so
@@ -202,15 +224,13 @@ export default function BillOCR({ onClose, onExtracted }) {
       <div className="modal-content" onClick={e => e.stopPropagation()} style={{ maxWidth: 'min(1080px, 96vw)', maxHeight: '92vh', overflow: 'auto' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.75rem' }}>
           <h3 className="section-title" style={{ margin: 0, display: 'flex', alignItems: 'center', gap: 8 }}>
-            <Wand2 size={18} /> Import from bill image (OCR)
+            <Wand2 size={18} /> {i18nT('ui.importFromBillImageOcr')}
           </h3>
-          <button className="icon-btn" onClick={onClose} title="Close"><X size={18} /></button>
+          <button className="icon-btn" onClick={onClose} title={i18nT('ui.close')}><X size={18} /></button>
         </div>
         <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginTop: 0, marginBottom: '1rem' }}>
-          Upload a photo or scan of the supplier's invoice. We'll extract the
-          <strong> GSTIN, invoice number, date, grand total, line items
-          (name / HSN / quantity / rate / GST%), and the tax breakdown
-          (CGST / SGST / IGST / cess)</strong>. Rows are cross-matched
+          {i18nT('ui.uploadAPhotoOrScanOf')}
+          <strong> {i18nT('ui.gstinInvoiceNumberDateGrandTotal')}</strong>. Rows are cross-matched
           against your saved products — matched items get your stored
           HSN + tax rate auto-filled. Everything runs in your browser;
           nothing is uploaded to a server.
@@ -236,18 +256,18 @@ export default function BillOCR({ onClose, onExtracted }) {
                 onChange={e => pickFile(e.target.files?.[0])} />
             </div>
             {previewUrl && (
-              <img src={previewUrl} alt="Bill preview"
+              <img src={previewUrl} alt={i18nT('ui.billPreview')}
                 style={{ marginTop: 10, maxWidth: '100%', maxHeight: 300, border: '1px solid var(--border-color)', borderRadius: 4 }} />
             )}
             {file && status !== 'ocr' && (
-              <button className="btn btn-primary" onClick={runOCR} style={{ marginTop: 10, width: '100%' }}>
-                <Wand2 size={16} /> Extract fields
+              <button className="btn btn-primary" onClick={runSmart} style={{ marginTop: 10, width: '100%' }}>
+                <Wand2 size={16} /> {i18nT('ui.extractFields')}
               </button>
             )}
             {status === 'ocr' && (
               <div style={{ marginTop: 10, textAlign: 'center', fontSize: '0.85rem' }}>
                 <Loader size={16} className="spin" style={{ verticalAlign: '-3px', marginRight: 6 }} />
-                Reading image… {progress}%
+                {i18nT('ui.readingImage')} {progress}%
               </div>
             )}
           </div>
@@ -255,26 +275,26 @@ export default function BillOCR({ onClose, onExtracted }) {
           {/* Right: extracted result */}
           {parsed && (
             <div style={{ background: 'var(--bg-secondary)', padding: '0.85rem', borderRadius: 6, maxHeight: 'calc(88vh - 100px)', overflowY: 'auto' }}>
-              <h4 style={{ margin: '0 0 0.5rem', fontSize: '0.9rem' }}>Extracted fields</h4>
-              <FieldPreview label="Supplier" value={parsed.supplierName} onChange={v => setParsed(p => ({ ...p, supplierName: v }))} />
+              <h4 style={{ margin: '0 0 0.5rem', fontSize: '0.9rem' }}>{i18nT('ui.extractedFields')}</h4>
+              <FieldPreview label={i18nT('ui.supplier')} value={parsed.supplierName} onChange={v => setParsed(p => ({ ...p, supplierName: v }))} />
               <FieldPreview label="GSTIN" value={parsed.supplierGstin} onChange={v => setParsed(p => ({ ...p, supplierGstin: v }))} />
-              <FieldPreview label="Invoice No." value={parsed.invoiceNumber} onChange={v => setParsed(p => ({ ...p, invoiceNumber: v }))} />
-              <FieldPreview label="Date" value={parsed.date} onChange={v => setParsed(p => ({ ...p, date: v }))} type="date" />
-              <FieldPreview label="Grand total" value={parsed.grandTotal || ''} onChange={v => setParsed(p => ({ ...p, grandTotal: Number(v) || 0 }))} type="number" />
+              <FieldPreview label={i18nT('ui.invoiceNo')} value={parsed.invoiceNumber} onChange={v => setParsed(p => ({ ...p, invoiceNumber: v }))} />
+              <FieldPreview label={i18nT('ui.date')} value={parsed.date} onChange={v => setParsed(p => ({ ...p, date: v }))} type="date" />
+              <FieldPreview label={i18nT('ui.grandTotal3')} value={parsed.grandTotal || ''} onChange={v => setParsed(p => ({ ...p, grandTotal: Number(v) || 0 }))} type="number" />
 
               {/* v1.10.35 — Tax breakdown from OCR */}
               {parsed.taxBreakdown && (parsed.taxBreakdown.taxableValue || parsed.taxBreakdown.cgst || parsed.taxBreakdown.igst) > 0 && (
                 <div style={{ marginTop: 10, padding: '0.55rem 0.7rem', background: 'var(--bg-primary)', borderRadius: 5, border: '1px solid var(--border)' }}>
                   <div style={{ fontSize: '0.7rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 4 }}>
-                    Tax breakdown
+                    {i18nT('ui.taxBreakdown')}
                   </div>
                   <div style={{ display: 'grid', gridTemplateColumns: 'auto 1fr', gap: '2px 8px', fontSize: '0.75rem' }}>
-                    {parsed.taxBreakdown.taxableValue > 0 && <><span style={{ color: 'var(--text-muted)' }}>Taxable</span><span style={{ textAlign: 'right', fontWeight: 600 }}>₹{parsed.taxBreakdown.taxableValue.toFixed(2)}</span></>}
+                    {parsed.taxBreakdown.taxableValue > 0 && <><span style={{ color: 'var(--text-muted)' }}>{i18nT('ui.taxable')}</span><span style={{ textAlign: 'right', fontWeight: 600 }}>₹{parsed.taxBreakdown.taxableValue.toFixed(2)}</span></>}
                     {parsed.taxBreakdown.cgst > 0 && <><span style={{ color: 'var(--text-muted)' }}>CGST</span><span style={{ textAlign: 'right' }}>₹{parsed.taxBreakdown.cgst.toFixed(2)}</span></>}
-                    {parsed.taxBreakdown.sgst > 0 && <><span style={{ color: 'var(--text-muted)' }}>SGST / UTGST</span><span style={{ textAlign: 'right' }}>₹{parsed.taxBreakdown.sgst.toFixed(2)}</span></>}
+                    {parsed.taxBreakdown.sgst > 0 && <><span style={{ color: 'var(--text-muted)' }}>{i18nT('ui.sgstUtgst')}</span><span style={{ textAlign: 'right' }}>₹{parsed.taxBreakdown.sgst.toFixed(2)}</span></>}
                     {parsed.taxBreakdown.igst > 0 && <><span style={{ color: 'var(--text-muted)' }}>IGST</span><span style={{ textAlign: 'right' }}>₹{parsed.taxBreakdown.igst.toFixed(2)}</span></>}
-                    {parsed.taxBreakdown.cess > 0 && <><span style={{ color: 'var(--text-muted)' }}>Cess</span><span style={{ textAlign: 'right' }}>₹{parsed.taxBreakdown.cess.toFixed(2)}</span></>}
-                    {Math.abs(parsed.taxBreakdown.roundOff) > 0.005 && <><span style={{ color: 'var(--text-muted)' }}>Round-off</span><span style={{ textAlign: 'right' }}>{parsed.taxBreakdown.roundOff >= 0 ? '+' : ''}₹{parsed.taxBreakdown.roundOff.toFixed(2)}</span></>}
+                    {parsed.taxBreakdown.cess > 0 && <><span style={{ color: 'var(--text-muted)' }}>{i18nT('ui.cess2')}</span><span style={{ textAlign: 'right' }}>₹{parsed.taxBreakdown.cess.toFixed(2)}</span></>}
+                    {Math.abs(parsed.taxBreakdown.roundOff) > 0.005 && <><span style={{ color: 'var(--text-muted)' }}>{i18nT('ui.roundOff')}</span><span style={{ textAlign: 'right' }}>{parsed.taxBreakdown.roundOff >= 0 ? '+' : ''}₹{parsed.taxBreakdown.roundOff.toFixed(2)}</span></>}
                   </div>
                 </div>
               )}
@@ -284,16 +304,16 @@ export default function BillOCR({ onClose, onExtracted }) {
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 5 }}>
                   <span style={{ fontSize: '0.8rem', fontWeight: 600 }}>
                     <Package size={13} style={{ verticalAlign: '-2px', marginRight: 4 }} />
-                    Line items ({parsed.items?.length || 0})
+                    {i18nT('ui.lineItems2')}{parsed.items?.length || 0})
                   </span>
                   <button type="button" className="btn btn-secondary" onClick={addItem}
                     style={{ fontSize: '0.7rem', padding: '0.2rem 0.5rem' }}>
-                    <Plus size={11} /> Add row
+                    <Plus size={11} /> {i18nT('ui.addRow')}
                   </button>
                 </div>
                 {(!parsed.items || parsed.items.length === 0) ? (
                   <p style={{ fontSize: '0.72rem', color: 'var(--text-muted)', margin: 0, padding: '0.5rem', background: 'var(--bg-primary)', borderRadius: 4, textAlign: 'center' }}>
-                    No line items detected. Add rows manually or use the OCR-total single-line fallback.
+                    {i18nT('ui.noLineItemsDetectedAddRows')}
                   </p>
                 ) : (
                   <div style={{ display: 'flex', flexDirection: 'column', gap: 6, maxHeight: 320, overflowY: 'auto' }}>
@@ -303,36 +323,36 @@ export default function BillOCR({ onClose, onExtracted }) {
                         <div style={{ display: 'flex', gap: 6, alignItems: 'center', marginBottom: 4 }}>
                           <input type="text" className="form-input" value={it.name || ''}
                             onChange={e => updateItem(idx, { name: e.target.value })}
-                            placeholder="Product / description"
+                            placeholder={i18nT('ui.productDescription')}
                             style={{ flex: 1, fontSize: '0.78rem', padding: '0.25rem 0.4rem' }} />
                           <button type="button" className="icon-btn icon-btn-red"
-                            onClick={() => removeItem(idx)} title="Remove row" aria-label="Remove row"
+                            onClick={() => removeItem(idx)} title={i18nT('ui.removeRow')} aria-label={i18nT('ui.removeRow')}
                             style={{ width: 24, height: 24 }}>
                             <Trash2 size={12} />
                           </button>
                         </div>
                         {it._matchedProductId && (
                           <div style={{ fontSize: '0.68rem', color: 'var(--primary)', marginBottom: 4, display: 'flex', alignItems: 'center', gap: 3 }}>
-                            <Sparkles size={10} /> Matched saved product: <em>{it._matchedName}</em> ({Math.round((it._matchScore || 0) * 100)}%)
+                            <Sparkles size={10} /> {i18nT('ui.matchedSavedProduct')} <em>{it._matchedName}</em> ({Math.round((it._matchScore || 0) * 100)}%)
                           </div>
                         )}
                         {/* Row 2: hsn, qty, rate, tax%, amount */}
                         <div style={{ display: 'grid', gridTemplateColumns: '1.5fr 0.7fr 1fr 0.8fr 1fr', gap: 5, fontSize: '0.72rem' }}>
                           <div>
-                            <label style={{ fontSize: '0.62rem', color: 'var(--text-muted)', display: 'block' }}>HSN/SAC</label>
+                            <label style={{ fontSize: '0.62rem', color: 'var(--text-muted)', display: 'block' }}>{i18nT('ui.hsnSac')}</label>
                             <input type="text" className="form-input" value={it.hsn || ''}
                               onChange={e => updateItem(idx, { hsn: e.target.value })}
                               placeholder="e.g. 4802"
                               style={{ fontSize: '0.72rem', padding: '0.2rem 0.35rem', width: '100%' }} />
                           </div>
                           <div>
-                            <label style={{ fontSize: '0.62rem', color: 'var(--text-muted)', display: 'block' }}>Qty</label>
+                            <label style={{ fontSize: '0.62rem', color: 'var(--text-muted)', display: 'block' }}>{i18nT('ui.qty')}</label>
                             <input type="number" step="any" className="form-input" value={it.quantity ?? ''}
                               onChange={e => updateItem(idx, { quantity: Number(e.target.value) || 0 })}
                               style={{ fontSize: '0.72rem', padding: '0.2rem 0.35rem', width: '100%' }} />
                           </div>
                           <div>
-                            <label style={{ fontSize: '0.62rem', color: 'var(--text-muted)', display: 'block' }}>Rate ₹</label>
+                            <label style={{ fontSize: '0.62rem', color: 'var(--text-muted)', display: 'block' }}>{i18nT('ui.rate3')}</label>
                             <input type="number" step="any" className="form-input" value={it.rate ?? ''}
                               onChange={e => updateItem(idx, { rate: Number(e.target.value) || 0 })}
                               style={{ fontSize: '0.72rem', padding: '0.2rem 0.35rem', width: '100%' }} />
@@ -344,7 +364,7 @@ export default function BillOCR({ onClose, onExtracted }) {
                               style={{ fontSize: '0.72rem', padding: '0.2rem 0.35rem', width: '100%' }} />
                           </div>
                           <div>
-                            <label style={{ fontSize: '0.62rem', color: 'var(--text-muted)', display: 'block' }}>Amount ₹</label>
+                            <label style={{ fontSize: '0.62rem', color: 'var(--text-muted)', display: 'block' }}>{i18nT('ui.amount3')}</label>
                             <input type="number" step="any" className="form-input" value={it.amount ?? ''}
                               onChange={e => updateItem(idx, { amount: Number(e.target.value) || 0 })}
                               style={{ fontSize: '0.72rem', padding: '0.2rem 0.35rem', width: '100%' }} />
@@ -357,11 +377,11 @@ export default function BillOCR({ onClose, onExtracted }) {
               </div>
 
               <details style={{ marginTop: 10, fontSize: '0.75rem', color: 'var(--text-muted)' }}>
-                <summary style={{ cursor: 'pointer' }}>Raw OCR text</summary>
+                <summary style={{ cursor: 'pointer' }}>{i18nT('ui.rawOcrText')}</summary>
                 <pre style={{ whiteSpace: 'pre-wrap', fontSize: '0.7rem', maxHeight: 140, overflow: 'auto', marginTop: 4 }}>{rawText}</pre>
               </details>
               <button className="btn btn-primary" onClick={applyToForm} style={{ marginTop: 10, width: '100%' }}>
-                Use these values ({parsed.items?.length || 0} line item{parsed.items?.length === 1 ? '' : 's'})
+                {i18nT('ui.useTheseValues')}{parsed.items?.length || 0} {i18nT('ui.lineItem')}{parsed.items?.length === 1 ? '' : 's'})
               </button>
             </div>
           )}

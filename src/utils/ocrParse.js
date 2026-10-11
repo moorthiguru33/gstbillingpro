@@ -337,3 +337,34 @@ export const heuristicParseBill = (rawText, catalog = []) => {
     _rawText: rawText,
   };
 };
+
+// Phase 3b — convert the (already server-validated) Workers AI photo result
+// into the same shape heuristicParseBill() returns, so BillOCR's review UI
+// and PurchaseBills.applyOCR() work unchanged. Catalog matches fill gaps.
+export const aiPhotoToParsed = (r = {}, catalog = []) => {
+  const items = (Array.isArray(r.items) ? r.items : []).map((it) => {
+    const match = matchProduct(it.name, catalog);
+    const out = {
+      name: it.name || '',
+      hsn: it.hsn || match?.product?.hsn || '',
+      quantity: Number(it.qty) || 1,
+      rate: Number(it.rate) || 0,
+      amount: Number(it.amount) || 0,
+      taxPercent: it.gst != null ? Number(it.gst) : Number(match?.product?.taxPercent ?? match?.product?.taxRate ?? 0),
+    };
+    if (match) Object.assign(out, { _matchedProductId: match.product.id, _matchScore: match.score, _matchedName: match.product.name });
+    return out;
+  });
+  const t = r.totals || {};
+  return {
+    supplierGstin: r.gstin || '',
+    supplierName: r.supplier || '',
+    invoiceNumber: r.invoiceNo || '',
+    date: r.date || '',
+    grandTotal: Number(t.total) || 0,
+    taxBreakdown: { cgst: Number(t.cgst) || 0, sgst: Number(t.sgst) || 0, igst: Number(t.igst) || 0, cess: 0 },
+    items,
+    _rawText: '',
+    _source: 'ai',
+  };
+};
