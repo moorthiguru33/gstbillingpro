@@ -32,6 +32,7 @@ export const VIEW_SEGMENTS = {
   store: 'store',
   crm: 'crm',
   accounts: 'accounts',
+  payroll: 'payroll',
 };
 // Views with their own sub pages (/app/<view>/<sub>): module screens.
 export const SUB_VIEWS = ['settings', 'store', 'crm', 'accounts', 'payroll'];
