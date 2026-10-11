@@ -12,6 +12,7 @@ import { toast } from './Toast';
 import { confirmAction, promptAction } from './ConfirmModal';
 import { t as tr, hasChosenLanguage } from '../i18n';
 import MobileHome from './mobile/MobileHome';
+import FollowUpsWidget from './crm/FollowUpsWidget';
 
 // v1.10.13 — `bg` values switched from opaque tints (#fffbeb / #f5f3ff /
 // etc.) to translucent alpha versions of the accent color. Reason:
@@ -191,7 +192,7 @@ const statusMatchesFilter = (b, filter) => {
   return effectiveStatus(b) === filter;
 };
 
-export default function Dashboard({ onNew, onEdit, onDuplicate, onConvert, onOpenProducts, onOpenSettings, onOpenGuide, onOpenSupport, activeProfile, onOpenPOS, onNavigate }) {
+export default function Dashboard({ onNew, onEdit, onDuplicate, onConvert, onOpenProducts, onOpenSettings, onOpenGuide, onOpenSupport, activeProfile, onOpenPOS, onNavigate, onOpenFollowUps }) {
   // v1.10.64 — requested (#55, @sangwanmail-eng): "An invoice belonging to one
   // company should not appear under the other."
   //
@@ -1218,6 +1219,7 @@ export default function Dashboard({ onNew, onEdit, onDuplicate, onConvert, onOpe
         <MobileHome bills={bills} profile={profile} lowStockCount={lowStockProducts.length}
           onNew={onNew} onOpenPOS={onOpenPOS} onOpen={onNavigate} />
       )}
+      {onOpenFollowUps && <FollowUpsWidget onOpen={onOpenFollowUps} />}
 
       {/* v1.10.69 - a new user used to land here on "No invoices yet." and
           nothing else. The welcome wizard does end with a list of what to do,
