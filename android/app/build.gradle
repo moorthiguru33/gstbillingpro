@@ -1,0 +1,73 @@
+plugins {
+    id 'com.android.application'
+}
+
+// Trusted Web Activity wrapper for https://gst-billing-pro.pages.dev/
+// Release signing is read from a properties file that lives OUTSIDE the repo:
+//   GBP_SIGNING_PROPS=/path/to/signing.properties ./gradlew bundleRelease
+// (keys: storeFile, storePassword, keyAlias, keyPassword). Never commit keystores.
+def twa = [
+    applicationId : 'in.dprinters.gstbillingpro',
+    hostName      : 'gst-billing-pro.pages.dev',
+    launchUrl     : 'https://gst-billing-pro.pages.dev/',
+    name          : 'GST Billing Pro',
+    themeColor    : '#1E40AF',
+    navColor      : '#FFFFFF',
+    backgroundColor: '#F8FAFC',
+]
+
+def signingPropsPath = System.getenv('GBP_SIGNING_PROPS') ?: project.findProperty('gbpSigningProps')
+def signingProps = new Properties()
+if (signingPropsPath && file(signingPropsPath).exists()) {
+    file(signingPropsPath).withInputStream { signingProps.load(it) }
+}
+
+android {
+    namespace 'in.dprinters.gstbillingpro'
+    compileSdk 35
+    buildToolsVersion '35.0.0'
+
+    defaultConfig {
+        applicationId twa.applicationId
+        minSdk 21
+        targetSdk 35
+        versionCode 1
+        versionName '1.0.0'
+
+        resValue 'string', 'app_name', twa.name
+        resValue 'string', 'launch_url', twa.launchUrl
+        resValue 'string', 'host_name', twa.hostName
+        resValue 'string', 'asset_statements',
+            '[{\\"relation\\": [\\"delegate_permission/common.handle_all_urls\\"], \\"target\\": {\\"namespace\\": \\"web\\", \\"site\\": \\"https://' + twa.hostName + '\\"}}]'
+        resValue 'color', 'colorPrimary', twa.themeColor
+        resValue 'color', 'navigationColor', twa.navColor
+        resValue 'color', 'backgroundColor', twa.backgroundColor
+    }
+
+    signingConfigs {
+        release {
+            if (signingProps['storeFile']) {
+                storeFile file(signingProps['storeFile'])
+                storePassword signingProps['storePassword']
+                keyAlias signingProps['keyAlias']
+                keyPassword signingProps['keyPassword']
+            }
+        }
+    }
+
+    buildTypes {
+        release {
+            minifyEnabled false
+            if (signingProps['storeFile']) signingConfig signingConfigs.release
+        }
+    }
+
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
+    }
+}
+
+dependencies {
+    implementation 'com.google.androidbrowserhelper:androidbrowserhelper:2.5.0'
+}

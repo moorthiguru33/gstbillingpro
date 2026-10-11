@@ -1,0 +1,12 @@
+[
+  {
+    "relation": ["delegate_permission/common.handle_all_urls"],
+    "target": {
+      "namespace": "android_app",
+      "package_name": "in.dprinters.gstbillingpro",
+      "sha256_cert_fingerprints": [
+        "F3:EB:3E:D3:F4:F9:5F:BE:C4:E1:08:2B:FB:B7:B6:8B:75:75:2C:E2:40:FE:30:05:1C:F7:AE:BF:F3:04:0A:26"
+      ]
+    }
+  }
+]
