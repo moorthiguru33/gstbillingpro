@@ -74,10 +74,16 @@ export async function listRecords(table, { eq = {}, gte, lte, order = ['updated_
   for (const [k, v] of Object.entries(eq)) q = q.eq(k, v);
   if (gte) q = q.gte(gte[0], gte[1]);
   if (lte) q = q.lte(lte[0], lte[1]);
-  if (order) q = q.order(order[0], { ascending: !!order[1] });
-  const { data, error } = await q.limit(limit);
-  if (error) throw error;
-  return (data || []).map(r => ({ ...(r.data || {}), id: r.id }));
+  if (order) q = q.order(order[0], { ascending: !!order[1] }).order('id', { ascending: true });
+  // PostgREST caps a response at 1000 rows, so page through with range().
+  const out = [];
+  for (let from = 0; from < limit; from += 1000) {
+    const { data, error } = await q.range(from, Math.min(from + 1000, limit) - 1);
+    if (error) throw error;
+    out.push(...(data || []));
+    if (!data || data.length < 1000) break;
+  }
+  return out.map(r => ({ ...(r.data || {}), id: r.id }));
 }
 
 /** upsertRecords(table, records, cols(rec) => indexed column values) */
