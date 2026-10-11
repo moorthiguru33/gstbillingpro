@@ -17,6 +17,8 @@ import { confirmAction } from './ConfirmModal';
 import PrintSettings from './PrintSettings';
 import HelpButton from './HelpButton';
 import { getTrashedBills, restoreTrashedBill, purgeTrashedBill } from '../store';
+import { t as tr } from '../i18n';
+import PlanSettings from './plans/PlanSettings';
 
 // v1.10.36 — Section order for the jump-nav pill bar. Keeping this at
 // module scope so the scroll-spy effect below can reference it without
@@ -843,7 +845,7 @@ export default function SettingsView({ onSaved }) {
             boxShadow: '0 6px 18px rgba(var(--primary-rgb), 0.35)',
           }}>⚙</div>
           <div style={{ flex: 1, minWidth: 0 }}>
-            <h1 className="page-title" style={{ margin: 0 }}>Settings</h1>
+            <h1 className="page-title" style={{ margin: 0 }}>{tr('settings.title')}</h1>
             <p className="page-subtitle" style={{ margin: '0.15rem 0 0' }}>
               Business profile, branding, integrations & data
               <span style={{ fontSize: '0.7rem', padding: '0.1rem 0.5rem', borderRadius: 999, background: 'var(--bg-secondary)', border: '1px solid var(--border)', marginLeft: '0.55rem', fontWeight: 600 }}>
@@ -853,14 +855,14 @@ export default function SettingsView({ onSaved }) {
           </div>
           <HelpButton title="Settings — how to use" doc="settings">
             <ul style={{ paddingLeft: '1.1rem', margin: 0 }}>
-              <li><strong>Company Details</strong> — this is the header block on every invoice. GSTIN drives place-of-supply detection.</li>
+              <li><strong>{tr('settings.companyDetails')}</strong> — this is the header block on every invoice. GSTIN drives place-of-supply detection.</li>
               <li><strong>Multi-business profiles</strong> — Save as Profile keeps the current form as a switchable profile; switch between them from the business name at the top of the sidebar.</li>
-              <li><strong>Payment Accounts</strong> — add multiple bank / UPI accounts; ⭐ marks the default. Every inline change (add / edit / ⭐ / reorder / delete) auto-saves.</li>
+              <li><strong>{tr('settings.paymentAccounts')}</strong> — add multiple bank / UPI accounts; ⭐ marks the default. Every inline change (add / edit / ⭐ / reorder / delete) auto-saves.</li>
               <li><strong>Invoice Number Settings</strong> — brand prefix, financial-year suffix, padding. Live preview at the bottom.</li>
               <li><strong>Print Settings</strong> — templates, colors, watermark, thermal font size, per-type prefix overrides.</li>
               <li><strong>Backups</strong> — your data is saved to the cloud automatically; use Download backup now for your own copy. The Trash bin keeps deleted invoices until you restore or delete them.</li>
               <li><strong>Google Drive</strong> — easiest: install Google Drive for Desktop and sync the Saved Invoices folder. Advanced: connect your own Google Client ID to upload each downloaded invoice PDF.</li>
-              <li><strong>Data Management</strong> — export all or part of your data to one backup file, and import it here or on another computer. Clients and products import from CSV on their own screens.</li>
+              <li><strong>{tr('settings.dataManagement')}</strong> — export all or part of your data to one backup file, and import it here or on another computer. Clients and products import from CSV on their own screens.</li>
             </ul>
           </HelpButton>
         </div>
@@ -874,6 +876,7 @@ export default function SettingsView({ onSaved }) {
            History: v1.10.36/37 scroll-spy pills; v1.10.55 (#43) unsaved
            Company edits made visible; v1.10.67 (#66 item 9) one Save always
            on screen. */}
+      <PlanSettings />
       <div ref={saveBarRef} className="settings-bar" style={{
           position: 'sticky',
           zIndex: 30,
@@ -1126,13 +1129,13 @@ export default function SettingsView({ onSaved }) {
       {/* ---- Business Profile ---- */}
       <form id="section-company" onSubmit={handleSave} className="glass-panel p-6 mb-6" ref={companyFormRef} style={{ order: 1 }}>
         <fieldset disabled={!profileLoaded} style={{ border: 0, padding: 0, margin: 0, minWidth: 0 }}>
-        <h3 className="section-title">Company Details</h3>
+        <h3 className="section-title">{tr('settings.companyDetails')}</h3>
         {(() => {
           const cc = getCountryConfig(profile.country);
           return (
             <div className="grid grid-cols-2 gap-4">
               <div className="form-group full-width">
-                <label className="form-label">Business Name *</label>
+                <label className="form-label">{tr('settings.businessName')}</label>
                 <input required type="text" name="businessName" className="form-input" value={profile.businessName} onChange={handleChange} />
               </div>
               <div className="form-group">
@@ -1256,7 +1259,7 @@ export default function SettingsView({ onSaved }) {
             <>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', flexWrap: 'wrap', gap: '0.5rem', marginTop: '2rem' }}>
                 <div>
-                  <h3 className="section-title" style={{ margin: 0 }}>Payment Accounts</h3>
+                  <h3 className="section-title" style={{ margin: 0 }}>{tr('settings.paymentAccounts')}</h3>
                   <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)', margin: '0.15rem 0 0' }}>
                     Multiple bank / UPI accounts per profile. Pick one per invoice in the Customize panel.
                     The ⭐ default account is preselected on new invoices.
@@ -1535,7 +1538,7 @@ export default function SettingsView({ onSaved }) {
         </div>
 
         {/* Logo & Signature */}
-        <h3 className="section-title mt-8">Branding</h3>
+        <h3 className="section-title mt-8">{tr('settings.branding')}</h3>
         <div className="grid grid-cols-2 gap-4">
           <div className="form-group">
             <label className="form-label">Business Logo</label>
@@ -1559,7 +1562,7 @@ export default function SettingsView({ onSaved }) {
                 </div>
               ) : (
                 <button type="button" className="upload-btn" onClick={() => logoInputRef.current?.click()}>
-                  <ImageIcon size={20} /><span>Upload Logo</span><span className="upload-hint">PNG or JPG, square or wide (up to 5 MB)</span>
+                  <ImageIcon size={20} /><span>{tr('settings.uploadLogo')}</span><span className="upload-hint">PNG or JPG, square or wide (up to 5 MB)</span>
                 </button>
               )}
               <input ref={logoInputRef} type="file" accept="image/*" style={{ display: 'none' }} onChange={(e) => handleImageUpload('logo', e)} />
@@ -1878,7 +1881,7 @@ export default function SettingsView({ onSaved }) {
       </div>
 
       <div id="section-data" className="glass-panel p-6 mb-6" style={{ order: 10 }}>
-        <h3 className="section-title">Data Management</h3>
+        <h3 className="section-title">{tr('settings.dataManagement')}</h3>
 
         {/* Privacy notice — uses the global .notice .notice-info utility so dark/light look identical to every other info card. */}
         <div className="notice notice-info" style={{ marginBottom: '1rem' }}>
