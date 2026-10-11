@@ -68,3 +68,4 @@
 @media (max-width: 480px) { .txn-item { grid-template-columns: 1fr 1fr 1fr 40px; } .txn-item .txn-item-name { grid-column: 1 / -1; } }
 .txn-total { display: flex; justify-content: space-between; font-size: 1rem; padding: .5rem 0; border-top: 1px solid var(--border, #e2e8f0); }
 .mod-check { flex-direction: row !important; align-items: center; gap: .5rem !important; }
+.txn-hint { margin: 0 0 6px; font-size: 13px; color: var(--text-secondary, #64748b); }

@@ -5,6 +5,7 @@ import { useTranslation } from 'react-i18next'
 import './i18n'
 import App from './App.jsx'
 import { captureInviteFromUrl } from './lib/org'
+import { applyDensity } from './lib/prefs'
 import './index.css'
 import './mobile.css'
 
@@ -230,6 +231,7 @@ class ErrorBoundary extends Component {
 // Staff invite links (/?invite=<token>) survive the login/signup round-trip.
 captureInviteFromUrl()
 
+applyDensity()
 createRoot(document.getElementById('root')).render(
   <StrictMode>
     <ErrorBoundary>

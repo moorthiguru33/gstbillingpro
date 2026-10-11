@@ -45,16 +45,24 @@ export function cleanDoc(input = {}) {
   const party = norm(input.party).slice(0, 120);
   const d = { ...input, kind, date, party, note: String(input.note || '').trim().slice(0, 500) };
   if (kind !== 'cash_adj' && kind !== 'loan_txn' && !party) throw new Error('need_party');
+  const lineItems = () => (input.items || []).filter(i => norm(i.name)).map(i => ({ name: norm(i.name).slice(0, 120), qty: num(i.qty) || 1, rate: r2(i.rate), taxPercent: num(i.taxPercent), unit: i.unit || 'Nos', productId: i.productId || undefined }));
   if (kind === 'sale_order' || kind === 'purchase_order') {
-    d.items = (input.items || []).filter(i => norm(i.name)).map(i => ({ name: norm(i.name).slice(0, 120), qty: num(i.qty) || 1, rate: r2(i.rate), taxPercent: num(i.taxPercent), unit: i.unit || 'Nos', productId: i.productId || undefined }));
+    d.items = lineItems();
     if (!d.items.length) throw new Error('need_items');
     d.amount = itemsTotal(d.items).total;
     d.status = ORDER_STATUSES.includes(input.status) ? input.status : 'open';
+  } else if (kind === 'purchase_return' && lineItems().length) {
+    // Itemised return: amount and GST come from the lines; stock goes down.
+    d.items = lineItems();
+    const t = itemsTotal(d.items);
+    d.amount = t.total; d.tax = t.tax;
+    if (!(d.amount > 0)) throw new Error('need_amount');
   } else {
+    if (kind === 'purchase_return') delete d.items;
     d.amount = r2(input.amount);
     if (!(d.amount > 0)) throw new Error('need_amount');
   }
-  if (kind === 'purchase_return') d.tax = Math.min(r2(input.tax), d.amount);
+  if (kind === 'purchase_return' && !d.items) d.tax = Math.min(r2(input.tax), d.amount);
   if (['payment_out', 'loan', 'loan_txn'].includes(kind)) d.mode = PAY_MODES.includes(input.mode) ? input.mode : 'cash';
   if (kind === 'cheque') {
     d.direction = input.direction === 'issued' ? 'issued' : 'received';
@@ -72,6 +80,17 @@ export function cleanDoc(input = {}) {
     d.principal = r2(Math.max(0, d.amount - d.interest));
   }
   return d;
+}
+
+/** Stock change a purchase return makes: { productId: -qty } (cancelled = none). */
+export function returnStockEffect(doc) {
+  const out = {};
+  if (doc?.kind !== 'purchase_return' || doc.status === 'cancelled') return out;
+  for (const it of doc.items || []) {
+    if (!it.productId) continue;
+    out[it.productId] = Math.round(((out[it.productId] || 0) - num(it.qty)) * 1000) / 1000;
+  }
+  return out;
 }
 
 /** Outstanding principal and totals for a loan. */

@@ -9,7 +9,7 @@ import { t as tr } from '../../i18n';
 import { formatCurrency, localDateISO } from '../../utils';
 import { openInNewTab, whatsAppUrl } from '../../utils/share';
 import { getAllProducts } from '../../store';
-import { DOC_TABLE, listDocs, saveDoc, deleteDoc, myPurchases, payOut, convertPurchaseOrder } from '../../lib/txnData';
+import { DOC_TABLE, listDocs, saveDoc, deleteDoc, removeDoc, saveReturn, myPurchases, payOut, convertPurchaseOrder } from '../../lib/txnData';
 import { PAY_MODES, itemsTotal, loanSummary, purchaseDue, saleOrderToDraft } from '../../../shared/txn.js';
 
 // Payment-out, purchase returns, sale / purchase orders, cheques, cash in
@@ -46,7 +46,7 @@ function Txn({ sub, onSub, profile, onConvertSaleOrder }) {
   const all = useMemo(() => docs || [], [docs]);
   const list = useMemo(() => all.filter(d => d.kind === page.kind).sort((a, b) => String(b.date).localeCompare(String(a.date)) || String(b.createdAt).localeCompare(String(a.createdAt))), [all, page.kind]);
   const total = list.filter(d => d.status !== 'cancelled').reduce((s, d) => s + (Number(d.amount) || 0), 0);
-  const blank = () => ({ kind: page.kind, date: localDateISO(), party: '', amount: '', mode: 'cash', ...(page.kind === 'sale_order' || page.kind === 'purchase_order' ? { items: [{ name: '', qty: 1, rate: '', taxPercent: 0 }] } : {}), direction: page.kind === 'loan' ? 'taken' : page.kind === 'cheque' ? 'received' : 'add', status: page.kind === 'cheque' ? 'pending' : 'open' });
+  const blank = () => ({ kind: page.kind, date: localDateISO(), party: '', amount: '', mode: 'cash', ...(page.kind === 'sale_order' || page.kind === 'purchase_order' ? { items: [{ name: '', qty: 1, rate: '', taxPercent: 0 }] } : page.kind === 'purchase_return' ? { items: [] } : {}), direction: page.kind === 'loan' ? 'taken' : page.kind === 'cheque' ? 'received' : 'add', status: page.kind === 'cheque' ? 'pending' : 'open' });
   const ctx = { all, purchases, products, profile, reload, setEdit, onConvertSaleOrder };
 
   return (
@@ -139,10 +139,12 @@ function DocSheet({ doc, onClose, all, purchases, products, profile, reload, onC
   const setItem = (i, key, v) => setF(x => ({ ...x, items: x.items.map((it, j) => {
     if (j !== i) return it;
     const next = { ...it, [key]: v };
-    if (key === 'name') { const p = products.find(pr => String(pr.name || '').toLowerCase() === String(v).toLowerCase()); if (p) Object.assign(next, { productId: p.id, rate: String(k === 'purchase_order' ? (p.purchasePrice || p.sellingPrice || 0) : (p.sellingPrice ?? p.rate ?? 0)), taxPercent: Number(p.taxPercent) || 0, unit: p.unit }); }
+    if (key === 'name') { const p = products.find(pr => String(pr.name || '').toLowerCase() === String(v).toLowerCase()); if (p) Object.assign(next, { productId: p.id, rate: String(k === 'purchase_order' || k === 'purchase_return' ? (p.purchasePrice || p.sellingPrice || 0) : (p.sellingPrice ?? p.rate ?? 0)), taxPercent: Number(p.taxPercent) || 0, unit: p.unit }); else next.productId = undefined; }
     return next;
   }) }));
   const totals = f.items ? itemsTotal(f.items.filter(i => String(i.name || '').trim())) : null;
+  const named = (f.items || []).some(i => String(i.name || '').trim());
+  const showAmount = !f.items || (k === 'purchase_return' && !named);
 
   const run = async (fn, okMsg) => {
     setBusy(true);
@@ -151,11 +153,12 @@ function DocSheet({ doc, onClose, all, purchases, products, profile, reload, onC
   const save = () => run(async () => {
     const input = { ...f, ...(f.kind === 'cheque' && f.status === 'cleared' && !f.clearedOn ? { clearedOn: localDateISO() } : {}) };
     if (k === 'payment_out') await payOut(input, profile, all, purchases);
+    else if (k === 'purchase_return') await saveReturn(input, profile, all);
     else await saveDoc(input, profile, all);
   }, 'txn.saved');
   const remove = async () => {
     if (!(await confirmAction({ title: tr('txn.delete'), message: tr('txn.deleteMsg'), tone: 'danger', confirmLabel: tr('mod.delete'), cancelLabel: tr('mod.cancel') }))) return;
-    run(async () => { await deleteDoc(f.id); for (const t of all.filter(d => d.kind === 'loan_txn' && d.loanId === f.id)) await deleteDoc(t.id); });
+    run(async () => { await removeDoc(f); for (const t of all.filter(d => d.kind === 'loan_txn' && d.loanId === f.id)) await deleteDoc(t.id); });
   };
   const setStatus = (status) => run(() => saveDoc({ ...f, status, ...(status === 'cleared' ? { clearedOn: localDateISO() } : {}) }, profile, all), 'txn.saved');
   const convert = () => {
@@ -196,10 +199,10 @@ function DocSheet({ doc, onClose, all, purchases, products, profile, reload, onC
             </select>
           </label>
         )}
-        {f.items ? null : (
+        {!showAmount ? null : (
           <label>{tr(k === 'loan' ? 'txn.principal' : 'txn.amount')}<input className="form-input" data-testid="txn-amount" type="number" inputMode="decimal" min="0" value={f.amount} onChange={set('amount')} /></label>
         )}
-        {k === 'purchase_return' && <label>{tr('txn.gstIncluded')}<input className="form-input" type="number" inputMode="decimal" min="0" value={f.tax || ''} onChange={set('tax')} /></label>}
+        {k === 'purchase_return' && !named && <label>{tr('txn.gstIncluded')}<input className="form-input" type="number" inputMode="decimal" min="0" value={f.tax || ''} onChange={set('tax')} /></label>}
         {k === 'purchase_return' && <label className="mod-check"><input type="checkbox" checked={!!f.interstate} onChange={set('interstate')} /> {tr('txn.interstate')}</label>}
         {k === 'cheque' && <label>{tr('txn.chequeNo')}<input className="form-input" value={f.chequeNo || ''} onChange={set('chequeNo')} maxLength={30} /></label>}
         {k === 'cheque' && <label>{tr('txn.status')}<select className="form-input" value={f.status} onChange={set('status')}>{['pending', 'cleared', 'bounced'].map(s => <option key={s} value={s}>{tr(`txn.st_${s}`)}</option>)}</select></label>}
@@ -214,6 +217,7 @@ function DocSheet({ doc, onClose, all, purchases, products, profile, reload, onC
 
       {f.items && (
         <div className="txn-items" data-testid="txn-items">
+          {k === 'purchase_return' && <p className="txn-hint">{tr('txn.returnItems')}</p>}
           <datalist id="txn-products">{products.slice(0, 500).map(p => <option key={p.id} value={p.name} />)}</datalist>
           {f.items.map((it, i) => (
             <div className="txn-item" key={i}>
@@ -225,7 +229,7 @@ function DocSheet({ doc, onClose, all, purchases, products, profile, reload, onC
             </div>
           ))}
           {!ro && <button type="button" className="btn btn-secondary" onClick={() => setF(x => ({ ...x, items: [...x.items, { name: '', qty: 1, rate: '', taxPercent: 0 }] }))}><Plus size={16} /> {tr('txn.addItem')}</button>}
-          <div className="txn-total"><span>{tr('txn.total')}</span><b>{formatCurrency(totals.total)}</b></div>
+          {named && <div className="txn-total"><span>{tr('txn.total')}</span><b>{formatCurrency(totals.total)}</b></div>}
         </div>
       )}
 
