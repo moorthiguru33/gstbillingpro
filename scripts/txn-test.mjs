@@ -3,8 +3,9 @@
 import assert from 'node:assert/strict';
 import {
   nextDocNo, itemsTotal, cleanDoc, loanSummary, paidOutFor, deriveDocVouchers, purchasesPaidByDocs,
-  applyPaymentToBill, billDue, purchaseDue, saleOrderToDraft, purchaseOrderToBill,
+  applyPaymentToBill, billDue, purchaseDue, saleOrderToDraft, purchaseOrderToBill, returnStockEffect,
 } from '../shared/txn.js';
+import { topSellers, keypad } from '../src/lib/posPicks.js';
 import { deriveVouchers } from '../shared/accounting.js';
 import { profileCompletion, PROFILE_CHECKS } from '../src/components/mobile/profileCard.js';
 
@@ -113,6 +114,29 @@ test('profileCompletion', () => {
   assert.equal(PROFILE_CHECKS.length, 10);
   assert.equal(profileCompletion({}), 0);
   assert.equal(profileCompletion({ businessName: 'D Printers', phone: '9442745754', gstin: '33ABCDE1234F1Z5' }), 30);
+});
+
+test('purchase return: itemised amount/tax and stock effect', () => {
+  const r = cleanDoc({ kind: 'purchase_return', date: '2026-10-11', party: 'Metro', items: [{ name: 'Ink', qty: 2, rate: 100, taxPercent: 18, productId: 'p1' }, { name: 'Ink', qty: 1, rate: 100, taxPercent: 18, productId: 'p1' }, { name: 'Misc', qty: 1, rate: 10 }] });
+  assert.equal(r.amount, 364); assert.equal(r.tax, 54);
+  assert.deepEqual(returnStockEffect(r), { p1: -3 });
+  assert.deepEqual(returnStockEffect({ ...r, status: 'cancelled' }), {});
+  const plain = cleanDoc({ kind: 'purchase_return', date: '2026-10-11', party: 'Metro', amount: 118, tax: 18, items: [] });
+  assert.equal(plain.items, undefined); assert.equal(plain.tax, 18); assert.deepEqual(returnStockEffect(plain), {});
+  const v = deriveDocVouchers([{ ...r, id: 'r1' }]);
+  const dr = v[0].lines.reduce((s, l) => s + l.dr, 0); const cr = v[0].lines.reduce((s, l) => s + l.cr, 0);
+  assert.equal(r2(dr), r2(cr));
+});
+
+test('phone POS: most-sold picks and cash keypad', () => {
+  const products = [{ id: 'a', name: 'Rice' }, { id: 'b', name: 'Oil' }, { id: 'c', name: 'Salt' }];
+  const bills = [{ items: [{ name: 'oil', quantity: 5 }, { name: 'Salt', quantity: 1 }] }, { status: 'cancelled', items: [{ name: 'Salt', quantity: 50 }] }];
+  assert.deepEqual(topSellers(bills, products, 3).map(p => p.id), ['b', 'c', 'a']);
+  assert.equal(topSellers([], products, 2).length, 2);
+  let t = '';
+  for (const k of ['5', '0', '0']) t = keypad(t, k);
+  assert.equal(t, '500'); assert.equal(keypad(t, 'back'), '50'); assert.equal(keypad(t, 'C'), '');
+  assert.equal(keypad('0', '7'), '7'); assert.equal(keypad('1.25', '5'), '1.25'); assert.equal(keypad('12', '.'), '12.');
 });
 
 console.log(`txn-test: ${n} passed`);

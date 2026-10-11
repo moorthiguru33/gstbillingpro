@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { ChevronRight, Settings2, Receipt, Printer, Landmark, Users, MessageCircle, BellRing, Contact, Package, Store, HelpCircle, ExternalLink, IdCard, Languages } from 'lucide-react';
+import { ChevronRight, Settings2, Receipt, Printer, Landmark, Users, MessageCircle, BellRing, Contact, Package, Store, HelpCircle, ExternalLink, IdCard, Languages, Rows3 } from 'lucide-react';
 import { getEnabledModules, setEnabledModules, getStockAlertSettings, saveStockAlertSettings } from '../../store';
 import { isModuleEnabled, invoiceOptionOn } from '../../utils';
 import { getPrintSettings, savePrintSettings } from '../../utils/printSettings';
@@ -16,6 +16,7 @@ const writeOpt = (k, v) => { try { localStorage.setItem(OPT_KEY, JSON.stringify(
 // print settings, feature modules, stock alerts, device preferences.
 const PREF_SECTIONS = [
   { id: 'general', icon: Settings2 },
+  { id: 'display', icon: Rows3 },
   { id: 'transaction', icon: Receipt },
   { id: 'print', icon: Printer },
   { id: 'taxes', icon: Landmark },
@@ -32,14 +33,15 @@ const mod = (key) => ({ type: 'mod', key });
 const pref = (key) => ({ type: 'pref', key });
 const prn = (key) => ({ type: 'print', key });
 const ROWS = {
-  general: [pref('homeShowBalance'), { type: 'dark' }, mod('expenses'), mod('purchases'), mod('recurring'), { type: 'link', key: 'language', to: ['settings', 'help'] }],
+  display: [{ type: 'density' }, { type: 'dark' }],
+  general: [pref('homeShowBalance'), mod('expenses'), mod('purchases'), mod('recurring'), { type: 'link', key: 'language', to: ['settings', 'help'] }],
   transaction: [opt('showDueDate'), opt('showDiscount'), opt('showRoundOff'), opt('showMRP'), opt('showNotes'), mod('receipts'), { type: 'link', key: 'numbering', to: ['settings', 'bills'] }],
   print: [{ type: 'paper' }, prn('autoPrintOnSave'), opt('showLogo'), opt('showSignature'), opt('showBankDetails'), opt('showUPI'), opt('showTerms'), opt('showAmountWords'), { type: 'link', key: 'designs', to: ['settings', 'bills'] }],
   taxes: [opt('showGST'), opt('showHSN'), opt('showGSTIN'), opt('showPlaceOfSupply'), opt('showCess'), mod('gstReturns'), mod('incomeTax'), { type: 'link', key: 'gstSetup', to: ['settings', 'gst'] }],
   users: [{ type: 'link', key: 'staff', to: ['settings', 'staff'] }],
   messages: [pref('waAfterSave'), { type: 'link', key: 'waTemplates', to: ['settings', 'bills'] }],
   reminders: [{ type: 'stock' }, prn('reminderEnabled')],
-  party: [pref('partyShowBalance'), opt('showState'), mod('clients'), { type: 'link', key: 'parties', to: ['clients'] }],
+  party: [pref('partyShowBalance'), opt('showState'), { type: 'link', key: 'parties', to: ['clients'] }],
   item: [pref('itemShowPurchase'), opt('showItemQty'), mod('inventory'), { type: 'link', key: 'itemTools', to: ['inventory', 'manage'] }],
   store: [{ type: 'link', key: 'storeSetup', to: ['store', 'settings'] }, { type: 'link', key: 'storeOrders', to: ['store', 'orders'] }],
 };
@@ -52,7 +54,7 @@ export default function PhoneSettings({ sub, onSub, go, darkMode, onToggleDark, 
         <button type="button" className="pm-row pm-head" onClick={() => go('profile')}>
           <span className="pm-ic"><IdCard size={20} /></span><span className="pm-label">{tr('ph.mProfile')}<small>{tr('ph.profileHint')}</small></span><ChevronRight size={18} className="pm-chev" />
         </button>
-        {PREF_SECTIONS.filter(s => canManage || ['general', 'messages', 'print'].includes(s.id)).map(s => (
+        {PREF_SECTIONS.filter(s => canManage || ['general', 'display', 'messages', 'print'].includes(s.id)).map(s => (
           <button type="button" key={s.id} className="pm-row pm-head" onClick={() => onSub(s.id)} data-sec={s.id}>
             <span className="pm-ic"><s.icon size={20} /></span><span className="pm-label">{tr(`ps.${s.id}`)}</span><ChevronRight size={18} className="pm-chev" />
           </button>
@@ -91,7 +93,10 @@ function SectionPage({ id, go, darkMode, onToggleDark, onChanged }) {
     <section className="ph ps" data-testid={`ps-${id}`}>
       <h2 className="ps-title">{tr(`ps.${id}`)}</h2>
       <div className="ps-list">
-        {ROWS[id].map((r, i) => {
+        {ROWS[id].flatMap((r, i) => {
+          const head = r.type === 'mod' && ROWS[id].findIndex(x => x.type === 'mod') === i
+            ? [<div key="feat-head" className="ps-head">{tr('ps.featuresHead')}</div>] : [];
+          const row = (() => {
           const label = tr(`ps.${r.type}_${r.key || r.type}`);
           const help = r.type === 'link' || r.type === 'paper' ? '' : tr(`ps.${r.type}_${r.key || r.type}_help`);
           const k = `${r.type}-${r.key || i}`;
@@ -100,6 +105,19 @@ function SectionPage({ id, go, darkMode, onToggleDark, onChanged }) {
           if (r.type === 'print') return <Toggle key={k} label={label} help={help} on={ps[r.key]} onChange={v => { savePrintSettings({ ...getPrintSettings(), [r.key]: v }); bump(); }} testid={k} />;
           if (r.type === 'mod') return <Toggle key={k} label={label} help={help} on={isModuleEnabled(r.key, mods)} onChange={v => { setEnabledModules({ ...getEnabledModules(), [r.key]: v }); bump(); }} testid={k} />;
           if (r.type === 'dark') return <Toggle key={k} label={label} help={help} on={darkMode} onChange={() => onToggleDark()} testid={k} />;
+          if (r.type === 'density') {
+            return (
+              <div key={k} className="ps-row ps-density">
+                <span className="ps-label">{label}<small className="ps-help-text">{help}</small></span>
+                <div className="ps-seg" role="radiogroup" aria-label={label} data-testid="ps-density">
+                  {['compact', 'comfortable'].map(d => (
+                    <button type="button" key={d} role="radio" aria-checked={(prefs.density || 'compact') === d} className={(prefs.density || 'compact') === d ? 'on' : ''}
+                      onClick={() => { setPref('density', d); bump(); }}>{tr(`ps.${d}`)}</button>
+                  ))}
+                </div>
+              </div>
+            );
+          }
           if (r.type === 'paper') {
             return (
               <div key={k} className="ps-row"><span className="ps-label">{label}</span>
@@ -124,6 +142,8 @@ function SectionPage({ id, go, darkMode, onToggleDark, onChanged }) {
               <span className="ps-label">{label}</span><ExternalLink size={16} />
             </button>
           );
+          })();
+          return [...head, row];
         })}
       </div>
     </section>
