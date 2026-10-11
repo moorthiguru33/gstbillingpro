@@ -17,7 +17,7 @@ export const ROLE_VIEWS = Object.freeze({
   owner: null, // everything
   manager: null,
   // ids match App.jsx views; 'settings' is reduced to device/language pages
-  biller: Object.freeze(['dashboard', 'pos', 'new', 'clients', 'inventory', 'guide', 'support', 'settings']),
+  biller: Object.freeze(['dashboard', 'pos', 'new', 'clients', 'inventory', 'guide', 'support', 'settings', 'store']),
   accountant: Object.freeze(['dashboard', 'clients', 'inventory', 'expenses', 'purchases', 'receipts', 'reports', 'filing', 'incometax', 'guide', 'support', 'settings']),
 });
 
