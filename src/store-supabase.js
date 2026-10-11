@@ -5,6 +5,7 @@ import { getFinancialYearLabel } from './utils.js';
 import { DEMO_PROFILE, DEMO_CLIENTS, DEMO_PRODUCTS, DEMO_BILLS, DEMO_EXPENSES, DEMO_LAST_INVOICE_SEQ } from './data/demoData.js';
 import { normalizeProduct } from './utils/products.js';
 import { normalizeBill } from './utils/bills.js';
+import { dataOwnerId } from './lib/org.js';
 import {
   localToday, isTemplateDue, templateHasEnded, prefixForInvoiceType, profileForTemplate, buildBillFromTemplate,
 } from './utils/recurring.js';
@@ -68,7 +69,10 @@ const getUserId = async () => {
   const { data: { session } } = await supabase.auth.getSession();
   const user = session?.user;
   if (!user) throw new Error('Not authenticated');
-  return user.id;
+  // Staff & CA (migration 003): work in the active business's data, which
+  // stays keyed by the owner's user id. RLS checks the member's role.
+  const owner = dataOwnerId();
+  return owner && owner !== user.id ? owner : user.id;
 };
 
 // ---- Invoice Number Settings ----
@@ -283,7 +287,15 @@ export const getNextInvoiceNumber = async (prefix = 'INV', { peek = false, expli
 // their error into a readable one and let the UI open the upgrade modal.
 function planLimitError(error) {
   const kind = reportPlanLimit(error);
-  if (!kind) return error;
+  if (!kind) {
+    // Staff roles (003): RLS refuses writes the role may not do.
+    if (/42501|row-level security/i.test(`${error?.code || ''} ${error?.message || ''}`)) {
+      const e = new Error(i18nT('staff.noPermission'));
+      e.code = 'NO_PERMISSION';
+      return e;
+    }
+    return error;
+  }
   const err = new Error(i18nT(kind === 'invoices' ? 'plans.limitTitle' : 'plans.businessLimitTitle'));
   err.code = 'PLAN_LIMIT';
   err.planLimit = kind;
