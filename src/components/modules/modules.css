@@ -1,5 +1,7 @@
 /* Phase 4 module screens (store, CRM, accounting, payroll): mobile first. */
-.mod-page { max-width: 1100px; margin: 0 auto; padding-bottom: 6rem; }
+.mod-page { max-width: 1100px; margin: 0 auto; padding-bottom: 6rem; min-width: 0; width: 100%; box-sizing: border-box; }
+.mod-page .page-header { min-width: 0; max-width: 100%; }
+.mod-page .page-subtitle { overflow-wrap: anywhere; }
 .mod-card { background: var(--card-bg, #fff); border: 1px solid var(--border, #e2e8f0); border-radius: 14px; padding: 1rem; margin-bottom: .85rem; }
 .mod-center { text-align: center; padding: 2rem 1.25rem; }
 .mod-center h2 { margin: .6rem 0 .35rem; font-size: 1.15rem; }

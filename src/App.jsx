@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useMemo, lazy, Suspense } from 'react';
-import { Home, Store, FileText, Settings, Plus, Users, Package, BarChart3, Wallet, RefreshCw, Receipt, BookOpen, Moon, Sun, Download, X, ShoppingCart, ChevronDown, Building2, Pencil, HelpCircle, Search, Command, Bell, Calculator, Menu, Heart, LogOut, Zap, Target } from 'lucide-react';
+import { Home, Store, FileText, Settings, Plus, Users, Package, BarChart3, Wallet, RefreshCw, Receipt, BookOpen, Moon, Sun, Download, X, ShoppingCart, ChevronDown, Building2, Pencil, HelpCircle, Search, Command, Bell, Calculator, Menu, Heart, LogOut, Zap, Target, Landmark } from 'lucide-react';
 import { getAllProfiles, saveProfile, getProfile, getEnabledModules, getAllBills, getAllProducts, getStockAlertSettings, getAllClients, runUpdateNow, setDemoMode, isDemoModeActive, getMetaValue, processDueRecurring } from './store';
 import { isModuleEnabled, getUpcomingFilings, isCancelledBill, DOCS_URL, localDateISO } from './utils';
 // SaaS Auth + Subscription
@@ -47,6 +47,7 @@ let recurringAutoFireDone = false;
 const SupportView = lazy(() => import('./components/SupportView'));
 const OnlineStore = lazy(() => import('./components/store/OnlineStore'));
 const CrmView = lazy(() => import('./components/crm/CrmView'));
+const AccountingView = lazy(() => import('./components/accounting/AccountingView'));
 import StarBanner from './components/StarBanner';
 import AppFooter from './components/AppFooter';
 import { getPrintSettings } from './utils/printSettings';
@@ -609,6 +610,7 @@ function BillingApp({ authUser, onSignOut, isDemoMode, onExitDemo }) {
     { id: 'filing', icon: BookOpen, label: tr('nav.gstReturns'), module: 'gstReturns' },
     { id: 'incometax', icon: Calculator, label: tr('nav.incomeTax'), module: 'incomeTax' },
     { id: 'store', icon: Store, label: tr('nav.onlineStore'), module: 'dashboard', onClick: () => { setModuleSub(''); setCurrentView('store'); } },
+    { id: 'accounts', icon: Landmark, label: tr('nav.accounting'), module: 'dashboard', onClick: () => { setModuleSub(''); setCurrentView('accounts'); } },
     { id: 'crm', icon: Target, label: tr('nav.crm'), module: 'dashboard', onClick: () => { setModuleSub(''); setCurrentView('crm'); } },
     // v1.10.75 - opens the online documentation, which covers every screen
     // and stays current; the old built-in guide had fallen far behind.
@@ -1169,6 +1171,9 @@ function BillingApp({ authUser, onSignOut, isDemoMode, onExitDemo }) {
         )}
         {currentView === 'support' && (
           <SupportView />
+        )}
+        {currentView === 'accounts' && (
+          <AccountingView key={businessKey} sub={moduleSub} onSub={setModuleSub} profile={profile} />
         )}
         {currentView === 'crm' && (
           <CrmView key={businessKey} sub={moduleSub} onSub={setModuleSub} />
