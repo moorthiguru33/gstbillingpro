@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useCallback, useMemo, memo } from 'react';
-import { ArrowLeft, Plus, Trash2, Download, UserPlus, Pencil, Settings, ChevronUp, ChevronDown, MessageCircle, Check, Loader, Truck, Printer, Eye, EyeOff, Camera, Barcode, Search } from 'lucide-react';
+import { ArrowLeft, Plus, Trash2, Download, UserPlus, Pencil, Settings, ChevronUp, ChevronDown, MessageCircle, Check, Loader, Truck, Printer, Eye, EyeOff, Camera, Barcode, Search, ScanBarcode } from 'lucide-react';
 import { jsPDF } from 'jspdf';
 import html2canvas from 'html2canvas';
 import { saveBill, applyStockChanges, getNextInvoiceNumber, getTermsTemplates, getAllClients, saveClient, getProfile, getAllProducts, getInvoiceDisplayOptions, saveInvoiceDisplayOptions, getAllProfiles, getRegionMode, saveRecurring, getAllBills, saveProductsBatch } from '../store';
@@ -23,6 +23,7 @@ import AiBillButton from './ai/AiBillButton';
 import { t as i18nT } from '../i18n';
 import QuickAddSheet from './mobile/QuickAddSheet';
 import { setLeaveGuard } from '../lib/appRouter';
+import { findProductByCode, addScannedItem } from '../lib/scanner';
 
 // Rich text editor component that works with contentEditable properly
 function RichEditor({ value, onChange, placeholder, toolbar = false }) {
@@ -1382,13 +1383,10 @@ export default function InvoiceGenerator({ onBack, profile: profileProp, editing
     if (customer?.name && !client?.name) setClient(prev => ({ ...prev, name: customer.name, ...(customer.phone ? { phone: customer.phone } : {}) }));
   };
 
-  const handleBarcodeScanned = useCallback((code) => {
-    const trimmed = String(code).trim().toLowerCase();
-    const match = products.find(p =>
-      (p.barcode && p.barcode.toLowerCase() === trimmed) ||
-      (p.id && String(p.id).toLowerCase() === trimmed) ||
-      (p.name && p.name.toLowerCase() === trimmed)
-    );
+  // Camera scanner / Pick-item sheet / typed code. Returns a result for the
+  // live scanner ({ ok, name, price }); same product again → qty +1.
+  const handleBarcodeScanned = useCallback((code, productOverride, opts = {}) => {
+    const match = productOverride || findProductByCode(products, code);
 
     if (match) {
       const salePrice = match.sellingPrice ?? match.rate ?? 0;
@@ -1406,17 +1404,12 @@ export default function InvoiceGenerator({ onBack, profile: profileProp, editing
         productId: match.id,
       };
 
-      setItems(prev => {
-        const last = prev[prev.length - 1];
-        if (prev.length === 1 && !last?.name && (!last?.rate || last.rate === 0)) {
-          return [newItem];
-        }
-        return [...prev, newItem];
-      });
-      toast(`Added "${match.name}"`, 'success');
-    } else {
-      toast(`Barcode "${code}" not found in products catalog`, 'error');
+      setItems(prev => addScannedItem(prev, match, () => newItem));
+      if (!opts.fromScanner) toast(`Added "${match.name}"`, 'success');
+      return { ok: true, name: match.name, price: salePrice };
     }
+    if (!opts.fromScanner) toast(`Barcode "${code}" not found in products catalog`, 'error');
+    return { ok: false };
   }, [products, showGST, defaultTaxRate]);
 
   // Custom unit handler — prompts for a label, persists to localStorage, applies to current item.
@@ -4246,7 +4239,7 @@ export default function InvoiceGenerator({ onBack, profile: profileProp, editing
               <AiBillButton mode="voice" products={products} onApply={applyAi} />
               <AiBillButton mode="photo" products={products} onApply={applyAi} />
               <button type="button" className="btn btn-secondary" onClick={() => setShowBarcodeScanner(true)} title={i18nT('ui.scanProductBarcodeWithCameraOr')}>
-                <Camera size={18} /> {i18nT('ui.scanBarcode')}
+                <ScanBarcode size={18} /> {i18nT('ui.scanBarcode')}
               </button>
             </div>
 
@@ -4572,7 +4565,8 @@ export default function InvoiceGenerator({ onBack, profile: profileProp, editing
         <BarcodeScannerModal
           isOpen={showBarcodeScanner}
           onClose={() => setShowBarcodeScanner(false)}
-          onDetected={handleBarcodeScanned}
+          onScan={handleBarcodeScanned}
+          onProductCreated={(p) => setProducts(prev => [p, ...prev])}
         />
       )}
     </div>

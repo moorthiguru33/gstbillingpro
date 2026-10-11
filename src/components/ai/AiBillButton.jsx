@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Mic, Square, Camera, Loader, X, Sparkles, Trash2 } from 'lucide-react';
+import { Mic, Square, Camera, Loader, X, Sparkles, Trash2, ReceiptText } from 'lucide-react';
 import { toast } from '../Toast';
 import { aiVoiceBill, aiPhotoBill, withMatches } from '../../lib/ai';
 import { currentLanguage } from '../../i18n';
@@ -77,7 +77,7 @@ export default function AiBillButton({ mode = 'voice', products = [], onApply, c
     close();
   };
 
-  const Icon = mode === 'voice' ? Mic : Camera;
+  const Icon = mode === 'voice' ? Mic : ReceiptText; // bill photo (AI) — not the barcode scanner
   return (
     <>
       <button type="button" className="btn btn-secondary ai-bill-btn" title={t(mode === 'voice' ? 'ai.voiceHint' : 'ai.photoHint')}

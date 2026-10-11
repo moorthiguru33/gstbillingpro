@@ -53,14 +53,14 @@ export const DEMO_CLIENTS = [
 ];
 
 const rawProducts = [
-  ['prod_demo_1', 'India Gate Basmati Rice 5kg', 'Grocery & Staples', '1006', 5, 'BAG', 450, 520, 380, '8900000371110', 85],
-  ['prod_demo_2', 'Fortune Sunlite Refined Oil 1L', 'Edible Oils', '1512', 5, 'PKT', 135, 155, 118, '8906007280010', 120],
-  ['prod_demo_3', 'Tata Salt Vacuum Evaporated 1kg', 'Grocery & Staples', '2501', 0, 'PKT', 25, 28, 21, '8901058852320', 200],
-  ['prod_demo_4', 'Aashirvaad Shudh Chakki Atta 5kg', 'Grocery & Staples', '1101', 5, 'BAG', 240, 275, 210, '8901030383720', 60],
-  ['prod_demo_5', 'Dettol Original Liquid Handwash 200ml', 'Personal Care', '3401', 18, 'BTL', 95, 110, 78, '8901396123450', 45],
+  ['prod_demo_1', 'India Gate Basmati Rice 5kg', 'Grocery & Staples', '1006', 5, 'BAG', 450, 520, 380, '8900000371112', 85],
+  ['prod_demo_2', 'Fortune Sunlite Refined Oil 1L', 'Edible Oils', '1512', 5, 'PKT', 135, 155, 118, '8906007280013', 120],
+  ['prod_demo_3', 'Tata Salt Vacuum Evaporated 1kg', 'Grocery & Staples', '2501', 0, 'PKT', 25, 28, 21, '8901058852325', 200],
+  ['prod_demo_4', 'Aashirvaad Shudh Chakki Atta 5kg', 'Grocery & Staples', '1101', 5, 'BAG', 240, 275, 210, '8901030383724', 60],
+  ['prod_demo_5', 'Dettol Original Liquid Handwash 200ml', 'Personal Care', '3401', 18, 'BTL', 95, 110, 78, '8901396123453', 45],
   ['prod_demo_6', 'Surf Excel Quick Wash Detergent 1kg', 'Household', '3402', 18, 'PKT', 185, 215, 158, '8901030712340', 70],
-  ['prod_demo_7', 'JK Copier Paper A4 75 GSM (500 Sheets)', 'Stationery', '4802', 12, 'RIM', 290, 340, 245, '8906012456780', 40],
-  ['prod_demo_8', 'Philips LED Bulb 9W Cool Day White', 'Electricals', '8539', 18, 'PCS', 110, 140, 82, '8901035028450', 90],
+  ['prod_demo_7', 'JK Copier Paper A4 75 GSM (500 Sheets)', 'Stationery', '4802', 12, 'RIM', 290, 340, 245, '8906012456786', 40],
+  ['prod_demo_8', 'Philips LED Bulb 9W Cool Day White', 'Electricals', '8539', 18, 'PCS', 110, 140, 82, '8901035028453', 90],
 ];
 
 export const DEMO_PRODUCTS = rawProducts.map(([id, name, category, hsn, tax, unit, price, mrp, purchasePrice, barcode, stock]) => ({
