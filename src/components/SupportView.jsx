@@ -69,7 +69,7 @@ export default function SupportView() {
             Need help with setup, thermal printer connection, or customization? Message our support team directly.
           </p>
           <a
-            href="https://wa.me/919944880248?text=Hi%20GST%20Billing%20Pro%20Support,%20I%20need%20assistance"
+            href="https://wa.me/919442745754?text=Hi%20GST%20Billing%20Pro%20Support,%20I%20need%20assistance"
             target="_blank"
             rel="noopener noreferrer"
             className="btn btn-primary"
