@@ -1,108 +1,67 @@
-// functions/api/verify-payment.js
+// ============================================================
 // POST /api/verify-payment
-// Verifies Razorpay signature and activates subscription in Supabase
+// Headers: Authorization: Bearer <Supabase access token>
+// Body:    { razorpay_order_id, razorpay_payment_id, razorpay_signature }
+//
+// 1. Authenticates the user from the access token (not from the body).
+// 2. Verifies the Razorpay checkout signature (constant-time).
+// 3. Loads the order from payment_orders and checks it belongs to the user.
+// 4. Fetches the payment from the Razorpay API and checks it is captured,
+//    belongs to the order and the amount equals the plan price.
+// 5. Activates idempotently: extends from max(now, current end) by the
+//    plan length and logs the REAL captured amount.
+// ============================================================
+import {
+  HttpError, json, errorResponse, preflight, corsHeaders, assertOrigin, requireEnv,
+  getServiceClient, authenticate, hmacSha256Hex, timingSafeEqual, razorpay,
+} from '../../shared/server.js';
+import { loadOrder, activatePaidOrder } from '../../shared/activation.js';
 
-import { createClient } from '@supabase/supabase-js';
+const REQUIRED_ENV = ['SUPABASE_URL', 'SUPABASE_SERVICE_ROLE_KEY', 'RAZORPAY_KEY_ID', 'RAZORPAY_KEY_SECRET'];
+const ID_RE = /^[A-Za-z0-9_]{6,64}$/;
 
-// Helper: HMAC-SHA256 using Web Crypto API (available in Cloudflare Workers)
-async function hmacSha256(secret, data) {
-  const encoder = new TextEncoder();
-  const key = await crypto.subtle.importKey(
-    'raw',
-    encoder.encode(secret),
-    { name: 'HMAC', hash: 'SHA-256' },
-    false,
-    ['sign']
-  );
-  const signature = await crypto.subtle.sign('HMAC', key, encoder.encode(data));
-  return Array.from(new Uint8Array(signature))
-    .map(b => b.toString(16).padStart(2, '0'))
-    .join('');
-}
-
-export async function onRequestPost(context) {
-  const { request, env } = context;
-  const corsHeaders = {
-    'Access-Control-Allow-Origin': '*',
-    'Access-Control-Allow-Methods': 'POST, OPTIONS',
-    'Access-Control-Allow-Headers': 'Content-Type',
-  };
-
+export async function onRequestPost({ request, env }) {
+  const cors = corsHeaders(request, env);
   try {
-    const body = await request.json();
-    const {
-      razorpay_order_id,
-      razorpay_payment_id,
-      razorpay_signature,
-      userId,
-    } = body;
+    assertOrigin(request, env);
+    requireEnv(env, REQUIRED_ENV);
+    const supabase = getServiceClient(env);
+    const user = await authenticate(request, supabase);
 
-    if (!razorpay_payment_id || !razorpay_order_id || !razorpay_signature || !userId) {
-      return new Response(JSON.stringify({ error: 'Missing payment verification fields' }), {
-        status: 400, headers: { 'Content-Type': 'application/json', ...corsHeaders },
+    let body = {};
+    try { body = await request.json(); } catch { /* empty */ }
+    const { razorpay_order_id: orderId, razorpay_payment_id: paymentId, razorpay_signature: signature } = body;
+    if (!ID_RE.test(orderId || '') || !ID_RE.test(paymentId || '') || typeof signature !== 'string') {
+      throw new HttpError(400, 'Missing payment verification fields');
+    }
+
+    const expected = await hmacSha256Hex(env.RAZORPAY_KEY_SECRET, `${orderId}|${paymentId}`);
+    if (!timingSafeEqual(expected, signature)) throw new HttpError(400, 'Invalid payment signature');
+
+    const orderRow = await loadOrder(supabase, orderId);
+    if (!orderRow) throw new HttpError(404, 'Order not found. Please contact support with your payment ID.');
+    if (orderRow.user_id !== user.id) throw new HttpError(403, 'This payment belongs to a different account.');
+
+    if (orderRow.status === 'paid') {
+      return json({ success: true, alreadyProcessed: true, periodEnd: orderRow.period_end, plan: orderRow.plan }, 200, cors);
+    }
+
+    // Confirm with Razorpay itself — never trust the browser's word.
+    let payment = await razorpay(env, `/payments/${encodeURIComponent(paymentId)}`);
+    if (payment?.status === 'authorized') {
+      // Account not set to auto-capture: capture exactly the order amount.
+      payment = await razorpay(env, `/payments/${encodeURIComponent(paymentId)}/capture`, {
+        method: 'POST', body: { amount: orderRow.amount, currency: orderRow.currency || 'INR' },
       });
     }
 
-    // Verify Razorpay signature
-    const message = `${razorpay_order_id}|${razorpay_payment_id}`;
-    const expectedSignature = await hmacSha256(env.RAZORPAY_KEY_SECRET, message);
-
-    if (expectedSignature !== razorpay_signature) {
-      return new Response(JSON.stringify({ error: 'Invalid payment signature' }), {
-        status: 400, headers: { 'Content-Type': 'application/json', ...corsHeaders },
-      });
-    }
-
-    // Update Supabase subscription
-    const supabase = createClient(env.SUPABASE_URL, env.SUPABASE_SERVICE_ROLE_KEY);
-
-    // Support annual (365 days) vs monthly (30 days)
-    const isAnnual = body.plan === 'annual' || (body.amount && body.amount >= 90000);
-    const daysToAdd = isAnnual ? 365 : 30;
-
-    const newPeriodEnd = new Date();
-    newPeriodEnd.setDate(newPeriodEnd.getDate() + daysToAdd);
-
-    const { error: subError } = await supabase
-      .from('subscriptions')
-      .upsert({
-        user_id: userId,
-        status: 'active',
-        razorpay_payment_id,
-        current_period_end: newPeriodEnd.toISOString(),
-        updated_at: new Date().toISOString(),
-      }, { onConflict: 'user_id' });
-
-    if (subError) throw subError;
-
-    // Log the payment
-    await supabase.from('payment_logs').insert({
-      user_id: userId,
-      event_type: 'payment_verified',
-      razorpay_payment_id,
-      razorpay_order_id,
-      amount: 9900,
-      status: 'success',
-      payload: body,
-    });
-
-    return new Response(JSON.stringify({ success: true, periodEnd: newPeriodEnd.toISOString() }), {
-      status: 200, headers: { 'Content-Type': 'application/json', ...corsHeaders },
-    });
+    const result = await activatePaidOrder(supabase, { orderRow, payment, source: 'verify' });
+    return json({ success: true, ...result, plan: orderRow.plan }, 200, cors);
   } catch (err) {
-    return new Response(JSON.stringify({ error: err.message }), {
-      status: 500, headers: { 'Content-Type': 'application/json', ...corsHeaders },
-    });
+    return errorResponse(err, cors);
   }
 }
 
-export async function onRequestOptions() {
-  return new Response(null, {
-    status: 204,
-    headers: {
-      'Access-Control-Allow-Origin': '*',
-      'Access-Control-Allow-Methods': 'POST, OPTIONS',
-      'Access-Control-Allow-Headers': 'Content-Type',
-    },
-  });
+export function onRequestOptions({ request, env }) {
+  return preflight(request, env, 'POST, OPTIONS');
 }

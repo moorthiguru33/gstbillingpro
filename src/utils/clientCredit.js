@@ -1,3 +1,4 @@
+const localDateISO = (d = new Date()) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`; // local, not UTC
 /*
  * v1.10.24 — Client credit balance from overpayments.
  *
@@ -88,7 +89,7 @@ export function planCreditApplication(clientName, allBills, amountToApply, newBi
       {
         id: 'credit_out_' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6),
         amount: -take,
-        date: new Date().toISOString().split('T')[0],
+        date: localDateISO(),
         mode: 'credit-transferred-out',
         note: `Transferred to ${newBillId}`,
         recordedAt: new Date().toISOString(),
@@ -108,7 +109,7 @@ export function planCreditApplication(clientName, allBills, amountToApply, newBi
   const targetEntry = {
     id: 'credit_in_' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6),
     amount,
-    date: new Date().toISOString().split('T')[0],
+    date: localDateISO(),
     mode: 'credit-applied',
     note: `Applied from prior overpayment${consumedFrom.length > 1 ? 's' : ''} (${consumedFrom.map(c => c.invoiceNumber).join(', ')})`,
     recordedAt: new Date().toISOString(),

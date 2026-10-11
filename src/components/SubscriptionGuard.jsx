@@ -1,6 +1,11 @@
 import { useState, useEffect } from 'react';
-import { Zap, Clock, CheckCircle, X, CreditCard, Shield, Star } from 'lucide-react';
-import { getSubscription, getTrialDaysLeft, isSubscriptionActive } from '../lib/supabase.js';
+import { Zap, Clock, CheckCircle, X, CreditCard, Shield, RefreshCw } from 'lucide-react';
+import { getSubscription, getTrialDaysLeft, isSubscriptionActive, authFetch } from '../lib/supabase.js';
+import { PLANS, formatPlanPrice, annualSavingsPercent } from '../../shared/plans.js';
+
+const MONTHLY_PRICE = formatPlanPrice(PLANS.monthly.amount);   // ₹99
+const ANNUAL_PRICE = formatPlanPrice(PLANS.annual.amount);     // ₹999
+const ANNUAL_SAVE = `${annualSavingsPercent()}%`;
 
 // ============================================================
 // SubscriptionGuard — Wraps the app, shows payment wall
@@ -10,6 +15,7 @@ import { getSubscription, getTrialDaysLeft, isSubscriptionActive } from '../lib/
 export default function SubscriptionGuard({ user, children, onSignOut }) {
   const [sub, setSub] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState(null);
   const [showPayment, setShowPayment] = useState(false);
   const [paymentLoading, setPaymentLoading] = useState(false);
 
@@ -21,96 +27,93 @@ export default function SubscriptionGuard({ user, children, onSignOut }) {
       return;
     }
     loadSubscription();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user]);
 
+  // Subscription status ALWAYS comes from the database. If it cannot be
+  // read we show a retry screen — we never invent a trial in the browser
+  // (that let anyone with a blocked network use the app for free forever).
   const loadSubscription = async () => {
+    setLoading(true);
+    setLoadError(null);
     try {
-      let s = await getSubscription(user.id);
-      if (!s) {
-        // Fallback default 30-day trial
-        const trialEnd = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString();
-        s = { status: 'trial', trial_end: trialEnd, trial_start: new Date().toISOString() };
-      }
+      const s = await getSubscription(user.id);
+      if (!s) throw new Error('No subscription record found for this account.');
       setSub(s);
     } catch (err) {
-      console.warn('Subscription fetch error, defaulting to trial:', err);
-      const trialEnd = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString();
-      setSub({ status: 'trial', trial_end: trialEnd, trial_start: new Date().toISOString() });
+      console.warn('Subscription fetch error:', err);
+      setLoadError(err?.message || 'Could not reach the server.');
     } finally {
       setLoading(false);
     }
   };
 
-  const handleRazorpay = (plan = selectedPlan) => {
-    const razorpayKey = import.meta.env.VITE_RAZORPAY_KEY_ID;
-    if (!razorpayKey) {
-      alert('Payment setup incomplete. Contact support.');
+  const handleRazorpay = async (plan = selectedPlan) => {
+    const planInfo = PLANS[plan] || PLANS.annual;
+    if (typeof window.Razorpay !== 'function') {
+      alert('Payment window could not load. Check your internet connection (or disable ad-blockers) and try again.');
       return;
     }
     setPaymentLoading(true);
-
-    const isAnnual = plan === 'annual';
-    const amount = isAnnual ? 99900 : 9900;
-    const planLabel = isAnnual ? 'Annual Subscription (1 Year)' : 'Monthly Subscription (30 Days)';
-
-    // Create Razorpay order via Cloudflare Function
-    fetch('/api/create-order', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${user.id}`,
-      },
-      body: JSON.stringify({ amount, plan, currency: 'INR', userId: user.id, email: user.email }),
-    })
-      .then(async r => {
-        const data = await r.json();
-        if (!r.ok || !data.id) {
-          throw new Error(data.error || 'Failed to create order');
-        }
-        return data;
-      })
-      .then(order => {
-        const options = {
-          key: razorpayKey,
-          amount: order.amount || amount,
-          currency: 'INR',
-          name: 'GST Billing Pro',
-          description: planLabel,
-          order_id: order.id,
-          prefill: { email: user.email, name: user.email?.split('@')[0] || '' },
-          theme: { color: '#2563eb' },
-          handler: async (response) => {
-            try {
-              // Verify payment on server
-              const verifyRes = await fetch('/api/verify-payment', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ ...response, userId: user.id, plan, amount }),
-              });
-              const verifyData = await verifyRes.json();
-              if (!verifyRes.ok || !verifyData.success) {
-                throw new Error(verifyData.error || 'Payment verification failed');
-              }
-              await loadSubscription();
-              setShowPayment(false);
-              alert(`🎉 Payment successful! Your subscription is active for ${isAnnual ? '365 days' : '30 days'}.`);
-            } catch (vErr) {
-              alert(`Payment verification issue: ${vErr.message}. If money was deducted, contact support.`);
-            } finally {
-              setPaymentLoading(false);
-            }
-          },
-          modal: {
-            ondismiss: () => setPaymentLoading(false),
-          },
-        };
-        const rzp = new window.Razorpay(options);
-        rzp.open();
-      })
-      .catch(err => {
-        setPaymentLoading(false);
-        alert(`Payment error: ${err.message || 'Payment initiation failed. Please try again.'}`);
+    try {
+      // Server decides the price from the plan id; we only send the plan.
+      const r = await authFetch('/api/create-order', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ plan: planInfo.id }),
       });
+      const order = await r.json().catch(() => ({}));
+      if (!r.ok || !order.id) throw new Error(order.error || 'Failed to create order');
+
+      const razorpayKey = order.keyId || import.meta.env.VITE_RAZORPAY_KEY_ID;
+      if (!razorpayKey) throw new Error('Payment setup incomplete. Contact support.');
+
+      const rzp = new window.Razorpay({
+        key: razorpayKey,
+        amount: order.amount,
+        currency: order.currency || 'INR',
+        name: 'GST Billing Pro',
+        description: order.description || planInfo.description,
+        order_id: order.id,
+        prefill: { email: user.email, name: user.email?.split('@')[0] || '' },
+        notes: { plan: planInfo.id },
+        theme: { color: '#2563eb' },
+        handler: async (response) => {
+          try {
+            const verifyRes = await authFetch('/api/verify-payment', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                razorpay_order_id: response.razorpay_order_id,
+                razorpay_payment_id: response.razorpay_payment_id,
+                razorpay_signature: response.razorpay_signature,
+              }),
+            });
+            const verifyData = await verifyRes.json().catch(() => ({}));
+            if (!verifyRes.ok || !verifyData.success) {
+              throw new Error(verifyData.error || 'Payment verification failed');
+            }
+            await loadSubscription();
+            setShowPayment(false);
+            const until = verifyData.periodEnd ? new Date(verifyData.periodEnd).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }) : null;
+            alert(`🎉 Payment successful! Your ${planInfo.label.toLowerCase()} subscription is active${until ? ` until ${until}` : ''}.`);
+          } catch (vErr) {
+            alert(`Payment verification issue: ${vErr.message}. If money was deducted it will be applied automatically within a few minutes — otherwise contact support with payment ID ${response.razorpay_payment_id}.`);
+          } finally {
+            setPaymentLoading(false);
+          }
+        },
+        modal: { ondismiss: () => setPaymentLoading(false) },
+      });
+      rzp.on?.('payment.failed', (resp) => {
+        setPaymentLoading(false);
+        alert(`Payment failed: ${resp?.error?.description || 'Please try again.'}`);
+      });
+      rzp.open();
+    } catch (err) {
+      setPaymentLoading(false);
+      alert(`Payment error: ${err.message || 'Payment initiation failed. Please try again.'}`);
+    }
   };
 
   if (loading) {
@@ -126,6 +129,44 @@ export default function SubscriptionGuard({ user, children, onSignOut }) {
             animation: 'spin 0.8s linear infinite', margin: '0 auto 1rem',
           }} />
           <p style={{ color: '#64748b' }}>Loading your account...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (loadError || (!sub && user && !user.isDemo)) {
+    return (
+      <div style={{
+        minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center',
+        background: 'var(--bg, #f0f2f5)', padding: '1rem',
+      }}>
+        <div role="alert" style={{
+          background: '#fff', borderRadius: 16, padding: '2rem', maxWidth: 420, width: '100%',
+          textAlign: 'center', boxShadow: '0 10px 40px rgba(0,0,0,0.08)',
+        }}>
+          <h2 style={{ fontSize: '1.2rem', fontWeight: 800, color: '#0f172a', margin: '0 0 0.5rem' }}>
+            Couldn&apos;t load your account
+          </h2>
+          <p style={{ color: '#64748b', margin: '0 0 1.25rem', lineHeight: 1.5, fontSize: '0.9rem' }}>
+            We could not check your subscription. Please check your internet connection and try again.
+            {loadError ? <><br /><small style={{ color: '#94a3b8' }}>{loadError}</small></> : null}
+          </p>
+          <button onClick={loadSubscription} style={{
+            padding: '0.75rem 1.5rem', background: '#2563eb', color: '#fff', border: 'none',
+            borderRadius: 10, fontWeight: 700, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: 8,
+          }}>
+            <RefreshCw size={16} /> Retry
+          </button>
+          {onSignOut && (
+            <div>
+              <button onClick={onSignOut} style={{
+                marginTop: '1rem', background: 'none', border: 'none', color: '#94a3b8',
+                fontSize: '0.85rem', cursor: 'pointer', textDecoration: 'underline',
+              }}>
+                Sign out
+              </button>
+            </div>
+          )}
         </div>
       </div>
     );
@@ -176,7 +217,7 @@ export default function SubscriptionGuard({ user, children, onSignOut }) {
               }}
             >
               <div style={{ fontSize: '0.8rem', fontWeight: 600, color: '#64748b' }}>Monthly</div>
-              <div style={{ fontSize: '1.35rem', fontWeight: 800, color: '#1e293b' }}>₹99</div>
+              <div style={{ fontSize: '1.35rem', fontWeight: 800, color: '#1e293b' }}>{MONTHLY_PRICE}</div>
               <div style={{ fontSize: '0.72rem', color: '#64748b' }}>per month</div>
             </div>
 
@@ -192,9 +233,9 @@ export default function SubscriptionGuard({ user, children, onSignOut }) {
               <span style={{
                 position: 'absolute', top: 0, right: 0, background: '#16a34a', color: '#fff',
                 fontSize: '0.65rem', fontWeight: 700, padding: '1px 6px', borderBottomLeftRadius: 6
-              }}>SAVE 16%</span>
+              }}>SAVE {ANNUAL_SAVE}</span>
               <div style={{ fontSize: '0.8rem', fontWeight: 600, color: '#16a34a' }}>Annual (Best Value)</div>
-              <div style={{ fontSize: '1.35rem', fontWeight: 800, color: '#1e293b' }}>₹999</div>
+              <div style={{ fontSize: '1.35rem', fontWeight: 800, color: '#1e293b' }}>{ANNUAL_PRICE}</div>
               <div style={{ fontSize: '0.72rem', color: '#16a34a', fontWeight: 600 }}>2 Months Free!</div>
             </div>
           </div>
@@ -222,7 +263,7 @@ export default function SubscriptionGuard({ user, children, onSignOut }) {
               boxShadow: '0 4px 20px rgba(37,99,235,0.3)',
             }}>
             <CreditCard size={20} />
-            {paymentLoading ? 'Processing...' : selectedPlan === 'annual' ? 'Subscribe for ₹999/year (Save 16%)' : 'Subscribe for ₹99/month'}
+            {paymentLoading ? 'Processing...' : selectedPlan === 'annual' ? `Subscribe for ${ANNUAL_PRICE}/year (Save ${ANNUAL_SAVE})` : `Subscribe for ${MONTHLY_PRICE}/month`}
           </button>
 
           <div style={{
@@ -296,7 +337,7 @@ function TrialBanner({ daysLeft, onUpgrade }) {
         border: 'none', borderRadius: 20, padding: '0.25rem 0.85rem',
         fontWeight: 700, cursor: 'pointer', fontSize: '0.8rem',
       }}>
-        Upgrade ₹99/mo
+        Upgrade {MONTHLY_PRICE}/mo
       </button>
       <button onClick={() => setDismissed(true)} style={{
         background: 'none', border: 'none', color: 'rgba(255,255,255,0.7)',
@@ -341,7 +382,7 @@ function PaymentModal({ onClose, onPay, paymentLoading }) {
             }}
           >
             <div style={{ fontSize: '0.75rem', fontWeight: 600, color: '#64748b' }}>Monthly</div>
-            <div style={{ fontSize: '1.25rem', fontWeight: 800, color: '#1e293b' }}>₹99</div>
+            <div style={{ fontSize: '1.25rem', fontWeight: 800, color: '#1e293b' }}>{MONTHLY_PRICE}</div>
             <div style={{ fontSize: '0.7rem', color: '#64748b' }}>per month</div>
           </div>
 
@@ -357,9 +398,9 @@ function PaymentModal({ onClose, onPay, paymentLoading }) {
             <span style={{
               position: 'absolute', top: 0, right: 0, background: '#16a34a', color: '#fff',
               fontSize: '0.6rem', fontWeight: 700, padding: '1px 5px', borderBottomLeftRadius: 5
-            }}>SAVE 16%</span>
+            }}>SAVE {ANNUAL_SAVE}</span>
             <div style={{ fontSize: '0.75rem', fontWeight: 600, color: '#16a34a' }}>Annual (Best)</div>
-            <div style={{ fontSize: '1.25rem', fontWeight: 800, color: '#1e293b' }}>₹999</div>
+            <div style={{ fontSize: '1.25rem', fontWeight: 800, color: '#1e293b' }}>{ANNUAL_PRICE}</div>
             <div style={{ fontSize: '0.7rem', color: '#16a34a', fontWeight: 600 }}>2 Months Free!</div>
           </div>
         </div>
@@ -374,7 +415,7 @@ function PaymentModal({ onClose, onPay, paymentLoading }) {
             boxShadow: '0 4px 15px rgba(0,0,0,0.1)',
           }}>
           <CreditCard size={18} />
-          {paymentLoading ? 'Processing...' : plan === 'annual' ? 'Pay ₹999 / Year (Save 16%)' : 'Pay ₹99 / Month'}
+          {paymentLoading ? 'Processing...' : plan === 'annual' ? `Pay ${ANNUAL_PRICE} / Year (Save ${ANNUAL_SAVE})` : `Pay ${MONTHLY_PRICE} / Month`}
         </button>
         <button onClick={onClose}
           style={{ marginTop: '0.75rem', background: 'none', border: 'none', color: '#94a3b8', cursor: 'pointer', fontSize: '0.875rem' }}>

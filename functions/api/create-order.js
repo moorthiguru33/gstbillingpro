@@ -1,77 +1,71 @@
 // ============================================================
-// Cloudflare Pages Functions — /functions/api/
-// These run as serverless functions on Cloudflare's edge
-// Handles: Razorpay order creation & payment verification
-// ============================================================
-
-// functions/api/create-order.js
 // POST /api/create-order
-export async function onRequestPost(context) {
-  const { request, env } = context;
+// Headers: Authorization: Bearer <Supabase access token>
+// Body:    { plan: 'monthly' | 'annual' }
+//
+// The price comes ONLY from shared/plans.js — any `amount` the browser
+// sends is ignored. The order is recorded in payment_orders so that
+// verify-payment / the webhook can check user, plan and amount later.
+// ============================================================
+import { getPlan } from '../../shared/plans.js';
+import {
+  HttpError, json, errorResponse, preflight, corsHeaders, assertOrigin,
+  requireEnv, getServiceClient, authenticate, razorpay,
+} from '../../shared/server.js';
 
-  // CORS headers
-  const corsHeaders = {
-    'Access-Control-Allow-Origin': '*',
-    'Access-Control-Allow-Methods': 'POST, OPTIONS',
-    'Access-Control-Allow-Headers': 'Content-Type, Authorization',
-  };
+const REQUIRED_ENV = ['SUPABASE_URL', 'SUPABASE_SERVICE_ROLE_KEY', 'RAZORPAY_KEY_ID', 'RAZORPAY_KEY_SECRET'];
 
+export async function onRequestPost({ request, env }) {
+  const cors = corsHeaders(request, env);
   try {
-    const body = await request.json();
-    const { amount, currency, userId, email } = body;
+    assertOrigin(request, env);
+    requireEnv(env, REQUIRED_ENV);
+    const supabase = getServiceClient(env);
+    const user = await authenticate(request, supabase);
 
-    if (!amount || !userId) {
-      return new Response(JSON.stringify({ error: 'Missing required fields' }), {
-        status: 400, headers: { 'Content-Type': 'application/json', ...corsHeaders },
-      });
-    }
+    let body = {};
+    try { body = await request.json(); } catch { /* empty body */ }
+    const plan = getPlan(body.plan);
+    if (!plan) throw new HttpError(400, 'Please choose a valid plan.');
 
-    // Create Razorpay order
-    // Support monthly (₹99) and annual (₹999 - Save 2 months)
-    const isAnnual = body.plan === 'annual' || (amount && amount >= 90000);
-    const orderAmount = isAnnual ? 99900 : (amount || 9900);
-    const planName = isAnnual ? 'annual' : 'monthly';
-
-    const credentials = btoa(`${env.RAZORPAY_KEY_ID}:${env.RAZORPAY_KEY_SECRET}`);
-    const orderRes = await fetch('https://api.razorpay.com/v1/orders', {
+    // Razorpay: receipt max 40 chars; notes values max 256 chars.
+    const receipt = `gbp_${plan.id[0]}_${Date.now().toString(36)}_${user.id.slice(0, 8)}`;
+    const order = await razorpay(env, '/orders', {
       method: 'POST',
-      headers: {
-        'Authorization': `Basic ${credentials}`,
-        'Content-Type': 'application/json',
+      body: {
+        amount: plan.amount,
+        currency: plan.currency,
+        receipt,
+        notes: { userId: user.id, email: (user.email || '').slice(0, 200), plan: plan.id },
       },
-      body: JSON.stringify({
-        amount: orderAmount,
-        currency: currency || 'INR',
-        receipt: `order_${userId}_${planName}_${Date.now()}`,
-        notes: { userId, email, plan: planName },
-      }),
     });
-
-    const order = await orderRes.json();
-
-    if (!orderRes.ok) {
-      return new Response(JSON.stringify({ error: order.error?.description || 'Order creation failed' }), {
-        status: 400, headers: { 'Content-Type': 'application/json', ...corsHeaders },
-      });
+    if (!order?.id || Number(order.amount) !== plan.amount) {
+      throw new HttpError(502, 'Payment gateway returned an unexpected order.');
     }
 
-    return new Response(JSON.stringify(order), {
-      status: 200, headers: { 'Content-Type': 'application/json', ...corsHeaders },
+    const { error } = await supabase.from('payment_orders').insert({
+      order_id: order.id,
+      user_id: user.id,
+      plan: plan.id,
+      amount: plan.amount,
+      currency: plan.currency,
+      status: 'created',
     });
+    if (error) throw error;
+
+    return json({
+      id: order.id,
+      amount: order.amount,
+      currency: order.currency,
+      plan: plan.id,
+      description: plan.description,
+      keyId: env.RAZORPAY_KEY_ID, // public key id, safe to expose
+    }, 200, cors);
   } catch (err) {
-    return new Response(JSON.stringify({ error: err.message }), {
-      status: 500, headers: { 'Content-Type': 'application/json', ...corsHeaders },
-    });
+    return errorResponse(err, cors);
   }
 }
 
-export async function onRequestOptions() {
-  return new Response(null, {
-    status: 204,
-    headers: {
-      'Access-Control-Allow-Origin': '*',
-      'Access-Control-Allow-Methods': 'POST, OPTIONS',
-      'Access-Control-Allow-Headers': 'Content-Type, Authorization',
-    },
-  });
+export function onRequestOptions({ request, env }) {
+  return preflight(request, env, 'POST, OPTIONS');
 }

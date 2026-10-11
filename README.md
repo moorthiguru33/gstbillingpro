@@ -1,3 +1,38 @@
+# GST Billing Pro
+
+Cloud GST billing, POS and GSTR-1/3B for Indian small businesses — <https://gst-billing-pro.pages.dev>
+Operated by **D Printers**, Chidambaram, Tamil Nadu · support@gstbillingpro.com · +91 94427 45754
+
+> GST Billing Pro is based on the open-source **Free GST Billing Software** by DiceCodes,
+> used under the [MIT licence](LICENSE) (original copyright notice retained).
+
+## Hosted (SaaS) setup
+
+| Piece | Where |
+|---|---|
+| Front-end | React + Vite PWA (`src/`), built with `npm run build` → `dist/` |
+| API | Cloudflare Pages Functions (`functions/api/*`), shared server code in `shared/` |
+| Data / auth | Supabase — schema in `supabase-setup.sql`, migrations in `supabase/migrations/` |
+| Payments | Razorpay orders + checkout; plans in `shared/plans.js` (single source of truth) |
+
+Environment variables are documented in [`.env.example`](.env.example). Server secrets
+(`SUPABASE_SERVICE_ROLE_KEY`, `RAZORPAY_KEY_SECRET`, `RAZORPAY_WEBHOOK_SECRET`) are set **only**
+in Cloudflare Pages → Settings → Variables and Secrets — never committed.
+
+```bash
+npm ci
+npm run test:unit      # tax, discounts, CSV, plans/payments, HSN summary, OCR parsing
+npm run build          # also regenerates public/data/catalogs (git-ignored, ~38 MB)
+```
+
+Legal pages (`public/terms.html`, `privacy.html`, `refund.html`, `contact.html`) are generated
+from `scripts/legal-pages.mjs` — edit there and run `node scripts/legal-pages.mjs`.
+
+---
+
+<details>
+<summary>Original upstream README (Free GST Billing Software)</summary>
+
 <div align="center">
 
 # Free GST Billing Software — 100% Free, No Subscription, No Limits
@@ -863,3 +898,5 @@ This project is licensed under the [MIT License](LICENSE) — free to use, modif
 Made in India 🇮🇳 · [DiceCodes](https://dicecodes.com)
 
 </div>
+
+</details>

@@ -2,12 +2,12 @@ import { useState, useEffect, useMemo } from 'react';
 import { FileText, Trash2, Plus, IndianRupee, Receipt, Edit3, TrendingUp, Search, Copy, X, CheckCircle, Clock, AlertTriangle, MessageCircle, Mail, StickyNote, Send, Package, Download, Printer, Ban, Zap } from 'lucide-react';
 import HelpButton from './HelpButton';
 import { getAllBills, saveBill, deleteBill, getAllProducts, applyStockChanges, getProfile, getAllClients, getStockAlertSettings, saveReceipt, deleteReceipt, getAllReceipts } from '../store';
-import { formatCurrency, INVOICE_TYPES, getFYOptions, numberToWords, belongsToProfile, salesSign, isCancelledBill, markPaidPatch, stockEffect, appliedStock, stockDelta, SALES_INVOICE_TYPES } from '../utils';
-import { openWhatsAppShare } from '../utils/share';
+import { formatCurrency, INVOICE_TYPES, getFYOptions, numberToWords, belongsToProfile, salesSign, isCancelledBill, markPaidPatch, stockEffect, appliedStock, stockDelta, SALES_INVOICE_TYPES, localDateISO } from '../utils';
+import { shareOnWhatsApp } from '../utils/share';
 import PageHeader from './PageHeader';
 import SupportNudge from './SupportNudge';
 import { toast } from './Toast';
-import { confirmAction } from './ConfirmModal';
+import { confirmAction, promptAction } from './ConfirmModal';
 
 // v1.10.13 — `bg` values switched from opaque tints (#fffbeb / #f5f3ff /
 // etc.) to translucent alpha versions of the accent color. Reason:
@@ -155,6 +155,38 @@ function ReceiptModal({ target, onClose }) {
   );
 }
 
+// Type badge text. Unknown / legacy types (e.g. 'regular' from old demo
+// data or POS bills) used to render an empty badge.
+const LEGACY_TYPE_ALIASES = { regular: 'tax-invoice', invoice: 'tax-invoice', 'tax_invoice': 'tax-invoice', pos: 'tax-invoice', estimate: 'proforma' };
+const invoiceTypeLabel = (type) => {
+  const key = type || 'tax-invoice';
+  return INVOICE_TYPES[key]?.label
+    || INVOICE_TYPES[LEGACY_TYPE_ALIASES[key]]?.label
+    || String(key).replace(/[-_]+/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
+};
+
+// The status a row actually shows: 'overdue' is never stored, it is an
+// unpaid/partial sale past its due date; a bill whose payments cover the
+// total counts as paid even if its stored status lagged behind.
+const effectiveStatus = (b) => {
+  const stored = b.status || 'unpaid';
+  if (stored === 'cancelled' || stored === 'paid') return stored;
+  const total = Number(b.totalAmount) || 0;
+  const paid = Number(b.paidAmount) || 0;
+  if (total > 0 && paid >= total - 0.005) return 'paid';
+  return paid > 0 ? 'partial' : stored;
+};
+const isOverdueBill = (b) => {
+  const st = effectiveStatus(b);
+  const due = b.data?.details?.dueDate;
+  return SALES_INVOICE_TYPES.includes(b.invoiceType || 'tax-invoice')
+    && st !== 'paid' && st !== 'cancelled' && !!due && new Date(due) < new Date();
+};
+const statusMatchesFilter = (b, filter) => {
+  if (filter === 'overdue') return isOverdueBill(b) || (b.status || '') === 'overdue';
+  return effectiveStatus(b) === filter;
+};
+
 export default function Dashboard({ onNew, onEdit, onDuplicate, onConvert, onOpenProducts, onOpenSettings, onOpenGuide, onOpenSupport, activeProfile, onOpenPOS }) {
   // v1.10.64 — requested (#55, @sangwanmail-eng): "An invoice belonging to one
   // company should not appear under the other."
@@ -280,7 +312,7 @@ export default function Dashboard({ onNew, onEdit, onDuplicate, onConvert, onOpe
   const loadBills = async () => {
     try {
       const data = await getAllBills();
-      const today = new Date().toISOString().split('T')[0];
+      const today = localDateISO();
 
       // v1.10.41 — Orphaned-payment reconciliation. Reported: user
       // recorded a payment in an older version — the receipt file
@@ -414,7 +446,7 @@ export default function Dashboard({ onNew, onEdit, onDuplicate, onConvert, onOpe
       result = result.filter(b => b.billType === 'non-gst' || b.isNonGst || b.invoiceType === 'estimate');
     }
     if (typeFilter !== 'all') result = result.filter(b => (b.invoiceType || 'tax-invoice') === typeFilter);
-    if (statusFilter !== 'all') result = result.filter(b => (b.status || 'unpaid') === statusFilter);
+    if (statusFilter !== 'all') result = result.filter(b => statusMatchesFilter(b, statusFilter));
     if (fyFilter !== 'all') {
       const fy = fyOptions.find(f => f.value === fyFilter);
       if (fy) result = result.filter(b => b.invoiceDate >= fy.from && b.invoiceDate <= fy.to);
@@ -511,7 +543,7 @@ export default function Dashboard({ onNew, onEdit, onDuplicate, onConvert, onOpe
 
   const openPaymentModal = (bill) => {
     setPaymentModal(bill);
-    setPaymentInput({ amount: '', date: new Date().toISOString().split('T')[0], mode: 'bank-transfer', note: '' });
+    setPaymentInput({ amount: '', date: localDateISO(), mode: 'bank-transfer', note: '' });
   };
 
   const recordPayment = async () => {
@@ -634,7 +666,7 @@ export default function Dashboard({ onNew, onEdit, onDuplicate, onConvert, onOpe
       bill, idx,
       form: {
         amount: String(target.amount || ''),
-        date: target.date || new Date().toISOString().split('T')[0],
+        date: target.date || localDateISO(),
         mode: target.mode || 'bank-transfer',
         note: target.note || '',
       },
@@ -792,7 +824,7 @@ export default function Dashboard({ onNew, onEdit, onDuplicate, onConvert, onOpe
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `freegstbill-bills-${sel.length}-${new Date().toISOString().split('T')[0]}.json`;
+    a.download = `freegstbill-bills-${sel.length}-${localDateISO()}.json`;
     a.click();
     URL.revokeObjectURL(url);
     toast(`Exported ${sel.length} invoice${sel.length !== 1 ? 's' : ''} as JSON`, 'success');
@@ -885,7 +917,7 @@ export default function Dashboard({ onNew, onEdit, onDuplicate, onConvert, onOpe
       if (window.__fgsbBulkAbort) { toast(`Aborted after ${ok} of ${sel.length}`, 'warning'); }
       window.__fgsbBulkAbort = false;
       if (ok === 0) { toast('Could not generate any PDFs', 'error'); return; }
-      const filename = `freegstbill-invoices-${ok}-${new Date().toISOString().split('T')[0]}.pdf`;
+      const filename = `freegstbill-invoices-${ok}-${localDateISO()}.pdf`;
       doc.save(filename);
       toast(`Exported ${ok} of ${sel.length} invoices`, 'success');
     } catch (e) {
@@ -1032,7 +1064,7 @@ export default function Dashboard({ onNew, onEdit, onDuplicate, onConvert, onOpe
         sessionStorage.setItem('fgsb_whatsappDesktopExplained', '1');
       }
     } catch { /* sessionStorage sandboxed — skip */ }
-    openWhatsAppShare(bill.clientPhone, msg);
+    shareOnWhatsApp({ phone: bill.clientPhone || bill.data?.client?.phone, message: msg, ask: promptAction, customerName: bill.clientName }).catch(() => {});
   };
 
   const shareEmail = (bill) => {
@@ -1083,7 +1115,7 @@ export default function Dashboard({ onNew, onEdit, onDuplicate, onConvert, onOpe
       : isOverdueDate
         ? `Hi ${clientName}, this is a gentle reminder that Invoice ${bill.invoiceNumber} for ${outstandingStr} was due on ${dueDate}. Kindly arrange the payment at your earliest convenience. Thank you! - ${businessName}`
         : `Hi ${clientName}, this is a gentle reminder about the pending payment of ${outstandingStr} on Invoice ${bill.invoiceNumber}. Kindly arrange the payment at your earliest convenience. Thank you! - ${businessName}`;
-    openWhatsAppShare(clientPhone, msg);
+    shareOnWhatsApp({ phone: clientPhone, message: msg, ask: promptAction, customerName: clientName }).catch(() => {});
   };
 
   const getClientPhone = (bill) => {
@@ -1586,7 +1618,7 @@ export default function Dashboard({ onNew, onEdit, onDuplicate, onConvert, onOpe
               </thead>
               <tbody>
                 {filtered.map(bill => {
-                  const status = bill.status || 'unpaid';
+                  const status = effectiveStatus(bill);
                   const sc = STATUS_CONFIG[status] || STATUS_CONFIG.unpaid;
                   // v1.10.76 (#83) - only real sales get paid, so only they get the
                   // Paid / Unpaid / Partial menu (and can be overdue).
@@ -1603,7 +1635,7 @@ export default function Dashboard({ onNew, onEdit, onDuplicate, onConvert, onOpe
                       </td>
                       {visibleColumns.date && <td className="text-muted">{new Date(bill.invoiceDate).toLocaleDateString('en-IN')}</td>}
                       {visibleColumns.invoice && <td><span className="invoice-badge">{bill.invoiceNumber}</span></td>}
-                      {visibleColumns.type && <td><span className="type-badge">{(INVOICE_TYPES[bill.invoiceType || 'tax-invoice'])?.label}</span></td>}
+                      {visibleColumns.type && <td><span className="type-badge">{invoiceTypeLabel(bill.invoiceType)}</span></td>}
                       {visibleColumns.client && <td className="font-medium td-client" title={bill.clientName}>
                         {bill.clientName}
                         {bill.data?.internalNote && (

@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { Receipt, Plus, Trash2, Search, Printer, Pencil } from 'lucide-react';
 import { getAllReceipts, saveReceipt, deleteReceipt, getAllBills, getProfile, getNextInvoiceNumber, saveBill } from '../store';
-import { formatCurrency, numberToWords, belongsToProfile, isUnassignedToBusiness, countsAsSales } from '../utils';
+import { formatCurrency, numberToWords, belongsToProfile, isUnassignedToBusiness, countsAsSales, localDateISO } from '../utils';
 import UnassignedBanner from './UnassignedBanner';
 import { toast } from './Toast';
 import { confirmAction } from './ConfirmModal';
@@ -10,7 +10,7 @@ import HelpButton from './HelpButton';
 const PAYMENT_MODES = ['Bank Transfer', 'UPI', 'Cash', 'Cheque', 'Card', 'Other'];
 
 const emptyForm = {
-  date: new Date().toISOString().split('T')[0],
+  date: localDateISO(),
   receiptNo: '',
   clientName: '',
   clientAddress: '',
@@ -92,7 +92,7 @@ export default function ReceiptVoucher() {
   // id so the server upserts in place.
   const openEdit = (rcp) => {
     setForm({
-      date: rcp.date || new Date().toISOString().split('T')[0],
+      date: rcp.date || localDateISO(),
       receiptNo: rcp.receiptNo || '',
       clientName: rcp.clientName || '',
       clientAddress: rcp.clientAddress || '',

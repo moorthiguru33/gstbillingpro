@@ -657,8 +657,9 @@ console.log('\n[V73] Customize options, order details, Quotation, docs links');
   eq(INVOICE_TYPES.quotation.prefix, 'QUO', 'Quotations number as QUO');
   eq(salesSign({ invoiceType: 'quotation', totalAmount: 100 }), 0, 'A quotation is not a sale');
 
-  eq(docsLink('invoices#toolbar'), 'https://dicecodes.com/free-gst-software-documentation/invoices.html#toolbar', 'Help links go to the docs section');
-  eq(docsLink('index'), 'https://dicecodes.com/free-gst-software-documentation/', 'The docs home link');
+  // GST Billing Pro sends help links to the in-app Help & Support screen.
+  eq(docsLink('invoices#toolbar'), '/?view=support', 'Help links open Help & Support');
+  eq(docsLink('index'), '/?view=support', 'The docs home link opens Help & Support');
   eq(TCS_SECTIONS.some((t) => t.code === '206C(1H)'), false, '206C(1H) (omitted from 1 April 2025) is not offered on new invoices');
 }
 

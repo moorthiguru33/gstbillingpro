@@ -27,7 +27,7 @@ export default function SupportNudge({ invoiceCount, onOpen }) {
       style={{ padding: '0.9rem 1.25rem', marginBottom: '1.25rem', display: 'flex', gap: '0.9rem', alignItems: 'center', flexWrap: 'wrap' }}>
       <Heart size={22} style={{ color: '#e11d48', flexShrink: 0 }} />
       <div style={{ flex: '1 1 260px', minWidth: 0 }}>
-        <div style={{ fontWeight: 700 }}>{milestone}+ invoices made with Free GST Billing</div>
+        <div style={{ fontWeight: 700 }}>{milestone}+ invoices made with GST Billing Pro</div>
         <div style={{ fontSize: '0.82rem', color: 'var(--text-muted)' }}>
           It's free and always will be. If it helps your business, you can help keep it going.
         </div>

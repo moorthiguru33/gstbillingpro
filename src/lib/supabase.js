@@ -73,16 +73,48 @@ export const getSession = async () => {
   return session;
 };
 
+/** Current Supabase access token (JWT), refreshed if needed; null if signed out. */
+export const getAccessToken = async () => {
+  const { data: { session } } = await supabase.auth.getSession();
+  return session?.access_token || null;
+};
+
+/**
+ * fetch() for our own /api/* functions, with the signed-in user's
+ * access token. The server verifies it with Supabase Auth — never send a
+ * bare user id as proof of identity.
+ */
+export const authFetch = async (url, options = {}) => {
+  const token = await getAccessToken();
+  const headers = new Headers(options.headers || {});
+  if (token) headers.set('Authorization', `Bearer ${token}`);
+  if (options.body && typeof options.body === 'string' && !headers.has('Content-Type')) {
+    headers.set('Content-Type', 'application/json');
+  }
+  return fetch(url, { ...options, headers });
+};
+
 // ---- Subscription Helpers ----
 
+/**
+ * Reads the user's subscription row. If none exists (accounts created
+ * before the signup trigger), asks the DATABASE to create the trial row
+ * (ensure_my_subscription RPC, see supabase/migrations/001). Trial dates
+ * therefore always come from the server, never from the browser clock.
+ * Throws on network / server errors so the caller can offer a retry.
+ */
 export const getSubscription = async (userId) => {
   const { data, error } = await supabase
     .from('subscriptions')
     .select('*')
     .eq('user_id', userId)
-    .single();
-  if (error && error.code !== 'PGRST116') throw error;
-  return data;
+    .maybeSingle();
+  if (error) throw error;
+  if (data) return data;
+
+  const { data: ensured, error: rpcError } = await supabase.rpc('ensure_my_subscription');
+  if (rpcError) throw rpcError;
+  return Array.isArray(ensured) ? (ensured[0] || null) : (ensured || null);
 };
 
 export const isSubscriptionActive = (sub) => {
