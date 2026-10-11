@@ -1,0 +1,3 @@
+{
+  "response": { "supplier": "D Printers", "gstin": "not visible", "invoiceNo": "<b>42</b>", "date": "31/02/2026", "customer": "Kumar", "items": [{ "name": "Visiting cards", "qty": "500", "rate": "1.5" }, { "name": "Flex banner", "qty": 2, "amount": "900" }], "totals": {} }
+}
