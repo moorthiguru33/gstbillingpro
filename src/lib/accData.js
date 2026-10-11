@@ -2,11 +2,12 @@
 // sync that derives auto vouchers from bills / purchases / expenses /
 // receipts. Books are kept per business profile (same rule as the rest of
 // the app: belongsToProfile), tagged with `biz` on every voucher.
-import { listRecords, upsertRecords, deleteRecords, newId } from './modData.js';
+import { listRecords, upsertRecords, deleteRecords, newId, tableReady } from './modData.js';
 import { activeRole } from './org.js';
 import { getAllBills, getAllPurchases, getAllExpenses, getAllReceipts } from '../store-supabase.js';
 import { belongsToProfile, countsAsSales, isCreditNote } from '../utils.js';
 import { deriveVouchers, planSync, fyStartYear, fyRange } from '../../shared/accounting.js';
+import { deriveDocVouchers, purchasesPaidByDocs } from '../../shared/txn.js';
 
 export const ACC_TABLES = ['acc_accounts', 'acc_vouchers'];
 export const canWriteBooks = () => ['owner', 'manager', 'accountant'].includes(activeRole());
@@ -52,7 +53,10 @@ export async function syncAutoVouchers({ biz, profile, stored, bankId }) {
   ]);
   const own = (r) => belongsToProfile(r, profile);
   const billKind = (b) => (countsAsSales(b) ? 'sale' : (isCreditNote(b) ? 'credit' : null));
-  const derived = deriveVouchers({ bills: bills.filter(own), purchases: purchases.filter(own), expenses: expenses.filter(own), receipts: receipts.filter(own), billKind, bankId })
+  // Payment-out, returns, cheques, cash and loans (migration 009) when present.
+  const docs = (await tableReady('biz_docs')) === 'ready' ? (await listRecords('biz_docs', { limit: 50000 }).catch(() => [])).filter(d => !d.biz || d.biz === biz) : [];
+  const derived = [...deriveVouchers({ bills: bills.filter(own), purchases: purchases.filter(own), expenses: expenses.filter(own), receipts: receipts.filter(own), billKind, bankId, paidByDocs: purchasesPaidByDocs(docs) }),
+    ...deriveDocVouchers(docs, { bankId })]
     .map(v => ({ ...v, id: v.id.replace(/^auto:/, `auto:${biz}:`), biz }));
   const { upserts, deletes } = planSync(derived, stored.filter(v => v.source === 'auto' && (v.biz === biz)));
   if (upserts.length) await upsertRecords('acc_vouchers', upserts, vCols);

@@ -47,6 +47,22 @@ export default function ReceiptVoucher() {
       setReceipts((recs || []).filter(r => belongsToProfile(r, prof)));
       setBills((bls || []).filter(b => belongsToProfile(b, prof)));
       setProfile(prof || {});
+      // Opened as "Payment-In" (phone menu / a bill card): start a new receipt,
+      // pre-filled for that invoice when one was given.
+      let ask = null;
+      try { ask = JSON.parse(sessionStorage.getItem('gbp_pay_in') || 'null'); sessionStorage.removeItem('gbp_pay_in'); } catch { ask = null; }
+      if (ask) {
+        const bill = ask.invoice && (bls || []).find(b => b.invoiceNumber === ask.invoice && belongsToProfile(b, prof));
+        let receiptNo = '';
+        try { receiptNo = await getNextInvoiceNumber('RCP', { peek: true }); } catch { receiptNo = ''; }
+        previewedNoRef.current = receiptNo;
+        setForm({
+          ...emptyForm, receiptNo,
+          ...(bill ? { clientName: bill.clientName || '', clientAddress: bill.data?.client?.address || '', amount: String(Math.max(0, bill.totalAmount - (bill.paidAmount || 0))), againstInvoice: bill.invoiceNumber || '' } : {}),
+        });
+        setEditingId(null);
+        setShowForm(true);
+      }
     } catch {
       toast('Failed to load data', 'error');
     }

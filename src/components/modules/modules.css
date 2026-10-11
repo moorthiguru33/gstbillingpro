@@ -61,3 +61,10 @@
 .mod-cal button.on-A { background: #fee2e2; border-color: #dc2626; }
 .mod-cal button.on-H { background: #fef3c7; border-color: #f59e0b; }
 .mod-cal button.on-L { background: #e0e7ff; border-color: #6366f1; }
+/* Business documents (orders): compact item lines */
+.txn-items { display: flex; flex-direction: column; gap: .5rem; margin-top: .75rem; }
+.txn-item { display: grid; grid-template-columns: 1fr 64px 84px 72px 40px; gap: .35rem; align-items: center; }
+.txn-item .form-input { min-width: 0; padding-left: .45rem; padding-right: .3rem; }
+@media (max-width: 480px) { .txn-item { grid-template-columns: 1fr 1fr 1fr 40px; } .txn-item .txn-item-name { grid-column: 1 / -1; } }
+.txn-total { display: flex; justify-content: space-between; font-size: 1rem; padding: .5rem 0; border-top: 1px solid var(--border, #e2e8f0); }
+.mod-check { flex-direction: row !important; align-items: center; gap: .5rem !important; }

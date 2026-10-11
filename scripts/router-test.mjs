@@ -187,4 +187,14 @@ await test('previousRoute for in-app back buttons', async () => {
   assert.equal(h.f.idx(), 1, 'All settings pops back');
 });
 
+await test('phone pages: insights, menu, docs, preferences, profile, items', async () => {
+  assert.deepEqual(pathToRoute('/app/insights'), { view: 'insights', sub: '' });
+  assert.deepEqual(pathToRoute('/app/menu'), { view: 'menu', sub: '' });
+  assert.deepEqual(pathToRoute('/app/docs/cheques'), { view: 'txn', sub: 'cheques' });
+  assert.equal(routeToPath({ view: 'txn', sub: 'loans' }), '/app/docs/loans');
+  assert.deepEqual(pathToRoute('/app/preferences/print'), { view: 'prefs', sub: 'print' });
+  assert.deepEqual(pathToRoute('/app/business-profile'), { view: 'profile', sub: '' });
+  assert.deepEqual(pathToRoute('/app/items/manage'), { view: 'inventory', sub: 'manage' });
+});
+
 console.log(`router-test: ${n} groups passed`);

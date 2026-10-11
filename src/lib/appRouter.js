@@ -33,9 +33,14 @@ export const VIEW_SEGMENTS = {
   crm: 'crm',
   accounts: 'accounts',
   payroll: 'payroll',
+  insights: 'insights',
+  menu: 'menu',
+  txn: 'docs',
+  prefs: 'preferences',
+  profile: 'business-profile',
 };
 // Views with their own sub pages (/app/<view>/<sub>): module screens.
-export const SUB_VIEWS = ['settings', 'store', 'crm', 'accounts', 'payroll'];
+export const SUB_VIEWS = ['settings', 'store', 'crm', 'accounts', 'payroll', 'txn', 'prefs', 'inventory'];
 const SEGMENT_VIEWS = Object.fromEntries(Object.entries(VIEW_SEGMENTS).map(([v, s]) => [s, v]));
 const SUB_RE = /^[a-z0-9-]{1,40}$/;
 

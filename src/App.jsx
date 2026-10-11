@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useMemo, lazy, Suspense } from 'react';
-import { Home, Store, FileText, Settings, Plus, Users, Package, BarChart3, Wallet, RefreshCw, Receipt, BookOpen, Moon, Sun, Download, X, ShoppingCart, ChevronDown, Building2, Pencil, HelpCircle, Search, Command, Bell, Calculator, Menu, Heart, LogOut, Zap, Target, Landmark, Briefcase } from 'lucide-react';
+import { Home, Store, FileText, Settings, Plus, Users, Package, BarChart3, Wallet, RefreshCw, Receipt, BookOpen, Moon, Sun, Download, X, ShoppingCart, ChevronDown, Building2, Pencil, HelpCircle, Search, Command, Bell, Calculator, Menu, Heart, LogOut, Zap, Target, Landmark, Briefcase, ArrowDownLeft, ArrowUpRight, ClipboardList, FileSignature, Undo2 } from 'lucide-react';
 import { getAllProfiles, saveProfile, getProfile, getEnabledModules, getAllBills, getAllProducts, getStockAlertSettings, getAllClients, runUpdateNow, setDemoMode, isDemoModeActive, getMetaValue, processDueRecurring } from './store';
 import { isModuleEnabled, getUpcomingFilings, isCancelledBill, DOCS_URL, localDateISO } from './utils';
 // SaaS Auth + Subscription
@@ -49,11 +49,19 @@ const OnlineStore = lazy(() => import('./components/store/OnlineStore'));
 const CrmView = lazy(() => import('./components/crm/CrmView'));
 const AccountingView = lazy(() => import('./components/accounting/AccountingView'));
 const PayrollView = lazy(() => import('./components/payroll/PayrollView'));
+const TxnView = lazy(() => import('./components/txn/TxnView'));
+const PhoneInsights = lazy(() => import('./components/mobile/PhoneInsights'));
+const PhoneItems = lazy(() => import('./components/mobile/PhoneItems'));
+const PhoneMenu = lazy(() => import('./components/mobile/PhoneMenu'));
+const PhoneSettings = lazy(() => import('./components/mobile/PhoneSettings'));
+const BusinessProfile = lazy(() => import('./components/mobile/BusinessProfile'));
 import StarBanner from './components/StarBanner';
 import AppFooter from './components/AppFooter';
 import { getPrintSettings } from './utils/printSettings';
 import { t as tr } from './i18n';
 import BottomTabBar from './components/mobile/BottomTabBar';
+import PhoneHome from './components/mobile/PhoneHome';
+import useIsPhone from './components/mobile/useIsPhone';
 import BottomSheet from './components/mobile/BottomSheet';
 import useMobileEnhancements from './components/mobile/useMobileEnhancements';
 import { WINDOWS_DOWNLOAD_URL, ANDROID_DOWNLOAD_URL } from './lib/appLinks';
@@ -101,7 +109,7 @@ function BillingApp({ authUser, onSignOut, isDemoMode, onExitDemo }) {
       const params = new URLSearchParams(window.location.search);
       const v = params.get('view');
       // v1.10.74 - 'controlpanel' added so ?view=controlpanel deep links work too.
-      const valid = ['dashboard', 'new', 'pos', 'clients', 'inventory', 'expenses', 'purchases', 'recurring', 'receipts', 'reports', 'filing', 'incometax', 'settings', ...(IS_DESKTOP_BUILD ? ['controlpanel'] : []), 'support'];
+      const valid = ['dashboard', 'new', 'pos', 'clients', 'inventory', 'expenses', 'purchases', 'recurring', 'receipts', 'reports', 'filing', 'incometax', 'settings', ...(IS_DESKTOP_BUILD ? ['controlpanel'] : []), 'support', 'insights', 'menu', 'txn', 'prefs', 'profile'];
       if (v && valid.includes(v)) {
         // Strip the query string so a refresh doesn't keep snapping back to
         // the shortcut target — only the *first* navigation honours it.
@@ -521,6 +529,18 @@ function BillingApp({ authUser, onSignOut, isDemoMode, onExitDemo }) {
     setTimeout(() => document.getElementById('invoice-list')?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 250);
   };
   const goMobile = (view) => { setMobileSheet(null); setBillsTab(false); if (view === 'bills') openBillsList(); else setCurrentView(view); };
+  // Open any screen with its sub page (phone menu, settings links, KPI cards).
+  const go = (view, sub = '') => {
+    setMobileSheet(null);
+    if (view === 'dashboard' && sub === 'bills') { openBillsList(); return; }
+    setBillsTab(false);
+    if (view === 'settings') setSettingsPage(sub || 'home');
+    else if (SUB_VIEWS.includes(view)) setModuleSub(sub || '');
+    setCurrentView(view);
+    document.querySelector('.main-content')?.scrollTo({ top: 0 });
+  };
+  const isPhone = useIsPhone();
+  const [, setPrefsTick] = useState(0);
   const closeNavAfterPick = (e) => {
     const picked = e.target.closest('button');
     if (picked && !picked.classList.contains('profile-switcher-btn')) setNavOpen(false);
@@ -529,14 +549,24 @@ function BillingApp({ authUser, onSignOut, isDemoMode, onExitDemo }) {
   // v1.10.76 - a fresh editor for every invoice opened, so nothing (such as
   // the stock record of the last invoice) carries over to the next one.
   const [editorKey, setEditorKey] = useState(0);
+  // Document type the next fresh editor opens as (credit note, quotation …).
+  const [presetType, setPresetType] = useState(null);
   const handleNewInvoice = () => {
+    setPresetType(null);
     setEditorKey((k) => k + 1);
     sessionStorage.removeItem('gst_invoiceDraft');
     setEditingBill(null);
     setCurrentView('new');
   };
 
+  const newDoc = (type) => { handleNewInvoice(); if (type && type !== 'tax-invoice') setPresetType(type); };
+  // Payment-In: the receipts screen opens a new receipt (for this bill, if given).
+  const payIn = (bill) => {
+    try { sessionStorage.setItem('gbp_pay_in', JSON.stringify({ invoice: bill?.invoiceNumber || '' })); } catch { /* ignore */ }
+    go('receipts');
+  };
   const handleEditInvoice = (bill) => {
+    setPresetType(null);
     setEditorKey((k) => k + 1);
     sessionStorage.removeItem('gst_invoiceDraft');
     setEditingBill(bill);
@@ -544,6 +574,7 @@ function BillingApp({ authUser, onSignOut, isDemoMode, onExitDemo }) {
   };
 
   const handleDuplicateInvoice = (bill) => {
+    setPresetType(null);
     setEditorKey((k) => k + 1);
     sessionStorage.removeItem('gst_invoiceDraft');
     const clone = JSON.parse(JSON.stringify(bill));
@@ -885,9 +916,9 @@ function BillingApp({ authUser, onSignOut, isDemoMode, onExitDemo }) {
           <Bell size={20} />
           {notifTotal > 0 && <span className="mobile-badge">{notifTotal > 99 ? '99+' : notifTotal}</span>}
         </button>
-        <button type="button" className="mobile-topbar-btn" onClick={() => setNavOpen(true)}
-          aria-label={tr('nav.openMenu')} aria-expanded={navOpen}>
-          <Menu size={22} />
+        <button type="button" className="mobile-topbar-btn" onClick={() => (roleCanView('prefs') ? go('prefs') : go('menu'))}
+          aria-label={tr('nav.settings')} data-testid="top-settings">
+          <Settings size={21} />
         </button>
       </div>
       {navOpen && <div className="sidebar-backdrop" onClick={() => setNavOpen(false)} aria-hidden="true" />}
@@ -1110,7 +1141,12 @@ function BillingApp({ authUser, onSignOut, isDemoMode, onExitDemo }) {
           </div>
         )}
         {currentView !== 'new' && <StarBanner />}
-        {currentView === 'dashboard' && (
+        {currentView === 'dashboard' && isPhone && !billsTab && (
+          <PhoneHome key={businessKey} profile={profile} onNewSale={handleNewInvoice} onCreateMenu={() => setMobileSheet('new')}
+            onEditBill={handleEditInvoice} onDraft={handleDuplicateInvoice} onOpen={go} onAllBills={openBillsList}
+            onPaymentIn={roleCanView('receipts') && showIfModule('receipts') ? payIn : undefined} />
+        )}
+        {currentView === 'dashboard' && !(isPhone && !billsTab) && (
           <Dashboard onNew={handleNewInvoice} onEdit={handleEditInvoice} onDuplicate={handleDuplicateInvoice} onConvert={handleConvertToInvoice} onOpenProducts={() => setCurrentView('inventory')} onOpenSettings={() => setCurrentView('settings')} onOpenGuide={openDocs} onOpenSupport={() => setCurrentView('support')} activeProfile={profile} onOpenPOS={() => setCurrentView('pos')} onNavigate={goMobile} onOpenFollowUps={roleCanView('crm') ? () => { setModuleSub('followups'); setCurrentView('crm'); } : undefined} />
         )}
         {currentView === 'pos' && (
@@ -1125,7 +1161,7 @@ function BillingApp({ authUser, onSignOut, isDemoMode, onExitDemo }) {
         )}
         {currentView === 'new' && (
           <InvoiceGenerator
-            key={editorKey}
+            key={editorKey} presetType={presetType}
             onBack={() => { setEditingBill(null); goBackInApp(); }}
             profile={profile} editingBill={editingBill}
           />
@@ -1136,8 +1172,21 @@ function BillingApp({ authUser, onSignOut, isDemoMode, onExitDemo }) {
         {currentView === 'clients' && (
           <ClientsView onNew={handleNewInvoice} onEdit={handleEditInvoice} onDuplicate={handleDuplicateInvoice} />
         )}
-        {currentView === 'inventory' && (
-          <InventoryView />
+        {currentView === 'inventory' && (isPhone && moduleSub !== 'manage'
+          ? <PhoneItems onManage={() => go('inventory', 'manage')} />
+          : <InventoryView />)}
+        {currentView === 'insights' && <PhoneInsights key={businessKey} profile={profile} onOpen={go} />}
+        {currentView === 'menu' && (
+          <PhoneMenu can={roleCanView} show={showIfModule} go={go} newDoc={newDoc} payIn={() => payIn(null)}
+            darkMode={darkMode} onToggleDark={() => setDarkMode(d => !d)} onSignOut={handleSignOut} />
+        )}
+        {currentView === 'prefs' && (
+          <PhoneSettings sub={moduleSub} onSub={setModuleSub} go={go} darkMode={darkMode} onToggleDark={() => setDarkMode(d => !d)}
+            onChanged={() => setPrefsTick(n => n + 1)} canManage={!isStaffMode() || roleCanView('accounts')} />
+        )}
+        {currentView === 'profile' && <BusinessProfile onSaved={(p) => setProfile(p)} onOpenFull={() => go('settings', 'business')} />}
+        {currentView === 'txn' && (
+          <TxnView key={businessKey} sub={moduleSub} onSub={setModuleSub} profile={profile} onConvertSaleOrder={handleDuplicateInvoice} />
         )}
         {/* v1.10.66 (#64 item 1) — `key={businessKey}` remounts these screens
             when the business changes. Each reads the business once when it
@@ -1188,54 +1237,37 @@ function BillingApp({ authUser, onSignOut, isDemoMode, onExitDemo }) {
         )}
         </Suspense>
         {/* Brand + legal links footer: Dashboard only, so it never takes space on working screens. */}
-        {currentView === 'dashboard' && <AppFooter onOpenSupport={() => setCurrentView('support')} />}
+        {currentView === 'dashboard' && !isPhone && <AppFooter onOpenSupport={() => setCurrentView('support')} />}
       </div>
 
       {currentView !== 'new' && currentView !== 'pos' && (
         <BottomTabBar
-          active={mobileSheet === 'more' ? 'more' : currentView === 'dashboard' ? (billsTab ? 'bills' : 'home') : currentView === 'inventory' ? 'items' : 'more'}
-          onHome={() => { setBillsTab(false); setCurrentView('dashboard'); document.querySelector('.main-content')?.scrollTo({ top: 0, behavior: 'smooth' }); }}
-          onBills={openBillsList}
-          onNew={() => setMobileSheet('new')}
-          onItems={() => goMobile('inventory')}
-          onMore={() => setMobileSheet('more')}
+          active={currentView === 'dashboard' ? 'home' : currentView === 'insights' ? 'insights' : currentView === 'inventory' ? 'items' : 'menu'}
+          showInsights={roleCanView('insights')}
+          onHome={() => { go('dashboard'); }}
+          onInsights={() => go('insights')}
+          onItems={() => go('inventory')}
+          onMenu={() => go('menu')}
         />
       )}
       {mobileSheet === 'new' && (
         <BottomSheet title={tr('mobile.createNew')} onClose={() => setMobileSheet(null)}>
           <div className="msheet-grid">
             {[
-              { icon: FileText, label: tr('mobile.newInvoice'), run: () => { setMobileSheet(null); handleNewInvoice(); }, show: showIfModule('invoicing') },
-              { icon: Zap, label: tr('mobile.counterSale'), run: () => goMobile('pos'), show: true },
-              { icon: ShoppingCart, label: tr('mobile.purchase'), run: () => goMobile('purchases'), show: showIfModule('purchases') },
-              { icon: Wallet, label: tr('mobile.expense'), run: () => goMobile('expenses'), show: showIfModule('expenses') },
-              { icon: Receipt, label: tr('nav.receipts'), run: () => goMobile('receipts'), show: showIfModule('receipts') },
-              { icon: Users, label: tr('mobile.parties'), run: () => goMobile('clients'), show: showIfModule('clients') },
+              { icon: FileText, label: tr('ph.mSaleInvoice'), run: () => { setMobileSheet(null); handleNewInvoice(); }, show: showIfModule('invoicing') && roleCanView('new') },
+              { icon: Zap, label: tr('mobile.counterSale'), run: () => go('pos'), show: roleCanView('pos') },
+              { icon: ArrowDownLeft, label: tr('ph.mPaymentIn'), run: () => { setMobileSheet(null); payIn(null); }, show: showIfModule('receipts') && roleCanView('receipts') },
+              { icon: ShoppingCart, label: tr('mobile.purchase'), run: () => go('purchases'), show: showIfModule('purchases') && roleCanView('purchases') },
+              { icon: ArrowUpRight, label: tr('ph.mPaymentOut'), run: () => go('txn'), show: roleCanView('txn') },
+              { icon: Wallet, label: tr('mobile.expense'), run: () => go('expenses'), show: showIfModule('expenses') && roleCanView('expenses') },
+              { icon: FileSignature, label: tr('ph.mQuotation'), run: () => { setMobileSheet(null); newDoc('quotation'); }, show: showIfModule('invoicing') && roleCanView('new') },
+              { icon: ClipboardList, label: tr('ph.mSaleOrder'), run: () => go('txn', 'sale-order'), show: roleCanView('txn') },
+              { icon: Undo2, label: tr('ph.mSaleReturn'), run: () => { setMobileSheet(null); newDoc('credit-note'); }, show: showIfModule('invoicing') && roleCanView('new') },
             ].filter(a => a.show).map(a => (
               <button type="button" key={a.label} className="msheet-tile" onClick={a.run}>
                 <span className="msheet-tile-icon"><a.icon size={24} /></span><span>{a.label}</span>
               </button>
             ))}
-          </div>
-        </BottomSheet>
-      )}
-      {mobileSheet === 'more' && (
-        <BottomSheet title={tr('mobile.more')} onClose={() => setMobileSheet(null)}>
-          <div className="msheet-grid msheet-grid-4">
-            {navItems.filter(item => roleCanView(item.id) && !['dashboard'].includes(item.id)).map(item => (
-              <button type="button" key={item.id} className={`msheet-tile${currentView === item.id ? ' active' : ''}`}
-                onClick={() => { setMobileSheet(null); setBillsTab(false); if (item.onClick) item.onClick(); else setCurrentView(item.id); }}>
-                <span className="msheet-tile-icon"><item.icon size={24} /></span><span>{item.label}</span>
-              </button>
-            ))}
-            <button type="button" className="msheet-tile" onClick={() => goMobile('settings')}><span className="msheet-tile-icon"><Settings size={24} /></span><span>{tr('nav.settings')}</span></button>
-            <button type="button" className="msheet-tile" onClick={() => goMobile('support')}><span className="msheet-tile-icon"><Heart size={24} /></span><span>{tr('nav.support')}</span></button>
-            <button type="button" className="msheet-tile" onClick={() => { setMobileSheet(null); setDarkMode(!darkMode); }}><span className="msheet-tile-icon">{darkMode ? <Sun size={24} /> : <Moon size={24} />}</span><span>{darkMode ? 'Light' : 'Dark'}</span></button>
-          </div>
-          <div className="msheet-links">
-            <a className="btn btn-secondary" href={ANDROID_DOWNLOAD_URL} target="_blank" rel="noopener noreferrer"><Download size={18} /> {tr('mobile.getAndroid')}</a>
-            <a className="btn btn-secondary" href={WINDOWS_DOWNLOAD_URL} target="_blank" rel="noopener noreferrer"><Download size={18} /> {tr('mobile.downloadWindows')}</a>
-            <button type="button" className="btn btn-secondary" onClick={() => { setMobileSheet(null); handleSignOut(); }}><LogOut size={18} /> {tr('mobile.signOut')}</button>
           </div>
         </BottomSheet>
       )}
