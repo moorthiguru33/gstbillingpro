@@ -1,4 +1,6 @@
 import { supabase } from './lib/supabase.js';
+import { reportPlanLimit } from './lib/planState';
+import { t as i18nT } from './i18n';
 import { getFinancialYearLabel } from './utils.js';
 import { DEMO_PROFILE, DEMO_CLIENTS, DEMO_PRODUCTS, DEMO_BILLS, DEMO_EXPENSES, DEMO_LAST_INVOICE_SEQ } from './data/demoData.js';
 import { normalizeProduct } from './utils/products.js';
@@ -277,6 +279,17 @@ export const getNextInvoiceNumber = async (prefix = 'INV', { peek = false, expli
   return formatInvoiceNumber(actualPrefix, next, settings);
 };
 
+// Free-plan limits are enforced by database triggers (migration 002). Turn
+// their error into a readable one and let the UI open the upgrade modal.
+function planLimitError(error) {
+  const kind = reportPlanLimit(error);
+  if (!kind) return error;
+  const err = new Error(i18nT(kind === 'invoices' ? 'plans.limitTitle' : 'plans.businessLimitTitle'));
+  err.code = 'PLAN_LIMIT';
+  err.planLimit = kind;
+  return err;
+}
+
 // ---- Bills ----
 export const saveBill = async (bill, { overwrite = false } = {}) => {
   if (_demoMode) {
@@ -322,7 +335,7 @@ export const saveBill = async (bill, { overwrite = false } = {}) => {
   };
 
   const { error } = await supabase.from('bills').upsert(row, { onConflict: 'id,user_id' });
-  if (error) throw error;
+  if (error) throw planLimitError(error);
   return { success: true };
 };
 
@@ -917,7 +930,7 @@ export const saveBusinessProfile = async (profile) => {
     data: profile,
     updated_at: new Date().toISOString(),
   }, { onConflict: 'id,user_id' });
-  if (error) throw error;
+  if (error) throw planLimitError(error);
   return profile;
 };
 

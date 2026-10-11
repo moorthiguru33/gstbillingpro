@@ -24,6 +24,7 @@ function getAccentRGB() {
   return [30, 64, 175];
 }
 import ClientModal from './ClientModal';
+import { t as tr } from '../i18n';
 
 const STATUS_COLORS = {
   unpaid: { label: 'Unpaid', color: '#f59e0b', bg: '#fffbeb' },
@@ -720,7 +721,7 @@ export default function ClientsView({ onEdit, onDuplicate, onNew }) {
       <div className="page-header">
         <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
           <div>
-            <h1 className="page-title">Clients</h1>
+            <h1 className="page-title">{tr('clients.title')}</h1>
             <p className="page-subtitle">Client-wise invoice ledger and outstanding</p>
           </div>
           <HelpButton title="Clients — how to use" doc="clients">
@@ -740,7 +741,7 @@ export default function ClientsView({ onEdit, onDuplicate, onNew }) {
             <Upload size={16} /> Import CSV
           </button>
           <button className="btn btn-secondary" onClick={() => openAddClient()}>
-            <Plus size={18} /> Add Client
+            <Plus size={18} /> {tr('clients.add')}
           </button>
           <button className="btn btn-primary" onClick={onNew}>
             <FileText size={18} /> New Invoice
@@ -766,9 +767,9 @@ export default function ClientsView({ onEdit, onDuplicate, onNew }) {
         <div className="glass-panel p-6">
           <div className="empty-state">
             <Users size={48} />
-            <p>No clients found.</p>
+            <p>{tr('clients.none')}</p>
             <button className="btn btn-secondary" onClick={() => openAddClient()} style={{ marginTop: '0.5rem' }}>
-              <Plus size={16} /> Add Your First Client
+              <Plus size={16} /> {tr('clients.addFirst')}
             </button>
           </div>
         </div>

@@ -6,6 +6,7 @@ import { toast } from './Toast';
 import HelpButton from './HelpButton';
 import PartyOutstandingReport from './PartyOutstandingReport';
 import { billCurrency } from '../utils/partyOutstanding';
+import { t as tr } from '../i18n';
 
 const MONTHS = [
   'January', 'February', 'March', 'April', 'May', 'June',
@@ -174,7 +175,7 @@ export default function ReportsView() {
       <div className="page-header">
         <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
           <div>
-            <h1 className="page-title">Reports</h1>
+            <h1 className="page-title">{tr('reports.title')}</h1>
             <p className="page-subtitle">Financial reports and receivables analysis</p>
           </div>
           <HelpButton title="Reports — how to use" doc="reports">
