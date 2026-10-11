@@ -4,6 +4,7 @@ import HelpButton from './HelpButton';
 import { getAllClients, getAllBills, deleteClient, saveClient, deleteBill, saveBill, getProfile } from '../store';
 import { formatCurrency, INVOICE_TYPES, markPaidPatch, salesSign, countsAsSales, isCancelledBill, localDateISO } from '../utils';
 import { getPrintSettings } from '../utils/printSettings';
+import { billShareMessage, reminderMessage } from '../lib/billLink';
 import { shareOnWhatsApp } from '../utils/share';
 import { confirmAction, promptAction } from './ConfirmModal';
 import { toast } from './Toast';
@@ -703,9 +704,22 @@ export default function ClientsView({ onEdit, onDuplicate, onNew }) {
     }
   };
 
-  const shareWhatsApp = (bill) => {
-    const msg = `*Invoice ${bill.invoiceNumber}*\nAmount: ${formatCurrency(bill.totalAmount)}\nDate: ${new Date(bill.invoiceDate).toLocaleDateString('en-IN')}\nStatus: ${(bill.status || 'unpaid').toUpperCase()}`;
+  const shareWhatsApp = async (bill) => {
+    const msg = await billShareMessage(bill, profileForStatement || bill.data?.profile, null);
     shareOnWhatsApp({ phone: bill.clientPhone || bill.data?.client?.phone, message: msg, ask: promptAction, customerName: bill.clientName }).catch(() => {});
+  };
+
+  // Phase 3: polite payment-due reminder for everything a client owes.
+  const sendDueReminder = async (clientName) => {
+    const { unpaidBills, buckets } = getClientAging(clientName);
+    if (buckets.total <= 0.01) { toast(tr('reminder.nothingDue'), 'info'); return; }
+    const client = clients.find(c => c.name === clientName);
+    const phone = client?.phone || unpaidBills.find(u => u.bill.clientPhone || u.bill.data?.client?.phone)?.bill.clientPhone || unpaidBills[0]?.bill.data?.client?.phone;
+    const message = await reminderMessage({
+      clientName, business: profileForStatement?.businessName, amount: buckets.total,
+      invoices: unpaidBills.slice(0, 8).map(u => u.bill.invoiceNumber),
+    });
+    shareOnWhatsApp({ phone, message, ask: promptAction, customerName: clientName }).catch(() => {});
   };
 
   const shareEmail = (bill) => {
@@ -839,6 +853,12 @@ export default function ClientsView({ onEdit, onDuplicate, onNew }) {
                         title="Aging report: outstanding invoices bucketed by how overdue they are">
                         <Download size={14} /> Aging PDF
                       </button>
+                      {getClientAging(clientName).buckets.total > 0.01 && (
+                        <button className="btn btn-primary" style={{ fontSize: '0.78rem', padding: '0.35rem 0.75rem', background: '#25D366', borderColor: '#25D366' }}
+                          onClick={() => sendDueReminder(clientName)} title={tr('reminder.buttonHint')}>
+                          <MessageCircle size={14} /> {tr('reminder.button')}
+                        </button>
+                      )}
                     </div>
 
                     {/* v1.10.22 — Aging summary strip: shows the four

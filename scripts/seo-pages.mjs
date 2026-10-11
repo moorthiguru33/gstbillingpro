@@ -119,6 +119,7 @@ files['public/robots.txt'] = `User-agent: *
 Allow: /
 Disallow: /admin
 Disallow: /api/
+Disallow: /b/
 
 Sitemap: ${SITE}/sitemap.xml
 `;

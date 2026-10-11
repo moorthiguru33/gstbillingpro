@@ -88,4 +88,11 @@ export const hasChosenLanguage = () => { try { return Boolean(localStorage.getIt
 
 /** Plain function for code outside React render (toasts, alerts, configs). */
 export const t = (key, opts) => i18n.t(key, opts);
+
+/** Translate into a specific language (e.g. the customer's), loading it first. */
+export async function tIn(lng, key, opts) {
+  const code = LANGUAGE_CODES.includes(lng) ? lng : currentLanguage();
+  try { await i18n.loadLanguages(code); } catch { /* fall back to English */ }
+  return i18n.getFixedT(code)(key, opts);
+}
 export default i18n;
