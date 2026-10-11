@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { Search, Camera, Plus } from 'lucide-react';
+import { Search, ScanBarcode, Plus } from 'lucide-react';
 import BottomSheet from './BottomSheet';
 import { formatCurrency } from '../../utils';
 import { t as tr } from '../../i18n';
@@ -20,7 +20,7 @@ export default function QuickAddSheet({ products, onPick, onScan, onBlank, voice
         <input type="search" value={q} onChange={e => setQ(e.target.value)} placeholder={tr('mobile.searchItems')} autoFocus enterKeyHint="search" />
       </div>
       <div className="mqa-tools">
-        <button type="button" className="btn btn-secondary" onClick={onScan}><Camera size={18} /> {tr('mobile.scan')}</button>
+        <button type="button" className="btn btn-secondary" onClick={onScan}><ScanBarcode size={18} /> {tr('mobile.scan')}</button>
         {voice}
         <button type="button" className="btn btn-secondary" onClick={onBlank}><Plus size={18} /> {tr('mobile.blankLine')}</button>
       </div>

@@ -7,6 +7,8 @@
 .mobile-only { display: none !important; }
 .mtabbar, .msheet-backdrop { display: none; }
 .lbl-short { display: none; }
+/* live barcode scanner is full screen on every device */
+.modal-overlay.scanner-overlay { align-items: stretch !important; justify-content: stretch !important; padding: 0 !important; backdrop-filter: none !important; }
 
 @media (max-width: 768px) {
   :root { --mtab-h: 64px; --mtop-h: 56px; --safe-b: env(safe-area-inset-bottom, 0px); }

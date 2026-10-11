@@ -1,10 +1,11 @@
 import { useState, useEffect, useRef } from 'react';
-import { Package, Search, Plus, Edit3, Trash2, X, Save, Upload, Sparkles, Barcode } from 'lucide-react';
+import { Package, Search, Plus, Edit3, Trash2, X, Save, Upload, Sparkles, Barcode, ScanBarcode } from 'lucide-react';
 import { getAllProducts, saveProduct, saveProductsBatch, deleteProduct, getProfile, getStockAlertSettings } from '../store';
 import { getAllUnits, getCountryConfig, formatCurrency } from '../utils';
 import { STARTER_CATALOG } from '../data/starterCatalog';
 import MasterCatalogModal from './MasterCatalogModal';
 import QuickStockModal from './QuickStockModal';
+import BarcodeScannerModal from './BarcodeScannerModal';
 import { toast } from './Toast';
 import { confirmAction } from './ConfirmModal';
 import HelpButton from './HelpButton';
@@ -28,6 +29,7 @@ export default function InventoryView() {
   const [showForm, setShowForm] = useState(false);
   const [editingId, setEditingId] = useState(null);
   const [form, setForm] = useState({ ...emptyForm });
+  const [showBarcodeCam, setShowBarcodeCam] = useState(false);
   const [units, setUnits] = useState(getAllUnits());
   const [profileCountry, setProfileCountry] = useState('India');
   const profileCurrency = getCountryConfig(profileCountry).currency;
@@ -314,8 +316,16 @@ export default function InventoryView() {
               </div>
               <div className="form-group">
                 <label className="form-label">{i18nT('ui.barcodeEanOptional')}</label>
-                <input type="text" className="form-input" value={form.barcode || ''}
-                  onChange={e => updateField('barcode', e.target.value)} placeholder="e.g. 8901030123456" />
+                <div style={{ display: 'flex', gap: '0.5rem' }}>
+                  <input type="text" className="form-input" value={form.barcode || ''} style={{ flex: 1, minWidth: 0 }}
+                    onChange={e => updateField('barcode', e.target.value)} placeholder="e.g. 8901030123456" />
+                  <button type="button" className="btn btn-secondary" onClick={() => setShowBarcodeCam(true)}
+                    title={i18nT('scan.title')} aria-label={i18nT('scan.title')}><ScanBarcode size={18} /></button>
+                </div>
+                {showBarcodeCam && (
+                  <BarcodeScannerModal mode="single" onClose={() => setShowBarcodeCam(false)}
+                    onScan={(code) => updateField('barcode', code)} />
+                )}
               </div>
               {/* v1.10.29 — Purchase price + selling price side by side.
                   Selling price seeds the invoice rate; purchase price seeds

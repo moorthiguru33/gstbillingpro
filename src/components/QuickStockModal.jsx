@@ -1,9 +1,10 @@
 import { useState, useEffect, useRef } from 'react';
-import { X, Barcode, Camera, Plus, Check, ArrowRight, Package, AlertCircle } from 'lucide-react';
+import { X, Barcode, ScanBarcode, Plus, Check, ArrowRight, Package, AlertCircle } from 'lucide-react';
 import { getAllProducts, saveProduct } from '../store';
 import { formatCurrency } from '../utils';
 import { toast } from './Toast';
 import BarcodeScannerModal from './BarcodeScannerModal';
+import { t as tr } from '../i18n';
 
 export default function QuickStockModal({ isOpen, onClose, onStockUpdated }) {
   const [products, setProducts] = useState([]);
@@ -238,10 +239,11 @@ export default function QuickStockModal({ isOpen, onClose, onStockUpdated }) {
                 type="button"
                 onClick={() => setShowCameraScanner(true)}
                 className="btn btn-secondary"
-                title="Use Mobile Camera"
+                title={tr('scan.title')}
+                aria-label={tr('scan.title')}
                 style={{ padding: '0.5rem 0.8rem' }}
               >
-                <Camera size={18} />
+                <ScanBarcode size={18} />
               </button>
 
               <button
@@ -461,7 +463,8 @@ export default function QuickStockModal({ isOpen, onClose, onStockUpdated }) {
         <BarcodeScannerModal
           isOpen={showCameraScanner}
           onClose={() => setShowCameraScanner(false)}
-          onDetected={handleBarcodeScanned}
+          mode="single"
+          onScan={handleBarcodeScanned}
         />
       )}
     </div>

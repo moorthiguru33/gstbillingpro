@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useMemo } from 'react';
 import {
-  Zap, Search, Barcode, Camera, Plus, Minus, Trash2, Printer,
+  Zap, Search, Barcode, ScanBarcode, Plus, Minus, Trash2, Printer,
   CheckCircle, ArrowRight, RefreshCw, X, CreditCard, Banknote,
   QrCode, UserPlus, Phone, FileText, ShoppingCart, PauseCircle,
   PlayCircle, Package, DollarSign, TrendingUp, AlertCircle, Calendar,
@@ -13,6 +13,7 @@ import { shareOnWhatsApp } from '../utils/share';
 import { promptAction } from './ConfirmModal';
 import { toast } from './Toast';
 import BarcodeScannerModal from './BarcodeScannerModal';
+import { findProductByCode } from '../lib/scanner';
 import QuickStockModal from './QuickStockModal';
 import MasterCatalogModal from './MasterCatalogModal';
 import InvoicePreview from './InvoicePreview';
@@ -264,7 +265,7 @@ export default function QuickPOS({ onBackToDashboard, onPrintInvoice }) {
       const existingIdx = prev.findIndex((item) => item.id === product.id);
       if (existingIdx >= 0) {
         const updated = [...prev];
-        updated[existingIdx].qty += qty;
+        updated[existingIdx] = { ...updated[existingIdx], qty: updated[existingIdx].qty + qty };
         return updated;
       }
       const price = Number(product.sellingPrice || product.rate || product.price || 0);
@@ -292,9 +293,9 @@ export default function QuickPOS({ onBackToDashboard, onPrintInvoice }) {
   };
 
   // Barcode scanned from hardware reader or camera
-  const handleBarcodeScanned = (code) => {
+  const handleBarcodeScanned = (code, productOverride, opts = {}) => {
     const raw = String(code).trim();
-    if (!raw) return;
+    if (!raw) return { ok: false };
 
     // Check for multiplier: e.g. 5*8901030 or 8901030*5
     let scanQty = 1;
@@ -310,20 +311,15 @@ export default function QuickPOS({ onBackToDashboard, onPrintInvoice }) {
       }
     }
 
-    const trimmed = targetCode.toLowerCase();
-    const match = products.find(
-      (p) =>
-        (p.barcode && p.barcode.toLowerCase() === trimmed) ||
-        (p.id && String(p.id).toLowerCase() === trimmed) ||
-        (p.name && p.name.toLowerCase() === trimmed)
-    );
+    const match = productOverride || findProductByCode(products, targetCode);
 
     if (match) {
       addToCart(match, scanQty);
-      toast(`Added ${match.name} (x${scanQty})`, 'success', 2000);
-    } else {
-      toast(`Barcode ${raw} not found in catalog`, 'error', 3000);
+      if (!opts.fromScanner) toast(`Added ${match.name} (x${scanQty})`, 'success', 2000);
+      return { ok: true, name: scanQty > 1 ? `${match.name} ×${scanQty}` : match.name, price: match.sellingPrice ?? match.rate ?? 0 };
     }
+    if (!opts.fromScanner) toast(`Barcode ${raw} not found in catalog`, 'error', 3000);
+    return { ok: false };
   };
 
   // Handle Search Input Arrow Keys & Enter navigation
@@ -1169,7 +1165,7 @@ export default function QuickPOS({ onBackToDashboard, onPrintInvoice }) {
               display: 'flex', alignItems: 'center', gap: 5,
             }}
           >
-            <Camera size={15} /> {i18nT('ui.camera')}
+            <ScanBarcode size={15} /> {i18nT('scan.scanButton')}
           </button>
 
           {onBackToDashboard && (
@@ -2134,6 +2130,7 @@ export default function QuickPOS({ onBackToDashboard, onPrintInvoice }) {
           isOpen={showScanner}
           onClose={() => setShowScanner(false)}
           onScan={handleBarcodeScanned}
+          onProductCreated={(p) => setProducts(prev => [p, ...prev])}
         />
       )}
 
