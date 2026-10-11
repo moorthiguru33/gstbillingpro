@@ -6,6 +6,7 @@ import UnassignedBanner from './UnassignedBanner';
 import { toast } from './Toast';
 import { confirmAction } from './ConfirmModal';
 import HelpButton from './HelpButton';
+import { t as i18nT } from '../i18n';
 
 // Each category is tagged with its ITR (Income Tax Return) head so the
 // v1.7.0+ ITR Filing Summary can auto-aggregate expenses under the correct
@@ -107,7 +108,7 @@ export default function ExpenseTracker() {
       // always shown, so nothing disappears from an existing ledger.
       setExpenses((rows || []).filter(r => belongsToProfile(r, prof)));
     } catch {
-      toast('Failed to load expenses', 'error');
+      toast(i18nT('ui.failedToLoadExpenses'), 'error');
     }
   };
 
@@ -168,11 +169,11 @@ export default function ExpenseTracker() {
   };
 
   const handleSave = async () => {
-    if (!form.description.trim()) { toast('Description is required', 'warning'); return; }
-    if (!form.amount || parseFloat(form.amount) <= 0) { toast('Enter a valid amount', 'warning'); return; }
+    if (!form.description.trim()) { toast(i18nT('ui.descriptionIsRequired'), 'warning'); return; }
+    if (!form.amount || parseFloat(form.amount) <= 0) { toast(i18nT('ui.enterAValidAmount'), 'warning'); return; }
     // v1.10.74 - GST % must be 0 to 100 (40% is a real rate, so no 28 cap).
     const gstPct = form.gstPercent === '' ? 0 : parseFloat(form.gstPercent);
-    if (!(gstPct >= 0 && gstPct <= 100)) { toast('GST % must be between 0 and 100', 'warning'); return; }
+    if (!(gstPct >= 0 && gstPct <= 100)) { toast(i18nT('ui.gstMustBeBetween0And'), 'warning'); return; }
     try {
       const expense = {
         ...(editingId ? { id: editingId } : {}),
@@ -199,23 +200,23 @@ export default function ExpenseTracker() {
       closeForm();
       loadExpenses();
     } catch {
-      toast('Failed to save expense', 'error');
+      toast(i18nT('ui.failedToSaveExpense'), 'error');
     }
   };
 
   const handleDelete = async (id) => {
     if (await confirmAction({
-      title: 'Delete this expense?',
-      message: 'The row is removed from your expense ledger. Any GST ITC claimed against this bill in past returns stays as filed.',
-      confirmLabel: 'Delete',
+      title: i18nT('ui.deleteThisExpense'),
+      message: i18nT('ui.theRowIsRemovedFromYour'),
+      confirmLabel: i18nT('ui.delete'),
       tone: 'danger',
     })) {
       try {
         await deleteExpense(id);
-        toast('Expense deleted', 'success');
+        toast(i18nT('ui.expenseDeleted'), 'success');
         loadExpenses();
       } catch {
-        toast('Failed to delete', 'error');
+        toast(i18nT('ui.failedToDelete'), 'error');
       }
     }
   };
@@ -233,7 +234,7 @@ export default function ExpenseTracker() {
   });
 
   const exportCSV = () => {
-    if (filtered.length === 0) { toast('No expenses to export', 'warning'); return; }
+    if (filtered.length === 0) { toast(i18nT('ui.noExpensesToExport'), 'warning'); return; }
     const headers = ['Date', 'Description', 'Category', 'Amount', 'GST Amount', 'GST %', 'Vendor', 'Vendor GSTIN', 'Invoice No', 'Payment Mode', 'Inter-state', 'Note']; // v1.10.74 - Inter-state (Y/N) added
     // v1.10.66 (#63) — toCsvLine neutralises formula-like text and quotes
     // line breaks, which the old local escape let split a row in two.
@@ -246,7 +247,7 @@ export default function ExpenseTracker() {
     const a = document.createElement('a');
     a.href = url; a.download = 'expenses.csv'; a.click();
     URL.revokeObjectURL(url);
-    toast('Expenses CSV downloaded', 'success');
+    toast(i18nT('ui.expensesCsvDownloaded'), 'success');
   };
 
   return (
@@ -254,21 +255,21 @@ export default function ExpenseTracker() {
       <div className="page-header">
         <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
           <div>
-            <h1 className="page-title">Expenses</h1>
-            <p className="page-subtitle">Track business expenses for P&L and ITC claims</p>
+            <h1 className="page-title">{i18nT('ui.expenses')}</h1>
+            <p className="page-subtitle">{i18nT('ui.trackBusinessExpensesForPAnd')}</p>
           </div>
-          <HelpButton title="Expenses — how to use" doc="expenses">
+          <HelpButton title={i18nT('ui.expensesHowToUse')} doc="expenses">
             <ul style={{ paddingLeft: '1.1rem', margin: 0 }}>
-              <li>For costs that are not stock: rent, electricity, internet, software, travel, fees.</li>
-              <li><strong>Amount</strong> is what you paid, including GST. Enter the <strong>GST %</strong> and the GST inside it is worked out and counted as input tax credit.</li>
-              <li>Tick <strong>Inter-state expense</strong> when the vendor charged IGST.</li>
-              <li><strong>Export CSV</strong> gives your CA the list for the year shown.</li>
+              <li>{i18nT('ui.forCostsThatAreNotStock')}</li>
+              <li><strong>{i18nT('ui.amount')}</strong> {i18nT('ui.isWhatYouPaidIncludingGst')} <strong>GST %</strong> {i18nT('ui.andTheGstInsideItIs')}</li>
+              <li>{i18nT('ui.tick')} <strong>{i18nT('ui.interStateExpense')}</strong> {i18nT('ui.whenTheVendorChargedIgst')}</li>
+              <li><strong>{i18nT('ui.exportCsv')}</strong> {i18nT('ui.givesYourCaTheListFor')}</li>
             </ul>
           </HelpButton>
         </div>
         <div className="flex gap-2">
-          <button className="btn btn-secondary" onClick={exportCSV}><Download size={16} /> Export CSV</button>
-          <button className="btn btn-primary" onClick={openAdd}><Plus size={18} /> Add Expense</button>
+          <button className="btn btn-secondary" onClick={exportCSV}><Download size={16} /> {i18nT('ui.exportCsv')}</button>
+          <button className="btn btn-primary" onClick={openAdd}><Plus size={18} /> {i18nT('ui.addExpense')}</button>
         </div>
       </div>
 
@@ -283,15 +284,15 @@ export default function ExpenseTracker() {
       <div className="stats-grid" style={{ gridTemplateColumns: 'repeat(3, 1fr)' }}>
         <div className="stat-card">
           <div className="stat-icon stat-icon-purple"><Wallet size={22} /></div>
-          <div><p className="stat-label">Total Expenses</p><h2 className="stat-value stat-value-purple">{formatCurrency(totalAmount)}</h2></div>
+          <div><p className="stat-label">{i18nT('ui.totalExpenses')}</p><h2 className="stat-value stat-value-purple">{formatCurrency(totalAmount)}</h2></div>
         </div>
         <div className="stat-card">
           <div className="stat-icon stat-icon-green"><Calendar size={22} /></div>
-          <div><p className="stat-label">GST Paid (ITC)</p><h2 className="stat-value stat-value-green">{formatCurrency(totalGST)}</h2></div>
+          <div><p className="stat-label">{i18nT('ui.gstPaidItc')}</p><h2 className="stat-value stat-value-green">{formatCurrency(totalGST)}</h2></div>
         </div>
         <div className="stat-card">
           <div className="stat-icon stat-icon-blue"><Wallet size={22} /></div>
-          <div><p className="stat-label">Entries</p><h2 className="stat-value">{filtered.length}</h2></div>
+          <div><p className="stat-label">{i18nT('ui.entries')}</p><h2 className="stat-value">{filtered.length}</h2></div>
         </div>
       </div>
 
@@ -300,21 +301,21 @@ export default function ExpenseTracker() {
         <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap', alignItems: 'center' }}>
           <div className="search-box" style={{ maxWidth: '300px' }}>
             <Search size={16} className="search-icon" />
-            <input type="text" placeholder="Search expenses..." value={search}
+            <input type="text" placeholder={i18nT('ui.searchExpenses')} value={search}
               onChange={e => setSearch(e.target.value)} className="search-input" />
           </div>
           <select className="filter-select" value={categoryFilter} onChange={e => setCategoryFilter(e.target.value)}>
-            <option value="all">All Categories</option>
+            <option value="all">{i18nT('ui.allCategories')}</option>
             {CATEGORY_NAMES.map(c => <option key={c} value={c}>{c}</option>)}
           </select>
           <select className="filter-select" value={fyFilter} onChange={e => setFyFilter(e.target.value)}>
             {/* v1.10.74 - '' already means no FY filter. */}
-            <option value="">All years</option>
+            <option value="">{i18nT('ui.allYears')}</option>
             {fyOptions.map(fy => <option key={fy.value} value={fy.value}>{fy.label}</option>)}
           </select>
           {/* v1.10.74 - Clear filters also puts the FY back to the current one. */}
           {(search || categoryFilter !== 'all' || fyFilter !== defaultFy) && (
-            <button className="icon-btn icon-btn-red" onClick={() => { setSearch(''); setCategoryFilter('all'); setFyFilter(defaultFy); }} title="Clear filters" aria-label="Clear filters"><X size={15} /></button>
+            <button className="icon-btn icon-btn-red" onClick={() => { setSearch(''); setCategoryFilter('all'); setFyFilter(defaultFy); }} title={i18nT('ui.clearFilters')} aria-label={i18nT('ui.clearFilters')}><X size={15} /></button>
           )}
         </div>
       </div>
@@ -326,49 +327,49 @@ export default function ExpenseTracker() {
             <h3 className="section-title">{editingId ? 'Edit Expense' : 'Add Expense'}</h3>
             <div className="grid grid-cols-2 gap-4">
               <div className="form-group">
-                <label className="form-label">Date *</label>
+                <label className="form-label">{i18nT('ui.date2')}</label>
                 <input type="date" className="form-input" value={form.date} onChange={e => updateField('date', e.target.value)} />
               </div>
               <div className="form-group">
-                <label className="form-label">Category</label>
+                <label className="form-label">{i18nT('ui.category')}</label>
                 <select className="form-input" value={form.category} onChange={e => updateField('category', e.target.value)}>
                   {CATEGORY_NAMES.map(c => <option key={c} value={c}>{c}</option>)}
                 </select>
               </div>
               <div className="form-group" style={{ gridColumn: 'span 2' }}>
-                <label className="form-label">Description *</label>
+                <label className="form-label">{i18nT('ui.description2')}</label>
                 <input type="text" className="form-input" value={form.description}
-                  onChange={e => updateField('description', e.target.value)} placeholder="e.g. AWS Hosting - March" />
+                  onChange={e => updateField('description', e.target.value)} placeholder={i18nT('ui.eGAwsHostingMarch')} />
               </div>
               <div className="form-group">
-                <label className="form-label">Amount (incl. GST) *</label>
+                <label className="form-label">{i18nT('ui.amountInclGst')}</label>
                 <input type="number" className="form-input" value={form.amount}
                   onChange={e => updateAmountOrGST('amount', e.target.value)}
                   placeholder="0.00" min="0" />
               </div>
               <div className="form-group">
-                <label className="form-label">GST % (for ITC)</label>
+                <label className="form-label">{i18nT('ui.gstForItc')}</label>
                 <input type="number" className="form-input" value={form.gstPercent}
                   onChange={e => updateAmountOrGST('gstPercent', e.target.value)} placeholder="18" min="0" max="100" />
                 {form.gstAmount > 0 && <p className="field-hint">GST: {formatCurrency(form.gstAmount)}</p>}
               </div>
               <div className="form-group">
-                <label className="form-label">Vendor Name</label>
+                <label className="form-label">{i18nT('ui.vendorName')}</label>
                 <input type="text" className="form-input" value={form.vendorName}
-                  onChange={e => updateField('vendorName', e.target.value)} placeholder="Optional" />
+                  onChange={e => updateField('vendorName', e.target.value)} placeholder={i18nT('ui.optional')} />
               </div>
               <div className="form-group">
-                <label className="form-label">Vendor GSTIN</label>
+                <label className="form-label">{i18nT('ui.vendorGstin')}</label>
                 <input type="text" className="form-input" value={form.vendorGstin}
-                  onChange={e => updateField('vendorGstin', e.target.value)} placeholder="For ITC claim" maxLength={15} />
+                  onChange={e => updateField('vendorGstin', e.target.value)} placeholder={i18nT('ui.forItcClaim')} maxLength={15} />
               </div>
               <div className="form-group">
-                <label className="form-label">Invoice / Bill No</label>
+                <label className="form-label">{i18nT('ui.invoiceBillNo')}</label>
                 <input type="text" className="form-input" value={form.invoiceNo}
-                  onChange={e => updateField('invoiceNo', e.target.value)} placeholder="Optional" />
+                  onChange={e => updateField('invoiceNo', e.target.value)} placeholder={i18nT('ui.optional')} />
               </div>
               <div className="form-group">
-                <label className="form-label">Payment Mode</label>
+                <label className="form-label">{i18nT('ui.paymentMode')}</label>
                 <select className="form-input" value={form.paymentMode} onChange={e => updateField('paymentMode', e.target.value)}>
                   {PAYMENT_MODES.map(m => <option key={m} value={m}>{m}</option>)}
                 </select>
@@ -379,7 +380,7 @@ export default function ExpenseTracker() {
                     onChange={e => updateField('interstate', e.target.checked)}
                     style={{ width: 16, height: 16, accentColor: 'var(--primary)' }} />
                   <span>
-                    <strong>Inter-state expense</strong> — vendor charged IGST (different state)
+                    <strong>{i18nT('ui.interStateExpense')}</strong> {i18nT('ui.vendorChargedIgstDifferentState')}
                     <span style={{ color: '#94a3b8', fontSize: '0.72rem', display: 'block' }}>
                       Routes ITC to IGST in GSTR-3B. Common: AWS / Google / Adobe / SaaS billed from an out-of-state office. Tip: check the vendor's GSTIN — first 2 digits are their state code.
                     </span>
@@ -387,13 +388,13 @@ export default function ExpenseTracker() {
                 </label>
               </div>
               <div className="form-group" style={{ gridColumn: 'span 2' }}>
-                <label className="form-label">Note (optional)</label>
+                <label className="form-label">{i18nT('ui.noteOptional')}</label>
                 <input type="text" className="form-input" value={form.note}
-                  onChange={e => updateField('note', e.target.value)} placeholder="Any additional note..." />
+                  onChange={e => updateField('note', e.target.value)} placeholder={i18nT('ui.anyAdditionalNote')} />
               </div>
             </div>
             <div className="flex gap-2 justify-end mt-4">
-              <button className="btn btn-secondary" onClick={closeForm}>Cancel</button>
+              <button className="btn btn-secondary" onClick={closeForm}>{i18nT('ui.cancel')}</button>
               <button className="btn btn-primary" onClick={handleSave}><Save size={16} /> {editingId ? 'Update' : 'Save'}</button>
             </div>
           </div>
@@ -402,26 +403,26 @@ export default function ExpenseTracker() {
 
       {/* Expense Table */}
       <div className="glass-panel">
-        <div className="table-header"><h3>Expense Records</h3></div>
+        <div className="table-header"><h3>{i18nT('ui.expenseRecords')}</h3></div>
         {filtered.length === 0 ? (
           <div className="empty-state">
             <Wallet size={48} />
             <p>{expenses.length === 0 ? 'No expenses recorded yet.' : 'No expenses match your filters.'}</p>
-            {expenses.length === 0 && <button className="btn btn-primary" onClick={openAdd}><Plus size={18} /> Add Expense</button>}
+            {expenses.length === 0 && <button className="btn btn-primary" onClick={openAdd}><Plus size={18} /> {i18nT('ui.addExpense')}</button>}
           </div>
         ) : (
           <div className="table-scroll">
             <table className="data-table" style={{ minWidth: '800px' }}>
               <thead>
                 <tr>
-                  <th>Date</th>
-                  <th>Description</th>
-                  <th>Category</th>
-                  <th>Vendor</th>
-                  <th style={{ textAlign: 'right' }}>Amount</th>
+                  <th>{i18nT('ui.date')}</th>
+                  <th>{i18nT('ui.description')}</th>
+                  <th>{i18nT('ui.category')}</th>
+                  <th>{i18nT('ui.vendor')}</th>
+                  <th style={{ textAlign: 'right' }}>{i18nT('ui.amount')}</th>
                   <th style={{ textAlign: 'right' }}>GST</th>
-                  <th>Mode</th>
-                  <th>Actions</th>
+                  <th>{i18nT('ui.mode')}</th>
+                  <th>{i18nT('ui.actions')}</th>
                 </tr>
               </thead>
               <tbody>
@@ -436,8 +437,8 @@ export default function ExpenseTracker() {
                     <td className="text-muted">{exp.paymentMode}</td>
                     <td>
                       <div className="table-actions">
-                        <button className="icon-btn icon-btn-blue" onClick={() => openEdit(exp)} title="Edit"><Edit3 size={15} /></button>
-                        <button className="icon-btn icon-btn-red" onClick={() => handleDelete(exp.id)} title="Delete"><Trash2 size={15} /></button>
+                        <button className="icon-btn icon-btn-blue" onClick={() => openEdit(exp)} title={i18nT('ui.edit2')}><Edit3 size={15} /></button>
+                        <button className="icon-btn icon-btn-red" onClick={() => handleDelete(exp.id)} title={i18nT('ui.delete')}><Trash2 size={15} /></button>
                       </div>
                     </td>
                   </tr>
@@ -445,7 +446,7 @@ export default function ExpenseTracker() {
               </tbody>
               <tfoot>
                 <tr style={{ fontWeight: 'bold', borderTop: '2px solid var(--border)' }}>
-                  <td colSpan={4}>Total</td>
+                  <td colSpan={4}>{i18nT('ui.total')}</td>
                   <td style={{ textAlign: 'right' }}>{formatCurrency(totalAmount)}</td>
                   <td style={{ textAlign: 'right' }}>{formatCurrency(totalGST)}</td>
                   <td colSpan={2}></td>

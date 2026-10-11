@@ -6,6 +6,7 @@ import { Download, Printer, Wallet } from 'lucide-react';
 import { getFinancialYearStart, toCsvLine } from '../utils';
 import { periodMonths, partyOutstanding, billCurrency } from '../utils/partyOutstanding';
 import { toast } from './Toast';
+import { t as i18nT } from '../i18n';
 
 const esc = (s) => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 const amt = (n) => (n ? n.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : '');
@@ -31,22 +32,22 @@ export default function PartyOutstandingReport({ bills, businessName }) {
   const totals = [...(hasEarlier ? [earlierTotal] : []), ...months.map((m) => colTotal(m.key)), grandTotal];
 
   const exportCsv = () => {
-    if (!rows.length) { toast('Nothing outstanding to export', 'warning'); return; }
+    if (!rows.length) { toast(i18nT('ui.nothingOutstandingToExport'), 'warning'); return; }
     const lines = [toCsvLine(heads), ...rows.map((r) => toCsvLine([r.name, ...cells(r).map((n) => n.toFixed(2))])),
       toCsvLine(['Total', ...totals.map((n) => n.toFixed(2))])];
     const url = URL.createObjectURL(new Blob([lines.join('\n')], { type: 'text/csv;charset=utf-8;' }));
     const a = document.createElement('a');
     a.href = url; a.download = `Party-Outstanding-${periodLabel.replace(/\s+/g, '_')}.csv`; a.click();
     URL.revokeObjectURL(url);
-    toast('Party outstanding CSV downloaded', 'success');
+    toast(i18nT('ui.partyOutstandingCsvDownloaded'), 'success');
   };
 
   // A plain page of its own, so the browser's Print (or Save as PDF) gets the
   // table alone, landscape, without the app around it.
   const print = () => {
-    if (!rows.length) { toast('Nothing outstanding to print', 'warning'); return; }
+    if (!rows.length) { toast(i18nT('ui.nothingOutstandingToPrint'), 'warning'); return; }
     const w = window.open('', '_blank');
-    if (!w) { toast('Allow pop-ups for this page to print the report', 'error'); return; }
+    if (!w) { toast(i18nT('ui.allowPopUpsForThisPage'), 'error'); return; }
     const tr = (label, nums, bold) => `<tr${bold ? ' class="t"' : ''}><td>${esc(label)}</td>${nums.map((n) => `<td class="n">${amt(n)}</td>`).join('')}</tr>`;
     w.document.write(`<!doctype html><html><head><meta charset="utf-8"><title>Party Outstanding ${esc(periodLabel)}</title><style>
       @page { size: A4 landscape; margin: 10mm; } body { font: 10px Arial, sans-serif; color: #000; }
@@ -68,29 +69,29 @@ export default function PartyOutstandingReport({ bills, businessName }) {
   return (
     <div className="glass-panel">
       <div className="table-header" style={{ flexWrap: 'wrap', gap: '0.75rem' }}>
-        <h3>Party outstanding by month</h3>
+        <h3>{i18nT('ui.partyOutstandingByMonth')}</h3>
         <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', alignItems: 'center' }}>
-          <select className="form-input" style={{ width: 'auto' }} value={mode} aria-label="Months"
+          <select className="form-input" style={{ width: 'auto' }} value={mode} aria-label={i18nT('ui.months')}
             onChange={(e) => { setMode(e.target.value); setYear(e.target.value === 'fy' ? getFinancialYearStart() : thisYear); }}>
-            <option value="fy">Financial year (Apr-Mar)</option>
-            <option value="calendar">Calendar year (Jan-Dec)</option>
+            <option value="fy">{i18nT('ui.financialYearAprMar')}</option>
+            <option value="calendar">{i18nT('ui.calendarYearJanDec')}</option>
           </select>
-          <select className="form-input" style={{ width: 'auto' }} value={year} aria-label="Year" onChange={(e) => setYear(Number(e.target.value))}>
+          <select className="form-input" style={{ width: 'auto' }} value={year} aria-label={i18nT('ui.year')} onChange={(e) => setYear(Number(e.target.value))}>
             {years.map((y) => <option key={y} value={y}>{mode === 'fy' ? `FY ${y}-${String(y + 1).slice(-2)}` : y}</option>)}
           </select>
           {currencies.length > 1 && (
-            <select className="form-input" style={{ width: 'auto' }} value={cur} aria-label="Currency" onChange={(e) => setCurrency(e.target.value)}>
+            <select className="form-input" style={{ width: 'auto' }} value={cur} aria-label={i18nT('ui.currency')} onChange={(e) => setCurrency(e.target.value)}>
               {currencies.map((c) => <option key={c} value={c}>{c}</option>)}
             </select>
           )}
-          <button className="btn btn-secondary" onClick={print}><Printer size={16} /> Print / PDF</button>
+          <button className="btn btn-secondary" onClick={print}><Printer size={16} /> {i18nT('ui.printPdf')}</button>
           <button className="btn btn-secondary" onClick={exportCsv}><Download size={16} /> CSV</button>
         </div>
       </div>
       {rows.length === 0 ? (
         <div className="empty-state">
           <Wallet size={48} />
-          <p>Nobody owes you anything for {periodLabel}.</p>
+          <p>{i18nT('ui.nobodyOwesYouAnythingFor')} {periodLabel}.</p>
         </div>
       ) : (
         <div className="table-scroll">
@@ -108,7 +109,7 @@ export default function PartyOutstandingReport({ bills, businessName }) {
                 </tr>
               ))}
               <tr style={{ fontWeight: 700, background: 'var(--bg-secondary)' }}>
-                <td style={pin('left')}>Total</td>
+                <td style={pin('left')}>{i18nT('ui.total')}</td>
                 {totals.map((n, i) => <td key={i} style={i === last ? { ...num, ...pin('right') } : num}>{amt(n) || '-'}</td>)}
               </tr>
             </tbody>

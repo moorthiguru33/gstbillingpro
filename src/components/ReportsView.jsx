@@ -7,6 +7,7 @@ import HelpButton from './HelpButton';
 import PartyOutstandingReport from './PartyOutstandingReport';
 import { billCurrency } from '../utils/partyOutstanding';
 import { t as tr } from '../i18n';
+import { t as i18nT } from '../i18n';
 
 const MONTHS = [
   'January', 'February', 'March', 'April', 'May', 'June',
@@ -48,7 +49,7 @@ export default function ReportsView() {
       setExpenses((expData || []).filter(e => belongsToProfile(e, prof)));
       setBusinessName(prof?.businessName || '');
     } catch {
-      toast('Failed to load data', 'error');
+      toast(i18nT('ui.failedToLoadData'), 'error');
     }
   };
 
@@ -176,15 +177,15 @@ export default function ReportsView() {
         <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
           <div>
             <h1 className="page-title">{tr('reports.title')}</h1>
-            <p className="page-subtitle">Financial reports and receivables analysis</p>
+            <p className="page-subtitle">{i18nT('ui.financialReportsAndReceivablesAnalysis')}</p>
           </div>
-          <HelpButton title="Reports — how to use" doc="reports">
+          <HelpButton title={i18nT('ui.reportsHowToUse')} doc="reports">
             <ul style={{ paddingLeft: '1.1rem', margin: 0 }}>
-              <li><strong>Profit &amp; Loss</strong>: sales against expenses, without GST, by year or month.</li>
-              <li><strong>Outstanding &amp; Aging</strong>: who owes you and how late, in 30-day groups.</li>
-              <li><strong>Party Outstanding</strong>: what each party owes, month by month (April-March or January-December), with totals. Print or CSV.</li>
-              <li><strong>Client Analytics</strong> and <strong>Product Performance</strong>: your best clients and items.</li>
-              <li>Only real sales count: estimates, challans and cancelled invoices are left out, credit notes are subtracted.</li>
+              <li><strong>{i18nT('ui.profitAndLoss')}</strong>{i18nT('ui.salesAgainstExpensesWithoutGstBy')}</li>
+              <li><strong>{i18nT('ui.outstandingAndAging')}</strong>{i18nT('ui.whoOwesYouAndHowLate')}</li>
+              <li><strong>{i18nT('ui.partyOutstanding')}</strong>{i18nT('ui.whatEachPartyOwesMonthBy')}</li>
+              <li><strong>{i18nT('ui.clientAnalytics')}</strong> {i18nT('ui.and')} <strong>{i18nT('ui.productPerformance')}</strong>{i18nT('ui.yourBestClientsAndItems')}</li>
+              <li>{i18nT('ui.onlyRealSalesCountEstimatesChallans')}</li>
             </ul>
           </HelpButton>
         </div>
@@ -194,23 +195,23 @@ export default function ReportsView() {
       <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '1.25rem', flexWrap: 'wrap' }}>
         <button className={`btn ${activeTab === 'pl' ? 'btn-primary' : 'btn-secondary'}`}
           onClick={() => setActiveTab('pl')}>
-          <BarChart3 size={16} /> Profit & Loss
+          <BarChart3 size={16} /> {i18nT('ui.profitAndLoss')}
         </button>
         <button className={`btn ${activeTab === 'aging' ? 'btn-primary' : 'btn-secondary'}`}
           onClick={() => setActiveTab('aging')}>
-          <Clock size={16} /> Outstanding & Aging
+          <Clock size={16} /> {i18nT('ui.outstandingAndAging')}
         </button>
         <button className={`btn ${activeTab === 'party' ? 'btn-primary' : 'btn-secondary'}`}
           onClick={() => setActiveTab('party')}>
-          <Users size={16} /> Party Outstanding
+          <Users size={16} /> {i18nT('ui.partyOutstanding')}
         </button>
         <button className={`btn ${activeTab === 'clients' ? 'btn-primary' : 'btn-secondary'}`}
           onClick={() => setActiveTab('clients')}>
-          <Users size={16} /> Client Analytics
+          <Users size={16} /> {i18nT('ui.clientAnalytics')}
         </button>
         <button className={`btn ${activeTab === 'products' ? 'btn-primary' : 'btn-secondary'}`}
           onClick={() => setActiveTab('products')}>
-          <Package size={16} /> Product Performance
+          <Package size={16} /> {i18nT('ui.productPerformance')}
         </button>
       </div>
 
@@ -220,15 +221,15 @@ export default function ReportsView() {
           <div className="glass-panel" style={{ padding: '1.25rem', marginBottom: '1.5rem' }}>
             <div style={{ display: 'flex', gap: '1rem', alignItems: 'flex-end', flexWrap: 'wrap' }}>
               <div className="form-group" style={{ margin: 0 }}>
-                <label className="form-label">Filter By</label>
+                <label className="form-label">{i18nT('ui.filterBy')}</label>
                 <select className="form-input" value={filterMode} onChange={e => setFilterMode(e.target.value)}>
-                  <option value="fy">Fiscal Year</option>
-                  <option value="month">Month / Year</option>
+                  <option value="fy">{i18nT('ui.fiscalYear')}</option>
+                  <option value="month">{i18nT('ui.monthYear')}</option>
                 </select>
               </div>
               {filterMode === 'fy' ? (
                 <div className="form-group" style={{ margin: 0 }}>
-                  <label className="form-label">Fiscal Year</label>
+                  <label className="form-label">{i18nT('ui.fiscalYear')}</label>
                   <select className="form-input" value={fyFilter} onChange={e => setFyFilter(e.target.value)}>
                     {fyOptions.map(fy => <option key={fy.value} value={fy.value}>{fy.label}</option>)}
                   </select>
@@ -236,13 +237,13 @@ export default function ReportsView() {
               ) : (
                 <>
                   <div className="form-group" style={{ margin: 0 }}>
-                    <label className="form-label">Month</label>
+                    <label className="form-label">{i18nT('ui.month')}</label>
                     <select className="form-input" value={monthFilter} onChange={e => setMonthFilter(e.target.value)}>
                       {MONTHS.map((m, i) => <option key={i} value={i}>{m}</option>)}
                     </select>
                   </div>
                   <div className="form-group" style={{ margin: 0 }}>
-                    <label className="form-label">Year</label>
+                    <label className="form-label">{i18nT('ui.year')}</label>
                     <select className="form-input" value={yearFilter} onChange={e => setYearFilter(e.target.value)}>
                       {yearOptions.map(y => <option key={y} value={y}>{y}</option>)}
                     </select>
@@ -251,7 +252,7 @@ export default function ReportsView() {
               )}
               {allCurrencies.length > 1 && (
                 <div className="form-group" style={{ margin: 0 }}>
-                  <label className="form-label">Currency</label>
+                  <label className="form-label">{i18nT('ui.currency')}</label>
                   <select className="form-input" value={currencyFilter} onChange={e => setCurrencyFilter(e.target.value)}>
                     {allCurrencies.map(c => <option key={c} value={c}>{c}</option>)}
                   </select>
@@ -267,35 +268,35 @@ export default function ReportsView() {
           <div className="stats-grid" style={{ gridTemplateColumns: 'repeat(4, 1fr)', marginBottom: '1.5rem' }}>
             <div className="stat-card">
               <div className="stat-icon stat-icon-green"><TrendingUp size={22} /></div>
-              <div><p className="stat-label">Revenue (ex. tax)</p><h2 className="stat-value stat-value-green">{formatCurrency(revenueExTax, currencyFilter)}</h2></div>
+              <div><p className="stat-label">{i18nT('ui.revenueExTax')}</p><h2 className="stat-value stat-value-green">{formatCurrency(revenueExTax, currencyFilter)}</h2></div>
             </div>
             <div className="stat-card">
               <div className="stat-icon stat-icon-purple"><TrendingDown size={22} /></div>
-              <div><p className="stat-label">Expenses (ex. GST)</p><h2 className="stat-value stat-value-purple">{formatCurrency(expenseExGST, currencyFilter)}</h2></div>
+              <div><p className="stat-label">{i18nT('ui.expensesExGst')}</p><h2 className="stat-value stat-value-purple">{formatCurrency(expenseExGST, currencyFilter)}</h2></div>
             </div>
             <div className="stat-card">
               <div className="stat-icon" style={{ background: netProfit >= 0 ? 'var(--success-light)' : 'var(--danger-light)', color: netProfit >= 0 ? 'var(--success)' : 'var(--danger)' }}>
                 <Wallet size={22} />
               </div>
               <div>
-                <p className="stat-label">Net {netProfit >= 0 ? 'Profit' : 'Loss'}</p>
+                <p className="stat-label">{i18nT('ui.net')} {netProfit >= 0 ? 'Profit' : 'Loss'}</p>
                 {/* v1.10.74 - a loss shows a minus sign, not just red colour */}
                 <h2 className="stat-value" style={{ color: netProfit >= 0 ? 'var(--success)' : 'var(--danger)' }}>{formatCurrency(netProfit, currencyFilter)}</h2>
               </div>
             </div>
             <div className="stat-card">
               <div className="stat-icon stat-icon-blue"><BarChart3 size={22} /></div>
-              <div><p className="stat-label">Margin</p><h2 className="stat-value">{revenueExTax > 0 ? Math.round((netProfit / revenueExTax) * 100) : 0}%</h2></div>
+              <div><p className="stat-label">{i18nT('ui.margin')}</p><h2 className="stat-value">{revenueExTax > 0 ? Math.round((netProfit / revenueExTax) * 100) : 0}%</h2></div>
             </div>
           </div>
 
           {/* P&L Statement */}
           <div className="glass-panel" style={{ marginBottom: '1.5rem' }}>
             <div className="table-header">
-              <h3>Profit & Loss Statement</h3>
+              <h3>{i18nT('ui.profitAndLossStatement')}</h3>
               {allCurrencies.length > 1 && (
                 <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)', fontWeight: 400 }}>
-                  Showing {currencyFilter} invoices only
+                  {i18nT('ui.showing')} {currencyFilter} {i18nT('ui.invoicesOnly')}
                 </span>
               )}
             </div>
@@ -303,32 +304,32 @@ export default function ReportsView() {
               <table style={{ width: '100%', maxWidth: '500px', margin: '0 auto', borderCollapse: 'collapse' }}>
                 <tbody>
                   <tr style={{ borderBottom: '1px solid var(--border)' }}>
-                    <td style={{ padding: '0.6rem 0', fontWeight: 500, color: 'var(--text-secondary)' }}>Total Revenue</td>
+                    <td style={{ padding: '0.6rem 0', fontWeight: 500, color: 'var(--text-secondary)' }}>{i18nT('ui.totalRevenue')}</td>
                     <td style={{ padding: '0.6rem 0', textAlign: 'right', fontWeight: 600 }}>{formatCurrency(totalRevenue, currencyFilter)}</td>
                   </tr>
                   <tr style={{ borderBottom: '1px solid var(--border)' }}>
-                    <td style={{ padding: '0.6rem 0', fontWeight: 500, color: 'var(--text-secondary)' }}>Less: GST Collected</td>
+                    <td style={{ padding: '0.6rem 0', fontWeight: 500, color: 'var(--text-secondary)' }}>{i18nT('ui.lessGstCollected')}</td>
                     <td style={{ padding: '0.6rem 0', textAlign: 'right', color: '#dc2626' }}>-{formatCurrency(totalTaxCollected, currencyFilter)}</td>
                   </tr>
                   <tr style={{ borderBottom: '2px solid var(--border)' }}>
-                    <td style={{ padding: '0.6rem 0', fontWeight: 700 }}>Net Revenue</td>
+                    <td style={{ padding: '0.6rem 0', fontWeight: 700 }}>{i18nT('ui.netRevenue')}</td>
                     <td style={{ padding: '0.6rem 0', textAlign: 'right', fontWeight: 700 }}>{formatCurrency(revenueExTax, currencyFilter)}</td>
                   </tr>
                   <tr style={{ borderBottom: '1px solid var(--border)' }}>
-                    <td style={{ padding: '0.6rem 0', fontWeight: 500, color: 'var(--text-secondary)' }}>Total Expenses</td>
+                    <td style={{ padding: '0.6rem 0', fontWeight: 500, color: 'var(--text-secondary)' }}>{i18nT('ui.totalExpenses')}</td>
                     <td style={{ padding: '0.6rem 0', textAlign: 'right', fontWeight: 600 }}>{formatCurrency(totalExpenseAmount, currencyFilter)}</td>
                   </tr>
                   <tr style={{ borderBottom: '1px solid var(--border)' }}>
-                    <td style={{ padding: '0.6rem 0', fontWeight: 500, color: 'var(--text-secondary)' }}>Less: GST on Expenses (ITC)</td>
+                    <td style={{ padding: '0.6rem 0', fontWeight: 500, color: 'var(--text-secondary)' }}>{i18nT('ui.lessGstOnExpensesItc')}</td>
                     <td style={{ padding: '0.6rem 0', textAlign: 'right', color: '#059669' }}>-{formatCurrency(totalExpenseGST, currencyFilter)}</td>
                   </tr>
                   <tr style={{ borderBottom: '2px solid var(--border)' }}>
-                    <td style={{ padding: '0.6rem 0', fontWeight: 700 }}>Net Expenses</td>
+                    <td style={{ padding: '0.6rem 0', fontWeight: 700 }}>{i18nT('ui.netExpenses')}</td>
                     <td style={{ padding: '0.6rem 0', textAlign: 'right', fontWeight: 700 }}>{formatCurrency(expenseExGST, currencyFilter)}</td>
                   </tr>
                   <tr>
                     <td style={{ padding: '1rem 0', fontWeight: 800, fontSize: '1.1rem' }}>
-                      Net {netProfit >= 0 ? 'Profit' : 'Loss'}
+                      {i18nT('ui.net')} {netProfit >= 0 ? 'Profit' : 'Loss'}
                     </td>
                     <td style={{ padding: '1rem 0', textAlign: 'right', fontWeight: 800, fontSize: '1.25rem', color: netProfit >= 0 ? '#059669' : '#dc2626' }}>
                       {formatCurrency(netProfit, currencyFilter)}
@@ -342,14 +343,14 @@ export default function ReportsView() {
           {/* Monthly Breakdown */}
           {monthlyKeys.length > 0 && (
             <div className="glass-panel">
-              <div className="table-header"><h3>Monthly Breakdown</h3></div>
+              <div className="table-header"><h3>{i18nT('ui.monthlyBreakdown')}</h3></div>
               <div className="table-scroll">
                 <table className="data-table" style={{ minWidth: '600px' }}>
                   <thead><tr>
-                    <th>Month</th>
-                    <th style={{ textAlign: 'right' }}>Revenue</th>
-                    <th style={{ textAlign: 'right' }}>Expenses</th>
-                    <th style={{ textAlign: 'right' }}>Profit/Loss</th>
+                    <th>{i18nT('ui.month')}</th>
+                    <th style={{ textAlign: 'right' }}>{i18nT('ui.revenue')}</th>
+                    <th style={{ textAlign: 'right' }}>{i18nT('ui.expenses')}</th>
+                    <th style={{ textAlign: 'right' }}>{i18nT('ui.profitLoss')}</th>
                   </tr></thead>
                   <tbody>
                     {monthlyKeys.map(key => {
@@ -390,19 +391,19 @@ export default function ReportsView() {
               <div className="stats-grid" style={{ gridTemplateColumns: 'repeat(5, 1fr)' }}>
                 <div className="stat-card">
                   <div className="stat-icon stat-icon-blue"><Wallet size={22} /></div>
-                  <div><p className="stat-label">Total Outstanding</p><h2 className="stat-value">{formatCurrency(agingByCurrency[cur].total, cur)}</h2></div>
+                  <div><p className="stat-label">{i18nT('ui.totalOutstanding')}</p><h2 className="stat-value">{formatCurrency(agingByCurrency[cur].total, cur)}</h2></div>
                 </div>
                 <div className="stat-card">
-                  <div><p className="stat-label">Current (0-30d)</p><h2 className="stat-value stat-value-green">{formatCurrency(agingByCurrency[cur].current, cur)}</h2></div>
+                  <div><p className="stat-label">{i18nT('ui.current030d')}</p><h2 className="stat-value stat-value-green">{formatCurrency(agingByCurrency[cur].current, cur)}</h2></div>
                 </div>
                 <div className="stat-card">
-                  <div><p className="stat-label">31-60 days</p><h2 className="stat-value stat-value-amber">{formatCurrency(agingByCurrency[cur]['31to60'], cur)}</h2></div>
+                  <div><p className="stat-label">{i18nT('ui.n3160Days')}</p><h2 className="stat-value stat-value-amber">{formatCurrency(agingByCurrency[cur]['31to60'], cur)}</h2></div>
                 </div>
                 <div className="stat-card">
-                  <div><p className="stat-label">61-90 days</p><h2 className="stat-value stat-value-purple">{formatCurrency(agingByCurrency[cur]['61to90'], cur)}</h2></div>
+                  <div><p className="stat-label">{i18nT('ui.n6190Days')}</p><h2 className="stat-value stat-value-purple">{formatCurrency(agingByCurrency[cur]['61to90'], cur)}</h2></div>
                 </div>
                 <div className="stat-card">
-                  <div><p className="stat-label">90+ days</p><h2 className="stat-value" style={{ color: '#dc2626' }}>{formatCurrency(agingByCurrency[cur]['90plus'], cur)}</h2></div>
+                  <div><p className="stat-label">{i18nT('ui.n90Days')}</p><h2 className="stat-value" style={{ color: '#dc2626' }}>{formatCurrency(agingByCurrency[cur]['90plus'], cur)}</h2></div>
                 </div>
               </div>
             </div>
@@ -421,7 +422,7 @@ export default function ReportsView() {
           <div className="glass-panel p-4 mb-6" style={{ marginTop: '1rem', marginBottom: '1rem' }}>
             <div className="search-box" style={{ maxWidth: '350px' }}>
               <Search size={16} className="search-icon" />
-              <input type="text" placeholder="Filter by client name..." value={agingSearch}
+              <input type="text" placeholder={i18nT('ui.filterByClientName')} value={agingSearch}
                 onChange={e => setAgingSearch(e.target.value)} className="search-input" />
               {agingSearch && <button className="icon-btn" onClick={() => setAgingSearch('')}><X size={14} /></button>}
             </div>
@@ -429,25 +430,25 @@ export default function ReportsView() {
 
           {/* Aging Table */}
           <div className="glass-panel">
-            <div className="table-header"><h3>Outstanding Receivables</h3></div>
+            <div className="table-header"><h3>{i18nT('ui.outstandingReceivables')}</h3></div>
             {agingSorted.length === 0 ? (
               <div className="empty-state">
                 <Wallet size={48} />
-                <p>No outstanding receivables found.</p>
+                <p>{i18nT('ui.noOutstandingReceivablesFound')}</p>
               </div>
             ) : (
               <div className="table-scroll">
                 <table className="data-table" style={{ minWidth: '850px' }}>
                   <thead>
                     <tr>
-                      <th>Client</th>
-                      <th>Invoice No</th>
-                      <th>Date</th>
-                      <th>Due Date</th>
-                      <th style={{ textAlign: 'right' }}>Amount</th>
-                      <th style={{ textAlign: 'right' }}>Paid</th>
-                      <th style={{ textAlign: 'right' }}>Outstanding</th>
-                      <th style={{ textAlign: 'right' }}>Days Overdue</th>
+                      <th>{i18nT('ui.client')}</th>
+                      <th>{i18nT('ui.invoiceNo2')}</th>
+                      <th>{i18nT('ui.date')}</th>
+                      <th>{i18nT('ui.dueDate')}</th>
+                      <th style={{ textAlign: 'right' }}>{i18nT('ui.amount')}</th>
+                      <th style={{ textAlign: 'right' }}>{i18nT('ui.paid')}</th>
+                      <th style={{ textAlign: 'right' }}>{i18nT('ui.outstanding')}</th>
+                      <th style={{ textAlign: 'right' }}>{i18nT('ui.daysOverdue')}</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -506,10 +507,10 @@ export default function ReportsView() {
         return (
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(400px, 1fr))', gap: '1rem' }}>
             <div className="glass-panel" style={{ padding: '1.25rem' }}>
-              <h3 style={{ marginTop: 0, fontSize: '1rem' }}>🏆 Top clients by revenue</h3>
-              {topByRevenue.length === 0 ? <p className="text-muted">No client data for this period.</p> : (
+              <h3 style={{ marginTop: 0, fontSize: '1rem' }}>{i18nT('ui.topClientsByRevenue')}</h3>
+              {topByRevenue.length === 0 ? <p className="text-muted">{i18nT('ui.noClientDataForThisPeriod')}</p> : (
                 <table className="data-table" style={{ marginBottom: 0 }}>
-                  <thead><tr><th>Client</th><th style={{ textAlign: 'right' }}>Revenue</th><th style={{ textAlign: 'right' }}>Invoices</th></tr></thead>
+                  <thead><tr><th>{i18nT('ui.client')}</th><th style={{ textAlign: 'right' }}>{i18nT('ui.revenue')}</th><th style={{ textAlign: 'right' }}>{i18nT('ui.invoices')}</th></tr></thead>
                   <tbody>
                     {topByRevenue.map((c, i) => (
                       <tr key={i}>
@@ -524,10 +525,10 @@ export default function ReportsView() {
             </div>
 
             <div className="glass-panel" style={{ padding: '1.25rem' }}>
-              <h3 style={{ marginTop: 0, fontSize: '1rem' }}>⚠️ Highest outstanding (worst payers)</h3>
-              {worstPayers.length === 0 ? <p className="text-muted">Everyone is up to date. 🎉</p> : (
+              <h3 style={{ marginTop: 0, fontSize: '1rem' }}>{i18nT('ui.highestOutstandingWorstPayers')}</h3>
+              {worstPayers.length === 0 ? <p className="text-muted">{i18nT('ui.everyoneIsUpToDate')}</p> : (
                 <table className="data-table" style={{ marginBottom: 0 }}>
-                  <thead><tr><th>Client</th><th style={{ textAlign: 'right' }}>Outstanding</th><th style={{ textAlign: 'right' }}>% Unpaid</th></tr></thead>
+                  <thead><tr><th>{i18nT('ui.client')}</th><th style={{ textAlign: 'right' }}>{i18nT('ui.outstanding')}</th><th style={{ textAlign: 'right' }}>{i18nT('ui.unpaid')}</th></tr></thead>
                   <tbody>
                     {worstPayers.map((c, i) => (
                       <tr key={i}>
@@ -542,16 +543,16 @@ export default function ReportsView() {
             </div>
 
             <div className="glass-panel" style={{ padding: '1.25rem', gridColumn: '1 / -1' }}>
-              <h3 style={{ marginTop: 0, fontSize: '1rem' }}>📊 All clients breakdown ({clientArr.length})</h3>
+              <h3 style={{ marginTop: 0, fontSize: '1rem' }}>{i18nT('ui.allClientsBreakdown')}{clientArr.length})</h3>
               <div style={{ overflowX: 'auto' }}>
                 <table className="data-table" style={{ marginBottom: 0 }}>
                   <thead><tr>
-                    <th>Client</th>
-                    <th style={{ textAlign: 'right' }}>Invoices</th>
-                    <th style={{ textAlign: 'right' }}>Revenue</th>
-                    <th style={{ textAlign: 'right' }}>Paid</th>
-                    <th style={{ textAlign: 'right' }}>Outstanding</th>
-                    <th>Last Invoice</th>
+                    <th>{i18nT('ui.client')}</th>
+                    <th style={{ textAlign: 'right' }}>{i18nT('ui.invoices')}</th>
+                    <th style={{ textAlign: 'right' }}>{i18nT('ui.revenue')}</th>
+                    <th style={{ textAlign: 'right' }}>{i18nT('ui.paid')}</th>
+                    <th style={{ textAlign: 'right' }}>{i18nT('ui.outstanding')}</th>
+                    <th>{i18nT('ui.lastInvoice')}</th>
                   </tr></thead>
                   <tbody>
                     {clientArr.sort((a, b) => b.revenue - a.revenue).map((c, i) => (
@@ -604,10 +605,10 @@ export default function ReportsView() {
         return (
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(400px, 1fr))', gap: '1rem' }}>
             <div className="glass-panel" style={{ padding: '1.25rem' }}>
-              <h3 style={{ marginTop: 0, fontSize: '1rem' }}>💰 Top revenue producers</h3>
-              {bestSellers.length === 0 ? <p className="text-muted">No product data for this period.</p> : (
+              <h3 style={{ marginTop: 0, fontSize: '1rem' }}>{i18nT('ui.topRevenueProducers')}</h3>
+              {bestSellers.length === 0 ? <p className="text-muted">{i18nT('ui.noProductDataForThisPeriod')}</p> : (
                 <table className="data-table" style={{ marginBottom: 0 }}>
-                  <thead><tr><th>Product</th><th style={{ textAlign: 'right' }}>Revenue</th><th style={{ textAlign: 'right' }}>Qty sold</th></tr></thead>
+                  <thead><tr><th>{i18nT('ui.product')}</th><th style={{ textAlign: 'right' }}>{i18nT('ui.revenue')}</th><th style={{ textAlign: 'right' }}>{i18nT('ui.qtySold')}</th></tr></thead>
                   <tbody>
                     {bestSellers.map((p, i) => (
                       <tr key={i}>
@@ -622,10 +623,10 @@ export default function ReportsView() {
             </div>
 
             <div className="glass-panel" style={{ padding: '1.25rem' }}>
-              <h3 style={{ marginTop: 0, fontSize: '1rem' }}>📦 Most units sold</h3>
-              {mostSoldByUnits.length === 0 ? <p className="text-muted">No product data.</p> : (
+              <h3 style={{ marginTop: 0, fontSize: '1rem' }}>{i18nT('ui.mostUnitsSold')}</h3>
+              {mostSoldByUnits.length === 0 ? <p className="text-muted">{i18nT('ui.noProductData')}</p> : (
                 <table className="data-table" style={{ marginBottom: 0 }}>
-                  <thead><tr><th>Product</th><th style={{ textAlign: 'right' }}>Qty sold</th><th style={{ textAlign: 'right' }}>Txns</th></tr></thead>
+                  <thead><tr><th>{i18nT('ui.product')}</th><th style={{ textAlign: 'right' }}>{i18nT('ui.qtySold')}</th><th style={{ textAlign: 'right' }}>{i18nT('ui.txns')}</th></tr></thead>
                   <tbody>
                     {mostSoldByUnits.map((p, i) => (
                       <tr key={i}>
@@ -640,16 +641,16 @@ export default function ReportsView() {
             </div>
 
             <div className="glass-panel" style={{ padding: '1.25rem', gridColumn: '1 / -1' }}>
-              <h3 style={{ marginTop: 0, fontSize: '1rem' }}>📋 All products ({productArr.length})</h3>
+              <h3 style={{ marginTop: 0, fontSize: '1rem' }}>{i18nT('ui.allProducts')}{productArr.length})</h3>
               <div style={{ overflowX: 'auto' }}>
                 <table className="data-table" style={{ marginBottom: 0 }}>
                   <thead><tr>
-                    <th>Product</th><th>HSN</th>
-                    <th style={{ textAlign: 'right' }}>Qty sold</th>
-                    <th style={{ textAlign: 'right' }}>Revenue</th>
-                    <th style={{ textAlign: 'right' }}>Avg rate</th>
-                    <th style={{ textAlign: 'right' }}>Txns</th>
-                    <th>Last sold</th>
+                    <th>{i18nT('ui.product')}</th><th>HSN</th>
+                    <th style={{ textAlign: 'right' }}>{i18nT('ui.qtySold')}</th>
+                    <th style={{ textAlign: 'right' }}>{i18nT('ui.revenue')}</th>
+                    <th style={{ textAlign: 'right' }}>{i18nT('ui.avgRate')}</th>
+                    <th style={{ textAlign: 'right' }}>{i18nT('ui.txns')}</th>
+                    <th>{i18nT('ui.lastSold')}</th>
                   </tr></thead>
                   <tbody>
                     {productArr.sort((a, b) => b.revenue - a.revenue).map((p, i) => (
