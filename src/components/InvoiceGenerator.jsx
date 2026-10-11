@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useCallback, useMemo, memo } from 'react';
-import { ArrowLeft, Plus, Trash2, Download, UserPlus, Pencil, Settings, ChevronUp, ChevronDown, MessageCircle, Check, Loader, Truck, Printer, Eye, EyeOff, Camera, Barcode } from 'lucide-react';
+import { ArrowLeft, Plus, Trash2, Download, UserPlus, Pencil, Settings, ChevronUp, ChevronDown, MessageCircle, Check, Loader, Truck, Printer, Eye, EyeOff, Camera, Barcode, Search } from 'lucide-react';
 import { jsPDF } from 'jspdf';
 import html2canvas from 'html2canvas';
 import { saveBill, applyStockChanges, getNextInvoiceNumber, getTermsTemplates, getAllClients, saveClient, getProfile, getAllProducts, getInvoiceDisplayOptions, saveInvoiceDisplayOptions, getAllProfiles, getRegionMode, saveRecurring, getAllBills, saveProductsBatch } from '../store';
@@ -21,6 +21,7 @@ import BarcodeScannerModal from './BarcodeScannerModal';
 import { t as tr } from '../i18n';
 import AiBillButton from './ai/AiBillButton';
 import { t as i18nT } from '../i18n';
+import QuickAddSheet from './mobile/QuickAddSheet';
 
 // Rich text editor component that works with contentEditable properly
 function RichEditor({ value, onChange, placeholder, toolbar = false }) {
@@ -569,8 +570,9 @@ export default function InvoiceGenerator({ onBack, profile: profileProp, editing
   // that we have to see in invoice preview what we are entering". Focus
   // mode: hide the preview so the editor gets the full width during
   // heavy data entry.
+  const [quickAddOpen, setQuickAddOpen] = useState(false);
   const [previewCollapsed, setPreviewCollapsed] = useState(() => {
-    try { return localStorage.getItem('fgsb_previewCollapsed') === '1'; } catch { return false; }
+    try { const v = localStorage.getItem('fgsb_previewCollapsed'); return v === null ? window.innerWidth <= 768 : v === '1'; } catch { return false; }
   });
   useEffect(() => {
     try { localStorage.setItem('fgsb_previewCollapsed', previewCollapsed ? '1' : '0'); } catch { /* sandboxed */ }
@@ -3200,7 +3202,7 @@ export default function InvoiceGenerator({ onBack, profile: profileProp, editing
             );
           })()}
         </div>
-        <div className="flex gap-2">
+        <div className="flex gap-2 editor-actions">
           {/* v1.10.37 — Explicit Save button. Reported: "invoice page
               needs a Save button". Previously only Download PDF was
               the primary action, forcing users who wanted to save
@@ -3209,6 +3211,7 @@ export default function InvoiceGenerator({ onBack, profile: profileProp, editing
               also fires the same "save to Saved Invoices/ folder"
               + auto-print + Drive sync side effects that generatePDF
               does — minus the PDF file. */}
+          <div className="editor-primary-actions">
           <button className="btn btn-primary" onClick={async () => {
             // v1.10.58 (#47) — refuse a blank invoice. Saving reserves an
             // invoice number, so an empty save leaves a permanent gap in a
@@ -3236,7 +3239,7 @@ export default function InvoiceGenerator({ onBack, profile: profileProp, editing
           </button>
           <button className="btn btn-secondary" onClick={generatePDF} disabled={saving}
             title={i18nT('ui.saveDownloadThePdf')}>
-            <Download size={18} /> {saving ? 'Generating...' : 'Save & Download'}
+            <Download size={18} /> <span className="lbl-long">{saving ? 'Generating...' : 'Save & Download'}</span><span className="lbl-short">PDF</span>
           </button>
           <button className="btn btn-secondary" onClick={directPrint} disabled={saving}
             title={
@@ -3247,8 +3250,9 @@ export default function InvoiceGenerator({ onBack, profile: profileProp, editing
             <Printer size={18} /> {i18nT('ui.print')}
           </button>
           <button className="btn btn-secondary" onClick={shareWhatsApp} disabled={saving} style={{ background: '#25d366', color: '#fff', borderColor: '#25d366' }}>
-            <MessageCircle size={18} /> {i18nT('ui.whatsapp')}
+            <MessageCircle size={18} /> <span className="lbl-long">{i18nT('ui.whatsapp')}</span><span className="lbl-short">Share</span>
           </button>
+          </div>
           {(invoiceType === 'tax-invoice' || invoiceType === 'delivery-challan') && (
             <button className="btn btn-secondary" onClick={exportEWayBill} disabled={saving} title={i18nT('ui.downloadEWayBillJsonFor')}>
               <Truck size={18} /> {i18nT('ui.eWayBill')}
@@ -4218,7 +4222,16 @@ export default function InvoiceGenerator({ onBack, profile: profileProp, editing
               />
             ))}
             <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', marginTop: '0.5rem' }}>
+              <button type="button" className="btn btn-primary mobile-only mqa-open" onClick={() => setQuickAddOpen(true)}><Search size={18} /> {i18nT('mobile.pickItem')}</button>
               <button type="button" className="btn btn-secondary" onClick={addItem}><Plus size={18} /> {i18nT('ui.addItem')}</button>
+              {quickAddOpen && (
+                <QuickAddSheet products={products}
+                  onPick={(p) => handleBarcodeScanned(String(p.id))}
+                  onScan={() => { setQuickAddOpen(false); setShowBarcodeScanner(true); }}
+                  onBlank={() => { setQuickAddOpen(false); addItem(); }}
+                  voice={<AiBillButton mode="voice" products={products} onApply={(r) => { setQuickAddOpen(false); applyAi(r); }} />}
+                  onClose={() => setQuickAddOpen(false)} />
+              )}
               <AiBillButton mode="voice" products={products} onApply={applyAi} />
               <AiBillButton mode="photo" products={products} onApply={applyAi} />
               <button type="button" className="btn btn-secondary" onClick={() => setShowBarcodeScanner(true)} title={i18nT('ui.scanProductBarcodeWithCameraOr')}>

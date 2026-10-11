@@ -6,6 +6,7 @@ import './i18n'
 import App from './App.jsx'
 import { captureInviteFromUrl } from './lib/org'
 import './index.css'
+import './mobile.css'
 
 // /admin is a separate, lazily loaded screen (its own chunk). Access is
 // decided by the server (/api/admin/*), never by this route.

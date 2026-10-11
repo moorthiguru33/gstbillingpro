@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { FileText, Zap, Share2, Package, BarChart3, Languages } from 'lucide-react';
+import { FileText, Zap, Share2, Package, BarChart3, Languages, Monitor, Smartphone } from 'lucide-react';
+import { WINDOWS_DOWNLOAD_URL, ANDROID_DOWNLOAD_URL } from '../lib/appLinks';
 import PricingTable from './plans/PricingTable';
 import LanguagePicker from './LanguagePicker';
 import { getFounderSlotsLeft } from '../lib/supabase';
@@ -38,6 +39,18 @@ export default function LandingSections({ onSignup }) {
   const h2 = { fontSize: '1.7rem', fontWeight: 800, textAlign: 'center', margin: '0 0 1.5rem', color: '#0f172a' };
   return (
     <div style={{ background: '#f8fafc', color: '#0f172a', fontFamily: 'inherit' }}>
+      <section id="apps" className="landing-apps" style={{ ...section, paddingBottom: 0, textAlign: 'center' }}>
+        <h2 style={{ ...h2, marginBottom: '0.5rem' }}>{t('mobile.apps')}</h2>
+        <p style={{ margin: '0 0 1rem', color: '#475569' }}>{t('mobile.appsSub')}</p>
+        <div style={{ display: 'flex', gap: '0.75rem', justifyContent: 'center', flexWrap: 'wrap' }}>
+          <a className="btn btn-primary" href={WINDOWS_DOWNLOAD_URL} rel="noopener noreferrer" style={{ textDecoration: 'none', minHeight: 48 }}>
+            <Monitor size={18} /> {t('mobile.downloadWindows')}
+          </a>
+          <a className="btn btn-secondary" href={ANDROID_DOWNLOAD_URL} rel="noopener noreferrer" style={{ textDecoration: 'none', minHeight: 48 }}>
+            <Smartphone size={18} /> {t('mobile.getAndroid')}
+          </a>
+        </div>
+      </section>
       <section id="features" style={section}>
         <h2 style={h2}>{t('landing.featuresTitle')}</h2>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '1rem' }}>

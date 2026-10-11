@@ -11,6 +11,7 @@ import SupportNudge from './SupportNudge';
 import { toast } from './Toast';
 import { confirmAction, promptAction } from './ConfirmModal';
 import { t as tr, hasChosenLanguage } from '../i18n';
+import MobileHome from './mobile/MobileHome';
 
 // v1.10.13 — `bg` values switched from opaque tints (#fffbeb / #f5f3ff /
 // etc.) to translucent alpha versions of the accent color. Reason:
@@ -190,7 +191,7 @@ const statusMatchesFilter = (b, filter) => {
   return effectiveStatus(b) === filter;
 };
 
-export default function Dashboard({ onNew, onEdit, onDuplicate, onConvert, onOpenProducts, onOpenSettings, onOpenGuide, onOpenSupport, activeProfile, onOpenPOS }) {
+export default function Dashboard({ onNew, onEdit, onDuplicate, onConvert, onOpenProducts, onOpenSettings, onOpenGuide, onOpenSupport, activeProfile, onOpenPOS, onNavigate }) {
   // v1.10.64 — requested (#55, @sangwanmail-eng): "An invoice belonging to one
   // company should not appear under the other."
   //
@@ -1213,6 +1214,11 @@ export default function Dashboard({ onNew, onEdit, onDuplicate, onConvert, onOpe
         <button className="btn btn-primary" onClick={onNew}><Plus size={18} /> {tr('nav.newInvoice')}</button>
       </PageHeader>
 
+      {onNavigate && (
+        <MobileHome bills={bills} profile={profile} lowStockCount={lowStockProducts.length}
+          onNew={onNew} onOpenPOS={onOpenPOS} onOpen={onNavigate} />
+      )}
+
       {/* v1.10.69 - a new user used to land here on "No invoices yet." and
           nothing else. The welcome wizard does end with a list of what to do,
           but it is shown once and then gone forever, which is no help on day
@@ -1425,7 +1431,7 @@ export default function Dashboard({ onNew, onEdit, onDuplicate, onConvert, onOpe
         </div>
       )}
 
-      <div className="glass-panel">
+      <div className="glass-panel" id="invoice-list">
         <div className="table-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '0.5rem', marginBottom: '0.75rem' }}>
           <h3 style={{ margin: 0 }}>Invoices</h3>
           <div style={{ display: 'flex', gap: '0.35rem', background: 'var(--bg-secondary, #f1f5f9)', padding: 3, borderRadius: 8, border: '1px solid var(--border, #cbd5e1)' }}>

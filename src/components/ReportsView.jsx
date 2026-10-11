@@ -192,7 +192,7 @@ export default function ReportsView() {
       </div>
 
       {/* Tab Selector — v1.9.5 adds Client + Product tabs */}
-      <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '1.25rem', flexWrap: 'wrap' }}>
+      <div className="report-tabs" style={{ display: 'flex', gap: '0.5rem', marginBottom: '1.25rem', flexWrap: 'wrap' }}>
         <button className={`btn ${activeTab === 'pl' ? 'btn-primary' : 'btn-secondary'}`}
           onClick={() => setActiveTab('pl')}>
           <BarChart3 size={16} /> {i18nT('ui.profitAndLoss')}

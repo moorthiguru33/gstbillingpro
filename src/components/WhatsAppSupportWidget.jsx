@@ -11,7 +11,7 @@ export default function WhatsAppSupportWidget() {
   };
 
   return (
-    <div style={{
+    <div className="wa-float" style={{
       position: 'fixed',
       bottom: '24px',
       right: '24px',

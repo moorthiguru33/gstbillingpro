@@ -968,6 +968,7 @@ export default function QuickPOS({ onBackToDashboard, onPrintInvoice }) {
 
   return (
     <div
+      className="pos-root"
       style={{
         display: 'flex', flexDirection: 'column', height: '100%',
         minHeight: '85vh', background: 'var(--bg, #f8fafc)',
@@ -976,6 +977,7 @@ export default function QuickPOS({ onBackToDashboard, onPrintInvoice }) {
     >
       {/* Top Counter Bar */}
       <div
+        className="pos-topbar"
         style={{
           display: 'flex', alignItems: 'center', justifyContent: 'space-between',
           padding: '0.65rem 1.25rem', background: '#0f172a', color: '#fff',
@@ -1012,7 +1014,7 @@ export default function QuickPOS({ onBackToDashboard, onPrintInvoice }) {
         </div>
 
         {/* Action Controls for Billing Boy */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
+        <div className="pos-controls" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
           {/* Printer Size Selector (58mm, 80mm, A5, A4) */}
           <div style={{ display: 'flex', background: '#1e293b', borderRadius: 8, padding: 3, border: '1px solid #334155' }}>
             {[
@@ -1217,6 +1219,7 @@ export default function QuickPOS({ onBackToDashboard, onPrintInvoice }) {
 
       {/* Main Counter Workspace */}
       <div
+        className="pos-workspace"
         style={{
           display: 'grid', gridTemplateColumns: 'minmax(0, 1.55fr) minmax(340px, 1fr)',
           gap: '1rem', padding: '1rem', flex: 1,
@@ -1250,8 +1253,9 @@ export default function QuickPOS({ onBackToDashboard, onPrintInvoice }) {
           )}
 
           {/* Search Bar with Arrow Keys Navigation */}
-          <div style={{ position: 'relative' }}>
+          <div className="pos-search" style={{ position: 'relative' }}>
             <div
+              className="pos-search-box"
               style={{
                 display: 'flex', alignItems: 'center', background: '#fff',
                 border: `2px solid ${billType === 'gst' ? '#2563eb' : '#059669'}`,
@@ -1351,6 +1355,7 @@ export default function QuickPOS({ onBackToDashboard, onPrintInvoice }) {
             }}
           >
             <div
+              className="pos-cart-head"
               style={{
                 display: 'grid', gridTemplateColumns: '2fr 85px 135px 95px 35px',
                 padding: '0.65rem 1rem', background: '#f8fafc',
@@ -1397,6 +1402,7 @@ export default function QuickPOS({ onBackToDashboard, onPrintInvoice }) {
                   return (
                     <div
                       key={item.id}
+                      className="pos-cart-row"
                       style={{
                         display: 'grid', gridTemplateColumns: '2fr 85px 135px 95px 35px',
                         alignItems: 'center', padding: '0.65rem 1rem',
@@ -1520,6 +1526,7 @@ export default function QuickPOS({ onBackToDashboard, onPrintInvoice }) {
 
         {/* Right Column: Customer Info, Payment Modes, Tender Calculator, Checkout */}
         <div
+          className="pos-side"
           style={{
             background: '#fff', borderRadius: 14, border: '1px solid #e2e8f0',
             padding: '1.15rem', display: 'flex', flexDirection: 'column', gap: '0.85rem',
@@ -1831,7 +1838,7 @@ export default function QuickPOS({ onBackToDashboard, onPrintInvoice }) {
           </div>
 
           {/* Action Buttons */}
-          <div style={{ display: 'flex', gap: '0.5rem' }}>
+          <div className="pos-checkout" style={{ display: 'flex', gap: '0.5rem' }}>
             <button
               type="button"
               onClick={() => {
@@ -1857,6 +1864,7 @@ export default function QuickPOS({ onBackToDashboard, onPrintInvoice }) {
               }}
             >
               <Printer size={18} /> {saving ? 'Printing...' : 'Tender & Print (F2)'}
+              <span className="mobile-only pos-checkout-total">{formatCurrency(totals.total)}</span>
             </button>
           </div>
         </div>
@@ -1864,6 +1872,7 @@ export default function QuickPOS({ onBackToDashboard, onPrintInvoice }) {
 
       {/* Keyboard Shortcuts Bar for Billing Boy */}
       <div
+        className="pos-shortcuts"
         style={{
           background: '#1e293b', color: '#94a3b8', padding: '0.4rem 1.25rem',
           fontSize: '0.74rem', display: 'flex', gap: '1.1rem', flexWrap: 'wrap',
