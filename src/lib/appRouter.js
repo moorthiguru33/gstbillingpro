@@ -29,7 +29,10 @@ export const VIEW_SEGMENTS = {
   settings: 'settings',
   support: 'support',
   controlpanel: 'control-panel',
+  store: 'store',
 };
+// Views with their own sub pages (/app/<view>/<sub>): module screens.
+export const SUB_VIEWS = ['settings', 'store', 'crm', 'accounts', 'payroll'];
 const SEGMENT_VIEWS = Object.fromEntries(Object.entries(VIEW_SEGMENTS).map(([v, s]) => [s, v]));
 const SUB_RE = /^[a-z0-9-]{1,40}$/;
 
@@ -39,8 +42,8 @@ export function normalizeRoute(r) {
   const view = r && VIEW_SEGMENTS[r.view] !== undefined ? r.view : 'dashboard';
   let sub = r && typeof r.sub === 'string' ? r.sub : '';
   if (view === 'dashboard' && sub !== 'bills') sub = '';
-  if (view === 'settings' && (sub === 'home' || !SUB_RE.test(sub))) sub = '';
-  if (view !== 'dashboard' && view !== 'settings') sub = '';
+  if (SUB_VIEWS.includes(view) && (sub === 'home' || !SUB_RE.test(sub))) sub = '';
+  if (view !== 'dashboard' && !SUB_VIEWS.includes(view)) sub = '';
   return { view, sub };
 }
 
@@ -63,8 +66,8 @@ export function pathToRoute(pathname) {
   if (rest === '') return { view: 'dashboard', sub: '' };
   if (rest === 'invoices') return { view: 'dashboard', sub: 'bills' };
   if (SEGMENT_VIEWS[rest]) return { view: SEGMENT_VIEWS[rest], sub: '' };
-  const m = rest.match(/^settings\/([a-z0-9-]{1,40})$/);
-  if (m) return normalizeRoute({ view: 'settings', sub: m[1] });
+  const m = rest.match(/^([a-z-]+)\/([a-z0-9-]{1,40})$/);
+  if (m && SEGMENT_VIEWS[m[1]] && SUB_VIEWS.includes(SEGMENT_VIEWS[m[1]])) return normalizeRoute({ view: SEGMENT_VIEWS[m[1]], sub: m[2] });
   return null;
 }
 

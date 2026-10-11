@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useMemo, lazy, Suspense } from 'react';
-import { Home, FileText, Settings, Plus, Users, Package, BarChart3, Wallet, RefreshCw, Receipt, BookOpen, Moon, Sun, Download, X, ShoppingCart, ChevronDown, Building2, Pencil, HelpCircle, Search, Command, Bell, Calculator, Menu, Heart, LogOut, Zap } from 'lucide-react';
+import { Home, Store, FileText, Settings, Plus, Users, Package, BarChart3, Wallet, RefreshCw, Receipt, BookOpen, Moon, Sun, Download, X, ShoppingCart, ChevronDown, Building2, Pencil, HelpCircle, Search, Command, Bell, Calculator, Menu, Heart, LogOut, Zap } from 'lucide-react';
 import { getAllProfiles, saveProfile, getProfile, getEnabledModules, getAllBills, getAllProducts, getStockAlertSettings, getAllClients, runUpdateNow, setDemoMode, isDemoModeActive, getMetaValue, processDueRecurring } from './store';
 import { isModuleEnabled, getUpcomingFilings, isCancelledBill, DOCS_URL, localDateISO } from './utils';
 // SaaS Auth + Subscription
@@ -45,6 +45,7 @@ const ControlPanel = lazy(() => import('./components/ControlPanel'));
 const IS_DESKTOP_BUILD = import.meta.env.VITE_DESKTOP_BUILD === '1';
 let recurringAutoFireDone = false;
 const SupportView = lazy(() => import('./components/SupportView'));
+const OnlineStore = lazy(() => import('./components/store/OnlineStore'));
 import StarBanner from './components/StarBanner';
 import AppFooter from './components/AppFooter';
 import { getPrintSettings } from './utils/printSettings';
@@ -53,7 +54,7 @@ import BottomTabBar from './components/mobile/BottomTabBar';
 import BottomSheet from './components/mobile/BottomSheet';
 import useMobileEnhancements from './components/mobile/useMobileEnhancements';
 import { WINDOWS_DOWNLOAD_URL, ANDROID_DOWNLOAD_URL } from './lib/appLinks';
-import { createAppRouter, pathToRoute, isAppPath, routeKey, OVERLAY_SELECTOR, setActiveRouter } from './lib/appRouter';
+import { createAppRouter, pathToRoute, isAppPath, routeKey, OVERLAY_SELECTOR, setActiveRouter, SUB_VIEWS } from './lib/appRouter';
 
 const openDocs = () => window.open(DOCS_URL, '_blank', 'noopener,noreferrer');
 
@@ -431,11 +432,17 @@ function BillingApp({ authUser, onSignOut, isDemoMode, onExitDemo }) {
     if (r && r.view === 'settings') return r.sub || 'home';
     try { return sessionStorage.getItem('gbp_settings_page') || 'home'; } catch { return 'home'; }
   });
+  // Sub page of a module screen (/app/store/orders …)
+  const [moduleSub, setModuleSub] = useState(() => {
+    const r = pathToRoute(window.location.pathname);
+    return r && r.view !== 'settings' && SUB_VIEWS.includes(r.view) ? r.sub : '';
+  });
   useMobileEnhancements();
 
   // ---- Browser history: Back walks through screens and closes overlays ----
   const routeSub = currentView === 'dashboard' ? (billsTab ? 'bills' : '')
-    : currentView === 'settings' ? (settingsPage === 'home' ? '' : settingsPage) : '';
+    : currentView === 'settings' ? (settingsPage === 'home' ? '' : settingsPage)
+      : SUB_VIEWS.includes(currentView) ? moduleSub : '';
   const currentRouteKey = routeKey({ view: currentView, sub: routeSub });
   const [initialRoute] = useState(() => ({ view: currentView, sub: routeSub }));
   const routerRef = useRef(null);
@@ -444,6 +451,7 @@ function BillingApp({ authUser, onSignOut, isDemoMode, onExitDemo }) {
       setCurrentView(r.view);
       setBillsTab(r.view === 'dashboard' && r.sub === 'bills');
       if (r.view === 'settings') setSettingsPage(r.sub || 'home');
+      else if (SUB_VIEWS.includes(r.view)) setModuleSub(r.sub || '');
       setNavOpen(false);
       if (r.view === 'dashboard' && r.sub === 'bills') {
         setTimeout(() => document.getElementById('invoice-list')?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 250);
@@ -502,6 +510,7 @@ function BillingApp({ authUser, onSignOut, isDemoMode, onExitDemo }) {
     setCurrentView(r.view);
     setBillsTab(r.view === 'dashboard' && r.sub === 'bills');
     if (r.view === 'settings') setSettingsPage(r.sub || 'home');
+    else if (SUB_VIEWS.includes(r.view)) setModuleSub(r.sub || '');
   };
   const openBillsList = () => {
     setBillsTab(true);
@@ -598,6 +607,7 @@ function BillingApp({ authUser, onSignOut, isDemoMode, onExitDemo }) {
     { id: 'reports', icon: BarChart3, label: tr('nav.reports'), module: 'reports' },
     { id: 'filing', icon: BookOpen, label: tr('nav.gstReturns'), module: 'gstReturns' },
     { id: 'incometax', icon: Calculator, label: tr('nav.incomeTax'), module: 'incomeTax' },
+    { id: 'store', icon: Store, label: tr('nav.onlineStore'), module: 'dashboard', onClick: () => { setModuleSub(''); setCurrentView('store'); } },
     // v1.10.75 - opens the online documentation, which covers every screen
     // and stays current; the old built-in guide had fallen far behind.
     { id: 'guide', icon: HelpCircle, label: tr('nav.guide'), module: 'dashboard', onClick: openDocs }, // gated by dashboard so it's always available
@@ -1157,6 +1167,9 @@ function BillingApp({ authUser, onSignOut, isDemoMode, onExitDemo }) {
         )}
         {currentView === 'support' && (
           <SupportView />
+        )}
+        {currentView === 'store' && (
+          <OnlineStore key={businessKey} sub={moduleSub} onSub={setModuleSub} onConvertOrder={handleDuplicateInvoice} />
         )}
         </Suspense>
         {/* Brand + legal links footer: Dashboard only, so it never takes space on working screens. */}
