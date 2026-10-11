@@ -17,6 +17,8 @@ import QuickStockModal from './QuickStockModal';
 import MasterCatalogModal from './MasterCatalogModal';
 import InvoicePreview from './InvoicePreview';
 import { t as tr } from '../i18n';
+import { printDirect, savedPrinter } from '../utils/thermalPrinter';
+import { receiptBytes } from '../utils/escpos';
 
 // Web Audio API Sound Synthesizer for Counter Scanners (100% Offline, Zero-Latency)
 const playAudioFeedback = (type = 'beep', soundEnabled = true) => {
@@ -509,6 +511,12 @@ export default function QuickPOS({ onBackToDashboard, onPrintInvoice }) {
       const paperCfg = getPaperSize(paperSize);
       const widthMm = paperCfg.widthMm || 80;
       const isThermal = paperCfg.kind === 'thermal';
+
+      // Paired Bluetooth/USB thermal printer: send ESC/POS directly, no dialog.
+      if (isThermal && savedPrinter()?.kind) {
+        const done = await printDirect((paper) => receiptBytes(billToPrint, profile, { paper }));
+        if (done) return;
+      }
 
       // Collect application stylesheets for bit-accurate rendering
       const parts = [];
