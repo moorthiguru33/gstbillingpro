@@ -620,30 +620,147 @@
     margin-top: 0.2rem !important; justify-content: flex-end !important; gap: 0.35rem;
   }
 
-  /* ---------- invoice editor ---------- */
-  .line-item-row { gap: 0.4rem; margin-bottom: 0.5rem; padding-bottom: 0.5rem; }
-  .line-item-field { min-width: 64px; }
-  .line-item-field input.form-input, .line-item-field select.form-input { min-height: 38px; }
-  .line-item-field .form-label { font-size: 10.5px; margin-bottom: 0.15rem; }
-  .editor-primary-actions { gap: 0.35rem; padding: 0.4rem 0.5rem calc(0.4rem + var(--safe-b)); }
-  .editor-primary-actions .btn { min-height: 44px; font-size: 12px !important; }
-  .editor-primary-actions .btn:first-child { font-size: 14px !important; }
-  .mqa-open { min-height: 46px !important; font-size: 15px !important; }
+  /* ---------- mobile typography & page headers ---------- */
+  .page-header { margin-bottom: 0.5rem !important; padding: 0 !important; }
+  .page-header > div:first-child h1.page-title { font-size: 1.15rem !important; margin-bottom: 0.15rem !important; }
+  .page-header > div:first-child p.page-subtitle { font-size: 11.5px !important; line-height: 1.3 !important; }
+
+  /* ---------- invoice editor (professional native card architecture) ---------- */
+  .line-item-row {
+    display: flex !important; flex-wrap: wrap !important; position: relative !important;
+    background: var(--card-bg, #ffffff) !important; border: 1px solid var(--border, #e2e8f0) !important;
+    border-radius: 14px !important; padding: 0.65rem 0.75rem 0.55rem !important;
+    margin-bottom: 0.6rem !important; box-shadow: 0 1px 4px rgba(15, 23, 42, 0.05) !important;
+    gap: 0.4rem !important; width: 100% !important; box-sizing: border-box !important;
+  }
+  .line-item-name {
+    flex: 1 1 100% !important; width: 100% !important; min-width: 0 !important;
+    padding-right: 38px !important; margin-bottom: 0.2rem !important;
+  }
+  .line-item-delete {
+    position: absolute !important; top: 0.65rem !important; right: 0.65rem !important;
+    margin: 0 !important; z-index: 2;
+  }
+  .line-item-delete button {
+    width: 34px !important; height: 34px !important; border-radius: 8px !important;
+    display: flex !important; align-items: center !important; justify-content: center !important;
+    background: rgba(239, 68, 68, 0.08) !important; color: #dc2626 !important; border: none !important;
+  }
+  .line-item-field {
+    flex: 1 1 calc(33.33% - 0.3rem) !important; min-width: 0 !important; max-width: 100% !important;
+    display: flex !important; flex-direction: column !important;
+  }
+  .line-item-field .form-label {
+    font-size: 11px !important; font-weight: 600 !important; color: var(--text-secondary, #64748b) !important;
+    margin-bottom: 0.15rem !important; white-space: nowrap !important; overflow: hidden !important; text-overflow: ellipsis !important;
+  }
+  .line-item-field input.form-input, .line-item-field select.form-input {
+    min-height: 40px !important; font-size: 14px !important; border-radius: 9px !important;
+    padding: 0.35rem 0.45rem !important; text-align: center; font-weight: 600;
+  }
+  .line-item-name input.form-input { text-align: left !important; font-weight: 700 !important; }
+  .line-item-description-row { flex: 1 1 100% !important; width: 100% !important; margin-top: 0.2rem !important; }
+
+  /* Invoice summary & bottom docked bar */
+  .invoice-totals {
+    border-radius: 14px !important; padding: 0.75rem !important;
+    background: var(--card-bg, #fff) !important; border: 1px solid var(--border, #e2e8f0) !important;
+    margin-top: 0.6rem !important; margin-bottom: 0.6rem !important;
+  }
+  .invoice-totals table { width: 100% !important; }
+  .invoice-totals td { padding: 0.25rem 0 !important; font-size: 13.5px !important; }
+  .invoice-totals tr:last-child td { font-size: 1.1rem !important; font-weight: 800 !important; border-top: 2px solid var(--border, #e2e8f0) !important; padding-top: 0.45rem !important; }
+
+  .editor-primary-actions {
+    position: fixed !important; left: 0 !important; right: 0 !important; bottom: 0 !important;
+    z-index: 930 !important; background: var(--card-bg, #fff) !important;
+    border-top: 1px solid var(--border, #e2e8f0) !important;
+    gap: 0.35rem !important; padding: 0.5rem 0.65rem calc(0.5rem + var(--safe-b)) !important;
+    box-shadow: 0 -4px 16px rgba(15, 23, 42, 0.08) !important; display: flex !important;
+  }
+  .editor-primary-actions .btn { min-height: 46px !important; font-size: 13px !important; border-radius: 11px !important; flex: 1 !important; font-weight: 700 !important; justify-content: center !important; }
+  .editor-primary-actions .btn-primary { flex: 1.4 !important; font-size: 14.5px !important; }
+  .mqa-open { min-height: 46px !important; font-size: 14.5px !important; font-weight: 700 !important; border-radius: 12px !important; width: 100% !important; margin: 0.4rem 0 !important; }
   .mqa-item { min-height: 52px; padding: 0.4rem 0.6rem; }
   .mqa-tools .btn, .mqa-tools button { min-height: 40px; }
 
-  /* ---------- POS ---------- */
-  .pos-topbar { padding: 0.35rem 0.5rem !important; gap: 0.3rem !important; }
-  .pos-cart-row { padding: 0.4rem 0.3rem !important; font-size: 14px !important; }
-  .pos-checkout { padding: 0.4rem 0.5rem calc(0.4rem + var(--safe-b)) !important; }
-  .pos-checkout .btn, .pos-checkout button { min-height: 48px; font-size: 15px !important; }
+  /* Client autocomplete popup on mobile */
+  .client-suggestions {
+    position: fixed !important; left: 0.75rem !important; right: 0.75rem !important;
+    top: auto !important; max-height: 55vh !important; border-radius: 16px !important;
+    box-shadow: 0 12px 32px rgba(15, 23, 42, 0.22) !important; border: 1px solid var(--border, #e2e8f0) !important;
+    z-index: 1200 !important;
+  }
+  .client-suggestion-item { min-height: 46px !important; padding: 0.5rem 0.75rem !important; }
 
-  /* ---------- parties ---------- */
-  .client-card-header { padding: 0.6rem !important; gap: 0.5rem; }
-  .client-card-name { font-size: 15px !important; }
+  /* ---------- POS mobile view ---------- */
+  .pos-topbar { padding: 0.45rem 0.65rem !important; gap: 0.4rem !important; min-height: 48px !important; }
+  .pos-topbar h2 { font-size: 1rem !important; }
+  .pos-controls { gap: 0.3rem !important; }
+  .pos-controls button { min-height: 36px !important; font-size: 11.5px !important; padding: 0.2rem 0.45rem !important; }
+  .pos-product-grid { grid-template-columns: repeat(2, minmax(0, 1fr)) !important; gap: 0.45rem !important; }
+  .pos-product-card { border-radius: 12px !important; padding: 0.55rem !important; min-height: 84px !important; }
+  .pos-cart-row { padding: 0.4rem 0.3rem !important; font-size: 13.5px !important; }
+  .pos-checkout {
+    position: fixed !important; left: 0 !important; right: 0 !important; bottom: 0 !important;
+    padding: 0.5rem 0.75rem calc(0.5rem + var(--safe-b)) !important; z-index: 930 !important;
+    background: var(--card-bg, #fff) !important; border-top: 1px solid var(--border, #e2e8f0) !important;
+    box-shadow: 0 -4px 16px rgba(15, 23, 42, 0.1) !important;
+  }
+  .pos-checkout .btn, .pos-checkout button { min-height: 48px !important; font-size: 15px !important; font-weight: 800 !important; border-radius: 12px !important; width: 100% !important; }
+
+  /* ---------- inventory table cards on mobile ---------- */
+  .view-inventory table.data-table { border: 0 !important; display: block !important; width: 100% !important; }
+  .view-inventory table.data-table thead { display: none !important; }
+  .view-inventory table.data-table tbody { display: flex !important; flex-direction: column !important; gap: 0.5rem !important; width: 100% !important; }
+  .view-inventory table.data-table tr {
+    display: grid !important; grid-template-columns: 1fr auto !important;
+    gap: 0.3rem 0.5rem !important; padding: 0.65rem 0.8rem !important;
+    background: var(--card-bg, #fff) !important; border: 1px solid var(--border, #e2e8f0) !important;
+    border-radius: 14px !important; box-shadow: 0 1px 3px rgba(15, 23, 42, 0.04) !important; width: 100% !important;
+    box-sizing: border-box !important;
+  }
+  .view-inventory table.data-table td { border: 0 !important; padding: 0 !important; min-width: 0 !important; font-size: 13.5px !important; }
+  .view-inventory table.data-table td:nth-child(1) { grid-column: 1 / 2; font-size: 15px !important; font-weight: 700 !important; color: var(--text-primary, #0f172a); }
+  .view-inventory table.data-table td:nth-child(2) { grid-column: 1 / 2; font-size: 12px !important; color: var(--text-secondary, #64748b); }
+  .view-inventory table.data-table td:nth-child(3) { grid-column: 1 / 2; font-size: 16px !important; font-weight: 800 !important; color: var(--primary, #2563eb); margin-top: 0.15rem; }
+  .view-inventory table.data-table td:nth-child(4) { display: none !important; }
+  .view-inventory table.data-table td:nth-child(5) { display: none !important; }
+  .view-inventory table.data-table td:nth-child(6) { grid-column: 2 / 3; grid-row: 2 / 3; text-align: right !important; font-weight: 700 !important; }
+  .view-inventory table.data-table td:nth-child(7) { grid-column: 2 / 3; grid-row: 1 / 2; display: flex !important; justify-content: flex-end !important; gap: 0.35rem; }
+  .view-inventory table.data-table td .table-actions button { width: 34px !important; height: 34px !important; border-radius: 8px !important; }
+
+  /* ---------- parties & clients ---------- */
+  .client-card-header { padding: 0.65rem 0.75rem !important; gap: 0.5rem !important; }
+  .client-card-name { font-size: 15px !important; font-weight: 700 !important; }
   .client-card-stats { gap: 0.35rem !important; }
-  .client-stat { padding: 0.3rem 0.4rem !important; border-radius: 8px; }
-  .client-stat-value { font-size: 13px !important; }
+  .client-stat { padding: 0.3rem 0.45rem !important; border-radius: 8px !important; }
+  .client-stat-value { font-size: 13.5px !important; font-weight: 700 !important; }
+
+  /* ---------- horizontal scroll tabs (Reports, GST, Income Tax) ---------- */
+  .report-tabs, .mod-tabs, .ph-filters {
+    display: flex !important; flex-wrap: nowrap !important; overflow-x: auto !important;
+    gap: 0.35rem !important; scrollbar-width: none !important; padding-bottom: 2px !important;
+    -webkit-overflow-scrolling: touch !important; width: 100% !important; margin-bottom: 0.65rem !important;
+  }
+  .report-tabs::-webkit-scrollbar, .mod-tabs::-webkit-scrollbar, .ph-filters::-webkit-scrollbar { display: none; }
+  .report-tabs .btn, .mod-tabs button, .ph-filters button {
+    flex: none !important; white-space: nowrap !important; min-height: 38px !important;
+    border-radius: 999px !important; font-size: 13px !important; font-weight: 600 !important;
+    padding: 0.35rem 0.85rem !important; display: inline-flex !important; align-items: center !important; gap: 0.35rem !important;
+  }
+
+  /* ---------- stats & KPI grid in mobile ---------- */
+  .stats-grid {
+    display: grid !important; grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+    gap: 0.45rem !important; margin-bottom: 0.65rem !important;
+  }
+  .stat-card {
+    padding: 0.65rem 0.75rem !important; border-radius: 12px !important;
+    display: flex !important; flex-direction: column !important; gap: 0.2rem !important;
+  }
+  .stat-card .stat-value { font-size: 1.15rem !important; font-weight: 800 !important; }
+  .stat-card .stat-label { font-size: 11.5px !important; opacity: 0.85 !important; }
 
   /* long lists keep a slim, native-looking scrollbar-free feel */
   .main-content { scrollbar-width: none; }
@@ -710,6 +827,7 @@
   .main-content .form-group > .form-label { margin-bottom: 0.15rem !important; }
   .main-content .form-grid, .main-content .grid-2 { gap: 0.4rem 0.5rem !important; }
 }
+
 
 /* ==========================================================================
    Phone shell screens (Home, Insights, Items, Menu, Settings, Profile).
