@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useMemo, lazy, Suspense } from 'react';
-import { Home, Store, FileText, Settings, Plus, Users, Package, BarChart3, Wallet, RefreshCw, Receipt, BookOpen, Moon, Sun, Download, X, ShoppingCart, ChevronDown, Building2, Pencil, HelpCircle, Search, Command, Bell, Calculator, Menu, Heart, LogOut, Zap, Target, Landmark, Briefcase, ArrowDownLeft, ArrowUpRight, ClipboardList, FileSignature, Undo2 } from 'lucide-react';
+import { Home, Store, FileText, Settings, Plus, Users, Package, BarChart3, Wallet, RefreshCw, Receipt, BookOpen, Moon, Sun, Download, X, ShoppingCart, ChevronDown, Building2, Pencil, HelpCircle, Search, Command, Bell, Calculator, Menu, Heart, LogOut, Zap, Target, Landmark, Briefcase, ArrowDownLeft, ArrowUpRight, ClipboardList, FileSignature, Undo2, ArrowLeft } from 'lucide-react';
 import { getAllProfiles, saveProfile, getProfile, getEnabledModules, getAllBills, getAllProducts, getStockAlertSettings, getAllClients, runUpdateNow, setDemoMode, isDemoModeActive, getMetaValue, processDueRecurring } from './store';
 import { isModuleEnabled, getUpcomingFilings, isCancelledBill, DOCS_URL, localDateISO } from './utils';
 // SaaS Auth + Subscription
@@ -84,6 +84,39 @@ function ViewLoading() {
       </div>
     </div>
   );
+}
+
+function getViewTitle(view, billsTab, settingsPage, tr) {
+  if (view === 'dashboard') {
+    return billsTab ? tr('ph.tabBills') : tr('nav.dashboard');
+  }
+  if (view === 'settings') {
+    if (settingsPage && settingsPage !== 'home') {
+      return tr(`settingsHome.${settingsPage}`);
+    }
+    return tr('nav.settings');
+  }
+  if (view === 'prefs') return tr('nav.settings');
+  if (view === 'new') return tr('nav.newInvoice');
+  if (view === 'pos') return tr('nav.pos');
+  if (view === 'clients') return tr('nav.clients');
+  if (view === 'inventory') return tr('nav.products');
+  if (view === 'expenses') return tr('nav.expenses');
+  if (view === 'purchases') return tr('nav.purchases');
+  if (view === 'recurring') return tr('nav.recurring');
+  if (view === 'receipts') return tr('nav.receipts');
+  if (view === 'reports') return tr('nav.reports');
+  if (view === 'filing') return tr('nav.gstReturns');
+  if (view === 'incometax') return tr('nav.incomeTax');
+  if (view === 'store') return tr('nav.onlineStore');
+  if (view === 'accounts') return tr('nav.accounting');
+  if (view === 'payroll') return tr('nav.payroll');
+  if (view === 'crm') return tr('nav.crm');
+  if (view === 'support') return tr('nav.support');
+  if (view === 'insights') return tr('ph.insights');
+  if (view === 'menu') return tr('ph.menu');
+  if (view === 'profile') return tr('ph.mProfile');
+  return tr('nav.dashboard');
 }
 
 function BillingApp({ authUser, onSignOut, isDemoMode, onExitDemo }) {
@@ -516,6 +549,15 @@ function BillingApp({ authUser, onSignOut, isDemoMode, onExitDemo }) {
   }, [currentRouteKey]); // eslint-disable-line react-hooks/exhaustive-deps
   // In-app "Back" (invoice editor etc.): go to the previous screen in history.
   const goBackInApp = () => {
+    if (currentView === 'settings' && settingsPage && settingsPage !== 'home') {
+      setSettingsPage('home');
+      try { sessionStorage.setItem('gbp_settings_page', 'home'); } catch { /* ignore */ }
+      return;
+    }
+    if (billsTab) {
+      setBillsTab(false);
+      return;
+    }
     const prev = routerRef.current?.previousRoute();
     const r = prev || { view: 'dashboard', sub: '' };
     setCurrentView(r.view);
@@ -899,27 +941,55 @@ function BillingApp({ authUser, onSignOut, isDemoMode, onExitDemo }) {
               {tr('nav.finishSetup')}
             </button>
           )}
-      {/* v1.10.66 (#59) — phone-only top bar with the menu button. CSS hides it
-          on wider screens, where the sidebar is always shown. */}
+      {/* Phone top bar: brand on home, native app header with Back button on every inner view */}
       <div className="mobile-topbar">
-        <button type="button" className="mobile-biz"
-          onClick={() => (allProfiles.length > 1 ? setMobileSheet('biz') : setCurrentView('settings'))}
-          aria-label={allProfiles.length > 1 ? tr('mobile.switchBusiness') : tr('nav.settings')}>
-          <span className="mobile-biz-avatar" aria-hidden="true">{(profile?.businessName || 'G').trim().charAt(0).toUpperCase()}</span>
-          <span className="mobile-biz-text">
-            <span className="mobile-biz-name">{profile?.businessName || 'GST Billing Pro'}</span>
-            <span className="mobile-biz-sub">{allProfiles.length > 1 ? tr('mobile.switchBusiness') : 'GST Billing Pro'}</span>
-          </span>
-          {allProfiles.length > 1 && <ChevronDown size={16} />}
-        </button>
-        <button type="button" className="mobile-topbar-btn" onClick={() => setShowNotifs(s => !s)} aria-label="Notifications" style={{ position: 'relative' }}>
-          <Bell size={20} />
-          {notifTotal > 0 && <span className="mobile-badge">{notifTotal > 99 ? '99+' : notifTotal}</span>}
-        </button>
-        <button type="button" className="mobile-topbar-btn" onClick={() => (roleCanView('prefs') ? go('prefs') : go('menu'))}
-          aria-label={tr('nav.settings')} data-testid="top-settings">
-          <Settings size={21} />
-        </button>
+        {currentView === 'dashboard' && !billsTab ? (
+          <>
+            <button type="button" className="mobile-biz"
+              onClick={() => (allProfiles.length > 1 ? setMobileSheet('biz') : go('settings'))}
+              aria-label={allProfiles.length > 1 ? tr('mobile.switchBusiness') : tr('nav.settings')}>
+              <span className="mobile-biz-avatar" aria-hidden="true">{(profile?.businessName || 'G').trim().charAt(0).toUpperCase()}</span>
+              <span className="mobile-biz-text">
+                <span className="mobile-biz-name">{profile?.businessName || 'GST Billing Pro'}</span>
+                <span className="mobile-biz-sub">{allProfiles.length > 1 ? tr('mobile.switchBusiness') : 'GST Billing Pro'}</span>
+              </span>
+              {allProfiles.length > 1 && <ChevronDown size={16} />}
+            </button>
+            <button type="button" className="mobile-topbar-btn" onClick={() => setShowNotifs(s => !s)} aria-label="Notifications" style={{ position: 'relative' }}>
+              <Bell size={20} />
+              {notifTotal > 0 && <span className="mobile-badge">{notifTotal > 99 ? '99+' : notifTotal}</span>}
+            </button>
+            <button type="button" className="mobile-topbar-btn" onClick={() => setDarkMode(!darkMode)} aria-label="Toggle dark mode" title={darkMode ? 'Light mode' : 'Dark mode'}>
+              {darkMode ? <Sun size={20} /> : <Moon size={20} />}
+            </button>
+            <button type="button" className="mobile-topbar-btn" onClick={() => (roleCanView('settings') ? go('settings') : go('menu'))}
+              aria-label={tr('nav.settings')} data-testid="top-settings">
+              <Settings size={21} />
+            </button>
+          </>
+        ) : (
+          <div className="mobile-subbar">
+            <button type="button" className="mobile-topbar-btn mobile-back-btn" onClick={goBackInApp} aria-label={tr('common.back')} title={tr('common.back')}>
+              <ArrowLeft size={20} />
+            </button>
+            <span className="mobile-subbar-title">
+              {getViewTitle(currentView, billsTab, settingsPage, tr)}
+            </span>
+            <div className="mobile-subbar-acts">
+              {currentView === 'clients' && (
+                <button type="button" className="mobile-topbar-btn" onClick={handleNewInvoice} aria-label={tr('nav.newInvoice')} title={tr('nav.newInvoice')}>
+                  <Plus size={20} />
+                </button>
+              )}
+              {currentView !== 'settings' && (
+                <button type="button" className="mobile-topbar-btn" onClick={() => (roleCanView('settings') ? go('settings') : go('menu'))}
+                  aria-label={tr('nav.settings')} data-testid="sub-top-settings">
+                  <Settings size={20} />
+                </button>
+              )}
+            </div>
+          </div>
+        )}
       </div>
       {navOpen && <div className="sidebar-backdrop" onClick={() => setNavOpen(false)} aria-hidden="true" />}
       <div className={`sidebar${navOpen ? ' sidebar-open' : ''}`} onClick={closeNavAfterPick}>

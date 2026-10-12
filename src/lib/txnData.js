@@ -3,9 +3,9 @@
 // loans. Every record carries `biz` (the active business key) so one
 // login with several businesses keeps them apart, like accounting does.
 import { listRecords, upsertRecords, deleteRecords, newId } from './modData.js';
-import { cleanDoc, nextDocNo, paidOutFor, purchaseOrderToBill, returnStockEffect } from '../../shared/txn.js';
-import { getAllPurchases, savePurchase, applyStockChanges } from '../store';
-import { belongsToProfile, stockDelta } from '../utils';
+import { cleanDoc, nextDocNo, paidOutFor, purchaseOrderToBill } from '../../shared/txn.js';
+import { getAllPurchases, savePurchase } from '../store';
+import { belongsToProfile } from '../utils';
 
 export const DOC_TABLE = 'biz_docs';
 const cols = (d) => ({ kind: d.kind, doc_date: d.date, status: d.status || '', amount: Number(d.amount) || 0 });
@@ -24,24 +24,6 @@ export async function saveDoc(input, profile, all = []) {
   return rec;
 }
 export const deleteDoc = (id) => deleteRecords(DOC_TABLE, id);
-
-/** Purchase return: saves it and takes the returned quantities out of stock
- *  (only the change since the last save, recorded on the doc as stockApplied). */
-export async function saveReturn(input, profile, all = []) {
-  const prev = input.id ? all.find(d => d.id === input.id) : null;
-  const to = returnStockEffect(cleanDoc(input));
-  const rec = await saveDoc({ ...input, stockApplied: to }, profile, all);
-  const delta = stockDelta(prev?.stockApplied || {}, to);
-  if (Object.keys(delta).length) await applyStockChanges(delta);
-  return rec;
-}
-
-/** Deletes a document and undoes any stock it moved. */
-export async function removeDoc(doc) {
-  await deleteDoc(doc.id);
-  const back = stockDelta(doc.stockApplied || {}, {});
-  if (Object.keys(back).length) await applyStockChanges(back);
-}
 
 /** Purchase bills of the active business (for Payment-Out / returns). */
 export async function myPurchases(profile) {

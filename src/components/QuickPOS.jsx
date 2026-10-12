@@ -22,9 +22,6 @@ import { printDirect, savedPrinter } from '../utils/thermalPrinter';
 import { receiptBytes } from '../utils/escpos';
 import AiBillButton from './ai/AiBillButton';
 import { t as i18nT } from '../i18n';
-import PhonePOS from './pos/PhonePOS';
-import useIsPhone from './mobile/useIsPhone';
-import { topSellers } from '../lib/posPicks';
 
 // Unique ids for AI-added items that are not in the catalogue (module scope, not render).
 let aiSeq = Date.now();
@@ -72,7 +69,6 @@ const playAudioFeedback = (type = 'beep', soundEnabled = true) => {
 };
 
 export default function QuickPOS({ onBackToDashboard, onPrintInvoice }) {
-  const isPhone = useIsPhone();
   const [products, setProducts] = useState([]);
   const [clients, setClients] = useState([]);
   const [search, setSearch] = useState('');
@@ -252,9 +248,6 @@ export default function QuickPOS({ onBackToDashboard, onPrintInvoice }) {
     if (!products.length) return [];
     return products.slice(0, 6);
   }, [products]);
-
-  // Phone POS tiles: most-sold first, then the catalogue.
-  const phonePicks = useMemo(() => topSellers(allBillsList, products, 12), [allBillsList, products]);
 
   // AI voice/photo bill → cart (matched catalogue items keep their id).
   const applyAi = ({ items, customer }) => {
@@ -610,12 +603,6 @@ export default function QuickPOS({ onBackToDashboard, onPrintInvoice }) {
       return;
     }
 
-    if (paymentMode === 'credit' && !customerName.trim()) {
-      toast(i18nT('posm.needCustomer'), 'warning');
-      return;
-    }
-    const isCredit = paymentMode === 'credit';
-
     setSaving(true);
     try {
       // Same numbering as the invoice editor: a GST bill continues the
@@ -677,7 +664,7 @@ export default function QuickPOS({ onBackToDashboard, onPrintInvoice }) {
         invoiceNumber: invoiceNo,
         invoiceDate: today,
         date: today,
-        status: isCredit ? 'unpaid' : 'paid',
+        status: 'paid',
         paymentMode,
         billType,
         isNonGst: billType === 'non-gst',
@@ -686,8 +673,8 @@ export default function QuickPOS({ onBackToDashboard, onPrintInvoice }) {
         clientGstin: '',
         totalAmount: totals.total,
         totalTaxAmount: totals.taxAmount,
-        paidAmount: isCredit ? 0 : totals.total,
-        payments: isCredit ? [] : [{
+        paidAmount: totals.total,
+        payments: [{
           id: 'pay_' + Date.now(),
           date: today,
           amount: totals.total,
@@ -974,46 +961,6 @@ export default function QuickPOS({ onBackToDashboard, onPrintInvoice }) {
   const nonGstBillsCount = useMemo(() => {
     return (allBillsList || []).filter((b) => b && (b.billType === 'non-gst' || b.isNonGst || b.invoiceType === 'estimate')).length;
   }, [allBillsList]);
-
-  const hiddenReceipt = (
-    <div style={{ position: 'fixed', left: -99999, top: 0, opacity: 0, pointerEvents: 'none' }} ref={hiddenReceiptRef}>
-      {completedBill && (
-        <InvoicePreview
-          profile={profile}
-          client={completedBill.client}
-          details={completedBill.details}
-          items={completedBill.items}
-          totals={completedBill.totals}
-          invoiceType={completedBill.invoiceType}
-          options={{ ...(completedBill.data?.invoiceOptions || {}), paperSize }}
-        />
-      )}
-    </div>
-  );
-
-  if (isPhone) {
-    return (
-      <>
-        <PhonePOS
-          products={products} picks={phonePicks} search={search} setSearch={setSearch} results={searchResults}
-          onAdd={(p) => addToCart(p, 1)} cart={cart} onQty={updateQty} onRemove={removeItem} totals={totals}
-          billType={billType} onToggleBillType={() => setBillType(b => (b === 'gst' ? 'non-gst' : 'gst'))}
-          mode={paymentMode} setMode={setPaymentMode} tendered={cashTendered} setTendered={setCashTendered}
-          customerName={customerName} setCustomerName={setCustomerName} customerPhone={customerPhone} onPhone={handlePhoneChange}
-          cardLast4={cardDetails.last4} setCardLast4={(v) => setCardDetails(c => ({ ...c, last4: v }))}
-          saving={saving} onComplete={handleCompleteSale} done={showReceiptModal ? completedBill : null}
-          onPrint={printDirectly} onWhatsApp={handleWhatsAppShare} onNewSale={handleStartNewSale}
-          onScan={() => setShowScanner(true)} onAi={applyAi}
-          upiQr={uploadedQr} upiId={profile?.upiId || profile?.paymentAccounts?.[0]?.upiId || ''} hasPrinter={!!savedPrinter()?.kind}
-        />
-        {hiddenReceipt}
-        {showScanner && (
-          <BarcodeScannerModal isOpen={showScanner} onClose={() => setShowScanner(false)} onScan={handleBarcodeScanned}
-            onProductCreated={(p) => setProducts(prev => [p, ...prev])} />
-        )}
-      </>
-    );
-  }
 
   return (
     <div

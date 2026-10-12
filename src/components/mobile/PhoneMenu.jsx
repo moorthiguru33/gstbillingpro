@@ -67,7 +67,7 @@ export default function PhoneMenu({ can, show, go, newDoc, payIn, darkMode, onTo
       { icon: DatabaseBackup, label: tr('ph.mBackup'), run: () => go('settings', 'data'), ok: can('settings') },
       { icon: Wrench, label: tr('ph.mItemTools'), run: () => go('inventory', 'manage'), ok: can('inventory') },
     ] },
-    { id: 'settings', icon: Settings, label: tr('nav.settings'), run: () => go('prefs'), ok: can('prefs') },
+    { id: 'settings', icon: Settings, label: tr('nav.settings'), run: () => go('settings'), ok: can('settings') },
     { id: 'profile', icon: IdCard, label: tr('ph.mProfile'), run: () => go('profile'), ok: can('profile') },
     { id: 'plans', icon: Crown, label: tr('ph.mPlans'), run: () => openUpgrade(null), ok: can('prefs') },
     { id: 'help', icon: MessageCircle, label: tr('ph.mHelp'), run: () => openInNewTab(`https://wa.me/${SUPPORT_WA}?text=${encodeURIComponent(tr('ph.helpMsg'))}`), ok: true },

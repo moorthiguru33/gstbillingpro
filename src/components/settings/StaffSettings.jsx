@@ -94,7 +94,7 @@ export default function StaffSettings() {
       <div className="glass-panel p-6 mb-6">
         <h3 className="section-title">{t('staff.teamTitle')}</h3>
         <div className="staff-list">
-          {(team.members || []).map(m => (
+          {team.members.map(m => (
             <div key={m.id} className="staff-row">
               <div className="staff-who">
                 <strong>{m.name || m.email || m.phone || '—'}</strong>

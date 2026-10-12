@@ -361,260 +361,354 @@
    without touching desktop. Inputs stay 16px so iOS never zooms.
    ========================================================================== */
 @media (max-width: 768px) {
-  :where(html.compact){ --mtab-h: 56px; --mtop-h: 48px; }
-  :where(html.compact) body{ font-size: 14px; }
+  :root { --mtab-h: 56px; --mtop-h: 48px; }
+  body { font-size: 14px; }
 
   /* ---------- top app bar ---------- */
-  :where(html.compact) .mobile-topbar{ padding: env(safe-area-inset-top, 0px) 0.5rem 0 0.6rem; gap: 0.3rem; box-shadow: 0 1px 0 var(--border, #e2e8f0); }
-  :where(html.compact) .mobile-topbar-btn{ width: 38px; height: 38px; border-radius: 10px; }
-  :where(html.compact) .mobile-topbar-btn svg{ width: 19px; height: 19px; }
-  :where(html.compact) .mobile-biz{ min-height: 40px; gap: 0.5rem; }
-  :where(html.compact) .mobile-biz-avatar{ width: 30px; height: 30px; border-radius: 8px; font-size: 0.95rem; }
-  :where(html.compact) .mobile-biz-name{ font-size: 0.92rem; }
-  :where(html.compact) .mobile-biz-sub{ font-size: 11px; }
-  :where(html.compact) .mobile-badge{ top: 2px; right: 2px; min-width: 16px; height: 16px; font-size: 10px; line-height: 16px; border-radius: 8px; }
-  :where(html.compact) .app-layout > .main-content{
+  .mobile-topbar { padding: env(safe-area-inset-top, 0px) 0.5rem 0 0.6rem; gap: 0.3rem; box-shadow: 0 1px 0 var(--border, #e2e8f0); }
+  .mobile-topbar-btn { width: 38px; height: 38px; border-radius: 10px; }
+  .mobile-topbar-btn svg { width: 19px; height: 19px; }
+  .mobile-biz { min-height: 40px; gap: 0.5rem; }
+  .mobile-biz-avatar { width: 30px; height: 30px; border-radius: 8px; font-size: 0.95rem; }
+  .mobile-biz-name { font-size: 0.92rem; }
+  .mobile-biz-sub { font-size: 11px; }
+  .mobile-badge { top: 2px; right: 2px; min-width: 16px; height: 16px; font-size: 10px; line-height: 16px; border-radius: 8px; }
+  .mobile-subbar { display: flex; align-items: center; justify-content: space-between; width: 100%; gap: 0.4rem; min-height: 38px; }
+  .mobile-back-btn { width: 36px !important; height: 36px !important; border-radius: 10px; background: var(--bg-secondary, rgba(15, 23, 42, 0.06)) !important; color: var(--text-primary, #0f172a) !important; border: 0; display: flex; align-items: center; justify-content: center; cursor: pointer; flex: none; }
+  .mobile-back-btn:active { transform: scale(0.92); }
+  .mobile-subbar-title { font-size: 1.02rem; font-weight: 700; color: var(--text-primary, #0f172a); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; flex: 1; min-width: 0; letter-spacing: -0.01em; }
+  .mobile-subbar-acts { display: flex; align-items: center; gap: 0.25rem; flex: none; }
+  .mobile-subbar-acts .mobile-topbar-btn { width: 36px; height: 36px; }
+  .app-layout > .main-content {
     padding: calc(var(--mtop-h) + env(safe-area-inset-top, 0px) + 0.5rem) 0.6rem calc(var(--mtab-h) + var(--safe-b) + 0.75rem);
   }
-  :where(html.compact) .app-layout > .main-content.view-new,
-  :where(html.compact) .app-layout > .main-content.view-pos{ padding-bottom: calc(68px + var(--safe-b)); }
+  .app-layout > .main-content.view-new,
+  .app-layout > .main-content.view-pos { padding-bottom: calc(68px + var(--safe-b)); }
 
   /* ---------- bottom tab bar ---------- */
-  :where(html.compact) .mtabbar{ padding: 0 0.15rem var(--safe-b); box-shadow: 0 -2px 10px rgba(15,23,42,0.06); }
-  :where(html.compact) .mtab{ gap: 1px; font-size: 10.5px; letter-spacing: 0.01em; }
-  :where(html.compact) .mtab svg{ width: 20px; height: 20px; }
-  :where(html.compact) .mtab span{ -webkit-line-clamp: 1; overflow-wrap: normal; white-space: nowrap; text-overflow: ellipsis; }
-  :where(html.compact) .mtab-fab-wrap{ padding-bottom: 4px; }
-  :where(html.compact) .mtab-fab{ top: -18px; width: 48px; height: 48px; border-width: 3px; box-shadow: 0 4px 12px rgba(30,64,175,0.4); }
-  :where(html.compact) .mtab-fab svg{ width: 24px; height: 24px; }
-  :where(html.compact) .mtab-fab-label{ font-size: 10.5px; }
-  :where(html.compact) .wa-float{ bottom: calc(var(--mtab-h) + var(--safe-b) + 10px) !important; }
+  .mtabbar { padding: 0 0.15rem var(--safe-b); box-shadow: 0 -2px 10px rgba(15,23,42,0.06); }
+  .mtab { gap: 1px; font-size: 10.5px; letter-spacing: 0.01em; }
+  .mtab svg { width: 20px; height: 20px; }
+  .mtab span { -webkit-line-clamp: 1; overflow-wrap: normal; white-space: nowrap; text-overflow: ellipsis; }
+  .mtab-fab-wrap { padding-bottom: 4px; }
+  .mtab-fab { top: -18px; width: 48px; height: 48px; border-width: 3px; box-shadow: 0 4px 12px rgba(30,64,175,0.4); }
+  .mtab-fab svg { width: 24px; height: 24px; }
+  .mtab-fab-label { font-size: 10.5px; }
+  .wa-float { bottom: calc(var(--mtab-h) + var(--safe-b) + 10px) !important; }
 
   /* ---------- bottom sheets ---------- */
-  :where(html.compact) .msheet{ max-height: 84vh; border-radius: 18px 18px 0 0; }
-  :where(html.compact) .msheet-grip{ width: 36px; height: 4px; margin: 6px auto 0; }
-  :where(html.compact) .msheet-head{ padding: 0.15rem 0.5rem 0.35rem 0.9rem; }
-  :where(html.compact) .msheet-head h3{ font-size: 1rem; }
-  :where(html.compact) .msheet-close{ width: 36px; height: 36px; border-radius: 10px; }
-  :where(html.compact) .msheet-body{ padding: 0.15rem 0.75rem 0.75rem; }
-  :where(html.compact) .msheet-grid{ gap: 0.4rem; }
-  :where(html.compact) .msheet-grid-4{ grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 0.35rem; }
-  :where(html.compact) .msheet-tile{ min-height: 74px; gap: 0.3rem; padding: 0.5rem 0.2rem; border-radius: 12px; font-size: 11.5px; line-height: 1.15; justify-content: center; }
-  :where(html.compact) .msheet-tile-icon{ width: 36px; height: 36px; border-radius: 10px; }
-  :where(html.compact) .msheet-tile-icon svg{ width: 20px; height: 20px; }
-  :where(html.compact) .msheet-links{ flex-direction: row; flex-wrap: wrap; gap: 0.4rem; margin-top: 0.6rem; }
-  :where(html.compact) .msheet-links .btn{ width: auto; flex: 1 1 calc(50% - 0.2rem); min-height: 40px; font-size: 13px; padding: 0.3rem 0.5rem; }
-  :where(html.compact) .msheet-links .btn:last-child{ flex-basis: 100%; }
-  :where(html.compact) .msheet-row{ min-height: 46px; font-size: 14px; border-radius: 10px; padding: 0 0.8rem; }
+  .msheet { max-height: 84vh; border-radius: 18px 18px 0 0; }
+  .msheet-grip { width: 36px; height: 4px; margin: 6px auto 0; }
+  .msheet-head { padding: 0.15rem 0.5rem 0.35rem 0.9rem; }
+  .msheet-head h3 { font-size: 1rem; }
+  .msheet-close { width: 36px; height: 36px; border-radius: 10px; }
+  .msheet-body { padding: 0.15rem 0.75rem 0.75rem; }
+  .msheet-grid { gap: 0.4rem; }
+  .msheet-grid-4 { grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 0.35rem; }
+  .msheet-tile { min-height: 74px; gap: 0.3rem; padding: 0.5rem 0.2rem; border-radius: 12px; font-size: 11.5px; line-height: 1.15; justify-content: center; }
+  .msheet-tile-icon { width: 36px; height: 36px; border-radius: 10px; }
+  .msheet-tile-icon svg { width: 20px; height: 20px; }
+  .msheet-links { flex-direction: row; flex-wrap: wrap; gap: 0.4rem; margin-top: 0.6rem; }
+  .msheet-links .btn { width: auto; flex: 1 1 calc(50% - 0.2rem); min-height: 40px; font-size: 13px; padding: 0.3rem 0.5rem; }
+  .msheet-links .btn:last-child { flex-basis: 100%; }
+  .msheet-row { min-height: 46px; font-size: 14px; border-radius: 10px; padding: 0 0.8rem; }
 
   /* modals that behave like sheets */
-  :where(html.compact) .modal-overlay > .modal-content{ max-height: 90vh !important; border-radius: 18px 18px 0 0 !important; padding: 0.8rem 0.8rem calc(0.8rem + var(--safe-b)) !important; }
+  .modal-overlay > .modal-content { max-height: 90vh !important; border-radius: 18px 18px 0 0 !important; padding: 0.8rem 0.8rem calc(0.8rem + var(--safe-b)) !important; }
 
   /* ---------- home: KPI strip + quick actions ---------- */
-  :where(html.compact) .mhome{ margin: 0 0 0.6rem; }
-  :where(html.compact) .mkpi-grid{ gap: 0.45rem; }
-  :where(html.compact) .mkpi{
+  .mhome { margin: 0 0 0.6rem; }
+  .mkpi-grid { gap: 0.45rem; }
+  .mkpi {
     display: grid; grid-template-columns: 30px minmax(0, 1fr); grid-template-areas: "icon label" "icon value" "icon sub";
     column-gap: 0.5rem; row-gap: 0; align-content: center; align-items: center; min-height: 62px; padding: 0.5rem 0.6rem;
     border-radius: 12px; box-shadow: 0 2px 8px rgba(15,23,42,0.10);
   }
-  :where(html.compact) .mkpi-icon{ grid-area: icon; width: 30px; height: 30px; border-radius: 9px; margin: 0; align-self: center; }
-  :where(html.compact) .mkpi-icon svg{ width: 16px; height: 16px; }
-  :where(html.compact) .mkpi-label{ grid-area: label; font-size: 11.5px; font-weight: 600; opacity: 0.92; }
-  :where(html.compact) .mkpi-value{ grid-area: value; font-size: 1.02rem; line-height: 1.2; }
-  :where(html.compact) .mkpi-sub{ grid-area: sub; font-size: 11px; line-height: 1.1; }
-  :where(html.compact) .mhome-title{ font-size: 0.82rem; margin: 0.7rem 0 0.4rem; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-secondary, #64748b); }
-  :where(html.compact) .mquick-grid{ gap: 0.4rem; }
-  :where(html.compact) .mquick{ min-height: 66px; gap: 0.25rem; padding: 0.45rem 0.2rem; border-radius: 12px; font-size: 11.5px; line-height: 1.15; justify-content: center; }
-  :where(html.compact) .mquick-icon{ width: 32px; height: 32px; border-radius: 9px; }
-  :where(html.compact) .mquick-icon svg{ width: 18px; height: 18px; }
+  .mkpi-icon { grid-area: icon; width: 30px; height: 30px; border-radius: 9px; margin: 0; align-self: center; }
+  .mkpi-icon svg { width: 16px; height: 16px; }
+  .mkpi-label { grid-area: label; font-size: 11.5px; font-weight: 600; opacity: 0.92; }
+  .mkpi-value { grid-area: value; font-size: 1.02rem; line-height: 1.2; }
+  .mkpi-sub { grid-area: sub; font-size: 11px; line-height: 1.1; }
+  .mhome-title { font-size: 0.82rem; margin: 0.7rem 0 0.4rem; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-secondary, #64748b); }
+  .mquick-grid { gap: 0.4rem; }
+  .mquick { min-height: 66px; gap: 0.25rem; padding: 0.45rem 0.2rem; border-radius: 12px; font-size: 11.5px; line-height: 1.15; justify-content: center; }
+  .mquick-icon { width: 32px; height: 32px; border-radius: 9px; }
+  .mquick-icon svg { width: 18px; height: 18px; }
 
   /* ---------- page chrome ---------- */
-  :where(html.compact) .demo-banner{ padding: 0.3rem 0.55rem !important; margin: 0 0 0.5rem !important; font-size: 12px !important; border-radius: 9px !important; }
-  :where(html.compact) .demo-banner button{ min-height: 30px !important; padding: 0.2rem 0.55rem !important; font-size: 12px !important; border-radius: 7px !important; white-space: nowrap; }
-  :where(html.compact) .demo-banner svg{ width: 15px; height: 15px; }
-  :where(html.compact) .page-header{ padding: 0.55rem 0.7rem !important; gap: 0.4rem !important; margin-bottom: 0.55rem !important; border-radius: 12px !important; }
-  :where(html.compact) .page-header > div{ gap: 0.45rem !important; }
-  :where(html.compact) .page-header .btn{ min-height: 34px; font-size: 13px !important; padding: 0.25rem 0.6rem !important; }
-  :where(html.compact) .page-title{ font-size: 1.1rem !important; margin-bottom: 0 !important; }
-  :where(html.compact) .page-subtitle{ font-size: 12px !important; line-height: 1.3; margin-top: 1px !important;
+  .demo-banner { padding: 0.3rem 0.55rem !important; margin: 0 0 0.5rem !important; font-size: 12px !important; border-radius: 9px !important; }
+  .demo-banner button { min-height: 30px !important; padding: 0.2rem 0.55rem !important; font-size: 12px !important; border-radius: 7px !important; white-space: nowrap; }
+  .demo-banner svg { width: 15px; height: 15px; }
+  .page-header { padding: 0.55rem 0.7rem !important; gap: 0.4rem !important; margin-bottom: 0.55rem !important; border-radius: 12px !important; }
+  .page-header > div { gap: 0.45rem !important; }
+  .page-header .btn { min-height: 34px; font-size: 13px !important; padding: 0.25rem 0.6rem !important; }
+  .page-title { font-size: 1.1rem !important; margin-bottom: 0 !important; }
+  .page-subtitle { font-size: 12px !important; line-height: 1.3; margin-top: 1px !important;
     display: -webkit-box; -webkit-line-clamp: 1; -webkit-box-orient: vertical; overflow: hidden; }
-  :where(html.compact) .glass-panel{ padding: 0.6rem !important; border-radius: 12px; }
-  :where(html.compact) .section-title{ margin-bottom: 0.55rem; font-size: 0.9rem; }
+  .glass-panel { padding: 0.6rem !important; border-radius: 12px; }
+  .section-title { margin-bottom: 0.55rem; font-size: 0.9rem; }
 
   /* stat cards: two per row, small icon beside the figure */
-  :where(html.compact) .main-content .stats-grid, :where(html.compact) .main-content .stats-grid-4,
-  :where(html.compact) .main-content .stats-grid[style*="grid-template-columns"]{ grid-template-columns: repeat(2, minmax(0, 1fr)) !important; gap: 0.4rem !important; margin-bottom: 0.6rem !important; }
-  :where(html.compact) .stat-card{ padding: 0.5rem 0.6rem !important; gap: 0.5rem !important; border-radius: 12px; }
-  :where(html.compact) .stat-icon{ width: 32px; height: 32px; border-radius: 9px; }
-  :where(html.compact) .stat-icon svg{ width: 16px; height: 16px; }
-  :where(html.compact) .stat-label{ font-size: 10.5px !important; margin-bottom: 0 !important; line-height: 1.2; }
-  :where(html.compact) .stat-value{ font-size: 1.02rem !important; line-height: 1.2; }
+  .main-content .stats-grid, .main-content .stats-grid-4,
+  .main-content .stats-grid[style*="grid-template-columns"] { grid-template-columns: repeat(2, minmax(0, 1fr)) !important; gap: 0.4rem !important; margin-bottom: 0.6rem !important; }
+  .stat-card { padding: 0.5rem 0.6rem !important; gap: 0.5rem !important; border-radius: 12px; }
+  .stat-icon { width: 32px; height: 32px; border-radius: 9px; }
+  .stat-icon svg { width: 16px; height: 16px; }
+  .stat-label { font-size: 10.5px !important; margin-bottom: 0 !important; line-height: 1.2; }
+  .stat-value { font-size: 1.02rem !important; line-height: 1.2; }
 
   /* ---------- touch targets, still comfortable but tighter ---------- */
-  :where(html.compact) .main-content .btn, :where(html.compact) .msheet .btn{ min-height: 40px; font-size: 14px; }
-  :where(html.compact) .main-content button.btn-sm, :where(html.compact) .main-content .btn.btn-sm{ min-height: 34px; font-size: 13px; }
-  :where(html.compact) .main-content input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="color"]),
-  :where(html.compact) .main-content select, :where(html.compact) .main-content textarea, :where(html.compact) .msheet input,
-  :where(html.compact) .modal-content input:not([type="checkbox"]):not([type="radio"]), :where(html.compact) .modal-content select, :where(html.compact) .modal-content textarea{
+  .main-content .btn, .msheet .btn { min-height: 40px; font-size: 14px; }
+  .main-content button.btn-sm, .main-content .btn.btn-sm { min-height: 34px; font-size: 13px; }
+  .main-content input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="color"]),
+  .main-content select, .main-content textarea, .msheet input,
+  .modal-content input:not([type="checkbox"]):not([type="radio"]), .modal-content select, .modal-content textarea {
     min-height: 40px; padding-top: 0.35rem; padding-bottom: 0.35rem; border-radius: 9px;
   }
-  :where(html.compact) .main-content textarea, :where(html.compact) .modal-content textarea{ min-height: 72px; }
-  :where(html.compact) .main-content input[type="checkbox"], :where(html.compact) .main-content input[type="radio"]{ width: 18px; height: 18px; }
-  :where(html.compact) .form-group{ margin-bottom: 0.55rem; }
-  :where(html.compact) .form-label, :where(html.compact) .main-content label{ font-size: 11.5px; margin-bottom: 0.2rem; letter-spacing: 0.02em; }
-  :where(html.compact) .main-content small, :where(html.compact) .main-content .text-sm, :where(html.compact) .settings-help{ font-size: 12px !important; }
-  :where(html.compact) .main-content table{ font-size: 13px; }
+  .main-content textarea, .modal-content textarea { min-height: 72px; }
+  .main-content input[type="checkbox"], .main-content input[type="radio"] { width: 18px; height: 18px; }
+  .form-group { margin-bottom: 0.55rem; }
+  .form-label, .main-content label { font-size: 11.5px; margin-bottom: 0.2rem; letter-spacing: 0.02em; }
+  .main-content small, .main-content .text-sm, .settings-help { font-size: 12px !important; }
+  .main-content table { font-size: 13px; }
 
   /* ---------- filter rows (bills, parties, products, reports…) ---------- */
   /* 6-column grid: [search | columns], [year | type | status], [from | to] = 3 rows instead of 6 */
-  :where(html.compact) .filters-bar{ display: grid !important; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 0.4rem !important; padding: 0.5rem 0 !important; }
-  :where(html.compact) .filters-bar > *{ min-width: 0 !important; max-width: 100%; grid-column: span 2; order: 2; }
-  :where(html.compact) .filters-bar > .search-box{ grid-column: span 4; order: 1; }
-  :where(html.compact) .filters-bar > select{ order: 3; }
-  :where(html.compact) .filters-bar > input[type="date"]{ grid-column: span 3; order: 4; }
-  :where(html.compact) .filters-bar .search-input{ min-height: 40px; padding-left: 2.1rem; }
-  :where(html.compact) .filters-bar select, :where(html.compact) .filters-bar input[type="date"]{ width: 100%; font-size: 14px !important; padding-left: 0.5rem; padding-right: 0.4rem; }
-  :where(html.compact) .filters-bar .btn{ width: 100%; justify-content: center; }
-  :where(html.compact) .mquickprint{ flex-wrap: nowrap !important; overflow-x: auto; padding: 0.4rem 0 !important; gap: 0.35rem !important; scrollbar-width: none; }
-  :where(html.compact) .mquickprint::-webkit-scrollbar{ display: none; }
-  :where(html.compact) .mquickprint > *{ flex: none; white-space: nowrap; }
-  :where(html.compact) .mquickprint .btn{ min-height: 32px !important; }
+  .filters-bar { display: grid !important; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 0.4rem !important; padding: 0.5rem 0 !important; }
+  .filters-bar > * { min-width: 0 !important; max-width: 100%; grid-column: span 2; order: 2; }
+  .filters-bar > .search-box { grid-column: span 4; order: 1; }
+  .filters-bar > select { order: 3; }
+  .filters-bar > input[type="date"] { grid-column: span 3; order: 4; }
+  .filters-bar .search-input { min-height: 40px; padding-left: 2.1rem; }
+  .filters-bar select, .filters-bar input[type="date"] { width: 100%; font-size: 14px !important; padding-left: 0.5rem; padding-right: 0.4rem; }
+  .filters-bar .btn { width: 100%; justify-content: center; }
+  .mquickprint { flex-wrap: nowrap !important; overflow-x: auto; padding: 0.4rem 0 !important; gap: 0.35rem !important; scrollbar-width: none; }
+  .mquickprint::-webkit-scrollbar { display: none; }
+  .mquickprint > * { flex: none; white-space: nowrap; }
+  .mquickprint .btn { min-height: 32px !important; }
   /* "All / GST / Non-GST" switch: one tidy row */
-  :where(html.compact) .table-header{ margin-bottom: 0.4rem !important; }
-  :where(html.compact) .table-header h3{ font-size: 0.95rem; }
-  :where(html.compact) .mseg{ width: 100%; gap: 2px !important; }
-  :where(html.compact) .mseg > button{ flex: 1 1 0; min-width: 0; min-height: 34px; padding: 0.2rem 0.3rem !important; font-size: 11.5px !important; line-height: 1.15; white-space: normal; }
+  .table-header { margin-bottom: 0.4rem !important; }
+  .table-header h3 { font-size: 0.95rem; }
+  .mseg { width: 100%; gap: 2px !important; }
+  .mseg > button { flex: 1 1 0; min-width: 0; min-height: 34px; padding: 0.2rem 0.3rem !important; font-size: 11.5px !important; line-height: 1.15; white-space: normal; }
 
   /* ---------- tabs / chips ---------- */
-  :where(html.compact) .tabs, :where(html.compact) .tab-bar, :where(html.compact) .report-tabs, :where(html.compact) .filter-chips{ gap: 0.35rem !important; margin-bottom: 0.6rem !important; padding-bottom: 2px; }
-  :where(html.compact) .tabs > *, :where(html.compact) .tab-bar > *, :where(html.compact) .report-tabs > *{ min-height: 34px; padding: 0.3rem 0.75rem !important; font-size: 13px !important; border-radius: 999px !important; white-space: nowrap; }
-  :where(html.compact) .report-tabs svg, :where(html.compact) .tabs svg{ width: 15px; height: 15px; }
+  .tabs, .tab-bar, .report-tabs, .filter-chips { gap: 0.35rem !important; margin-bottom: 0.6rem !important; padding-bottom: 2px; }
+  .tabs > *, .tab-bar > *, .report-tabs > * { min-height: 34px; padding: 0.3rem 0.75rem !important; font-size: 13px !important; border-radius: 999px !important; white-space: nowrap; }
+  .report-tabs svg, .tabs svg { width: 15px; height: 15px; }
 
   /* ---------- tables → compact two-column cards ---------- */
-  :where(html.compact) table.mcards tr{
+  table.mcards tr {
     display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); column-gap: 0.7rem; row-gap: 0.1rem;
     margin: 0 0 0.45rem; padding: 0.5rem 0.65rem; border-radius: 12px; box-shadow: none;
   }
-  :where(html.compact) table.mcards td{
+  table.mcards td {
     display: flex; flex-direction: column; align-items: flex-start; justify-content: flex-start; gap: 0;
     min-height: 0; padding: 0.1rem 0 !important; text-align: left !important; font-size: 13.5px; min-width: 0;
   }
-  :where(html.compact) table.mcards td::before{ max-width: 100%; font-size: 10.5px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.03em; line-height: 1.2; }
-  :where(html.compact) table.mcards td:first-child{ grid-column: 1 / -1; font-size: 14.5px; }
-  :where(html.compact) table.mcards td:last-child:not(:first-child){ grid-column: 1 / -1; flex-direction: row; justify-content: flex-end; margin-top: 0.15rem; padding-top: 0.35rem !important; }
+  table.mcards td::before { max-width: 100%; font-size: 10.5px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.03em; line-height: 1.2; }
+  table.mcards td:first-child { grid-column: 1 / -1; font-size: 14.5px; }
+  table.mcards td:last-child:not(:first-child) { grid-column: 1 / -1; flex-direction: row; justify-content: flex-end; margin-top: 0.15rem; padding-top: 0.35rem !important; }
   /* row checkbox (bulk select) floats in the card corner instead of taking its own line */
-  :where(html.compact) table.mcards tr{ position: relative; }
-  :where(html.compact) table.mcards tr:has(> td:first-child input[type="checkbox"]){ padding-left: 2.2rem; }
-  :where(html.compact) table.mcards td:first-child:has(input[type="checkbox"]){ position: absolute; left: 0.55rem; top: 0.55rem; width: auto !important; grid-column: auto; padding: 0 !important; }
-  :where(html.compact) table.mcards td:first-child:has(input[type="checkbox"])::before{ content: none; }
-  :where(html.compact) table.mcards td .flex, :where(html.compact) table.mcards td > div{ justify-content: flex-start; }
-  :where(html.compact) table.mcards td:last-child .flex, :where(html.compact) table.mcards td:last-child > div{ justify-content: flex-end; }
-  :where(html.compact) table.mcards td button, :where(html.compact) table.mcards td .btn{ min-width: 36px; min-height: 36px; }
-  :where(html.compact) table.mcards td select{ min-height: 34px !important; font-size: 13px !important; max-width: 100%; }
+  table.mcards tr { position: relative; }
+  table.mcards tr:has(> td:first-child input[type="checkbox"]) { padding-left: 2.2rem; }
+  table.mcards td:first-child:has(input[type="checkbox"]) { position: absolute; left: 0.55rem; top: 0.55rem; width: auto !important; grid-column: auto; padding: 0 !important; }
+  table.mcards td:first-child:has(input[type="checkbox"])::before { content: none; }
+  table.mcards td .flex, table.mcards td > div { justify-content: flex-start; }
+  table.mcards td:last-child .flex, table.mcards td:last-child > div { justify-content: flex-end; }
+  table.mcards td button, table.mcards td .btn { min-width: 36px; min-height: 36px; }
+  table.mcards td select { min-height: 34px !important; font-size: 13px !important; max-width: 100%; }
 
   /* ---------- settings home: compact list rows ---------- */
-  :where(html.compact) .settings-cards{ gap: 0.4rem; }
-  :where(html.compact) .settings-card{ min-height: 56px; padding: 0.5rem 0.7rem; gap: 0.65rem; border-radius: 12px; }
-  :where(html.compact) .settings-card:hover, :where(html.compact) .settings-card:focus-visible{ transform: none; }
-  :where(html.compact) .settings-card-icon{ width: 38px; height: 38px; border-radius: 10px; }
-  :where(html.compact) .settings-card-icon svg{ width: 19px; height: 19px; }
-  :where(html.compact) .settings-card-text{ gap: 0; }
-  :where(html.compact) .settings-card-text strong{ font-size: 14.5px; }
-  :where(html.compact) .settings-card-text small{ font-size: 12px !important; line-height: 1.25;
+  .settings-container { padding: 0.2rem 0 4.5rem; max-width: 100vw; }
+  .settings-cards { display: flex !important; flex-direction: column !important; gap: 0.45rem !important; }
+  .settings-card {
+    display: flex !important; align-items: center !important; min-height: 60px !important;
+    padding: 0.65rem 0.85rem !important; gap: 0.75rem !important; border-radius: 14px !important;
+    border: 1px solid var(--border, #e2e8f0) !important; background: var(--card-bg, #fff) !important;
+    box-shadow: 0 1px 3px rgba(15, 23, 42, 0.04) !important; cursor: pointer; text-align: left; width: 100%;
+    transition: transform 0.1s, background 0.15s;
+  }
+  .settings-card:active { transform: scale(0.99); background: var(--bg-secondary, #f8fafc) !important; }
+  .settings-card:hover, .settings-card:focus-visible { transform: none; }
+  .settings-card-icon { width: 40px !important; height: 40px !important; border-radius: 12px !important; flex: none !important; display: flex !important; align-items: center !important; justify-content: center !important; }
+  .settings-card-icon svg { width: 22px !important; height: 22px !important; }
+  .settings-card-text { gap: 1px !important; flex: 1 !important; min-width: 0 !important; display: flex !important; flex-direction: column !important; }
+  .settings-card-text strong { font-size: 14.5px !important; font-weight: 700 !important; color: var(--text-primary, #0f172a); }
+  .settings-card-text small { font-size: 12px !important; line-height: 1.25; color: var(--text-secondary, #64748b) !important;
     display: -webkit-box; -webkit-line-clamp: 1; -webkit-box-orient: vertical; overflow: hidden; }
-  :where(html.compact) .settings-card-chev{ width: 16px; height: 16px; }
-  :where(html.compact) .settings-container{ padding-bottom: 3.5rem; }
+  .settings-card-chev { width: 18px !important; height: 18px !important; color: var(--text-secondary, #94a3b8) !important; flex: none !important; }
+  
+  /* Settings page header with back navigation */
+  .settings-page-head {
+    display: flex !important; align-items: center !important; gap: 0.6rem !important;
+    padding: 0.55rem 0.75rem !important; margin-bottom: 0.65rem !important; border-radius: 12px !important;
+    background: var(--card-bg, #fff) !important; border: 1px solid var(--border, #e2e8f0) !important;
+  }
+  .settings-page-head .btn, .settings-page-head .btn-secondary {
+    min-height: 36px !important; padding: 0.2rem 0.6rem !important; font-size: 13px !important;
+    border-radius: 8px !important; flex: none !important;
+  }
+  .settings-page-head h2 { font-size: 1.05rem !important; font-weight: 700; margin: 0; }
+  .settings-page-head p { font-size: 12px !important; color: var(--text-secondary, #64748b); margin: 0; }
+  
+  /* Sub-sections of Settings */
+  .settings-pages [id^="section-"] {
+    margin-bottom: 0.7rem !important; padding: 0.75rem !important; border-radius: 14px !important;
+  }
+  .settings-pages [id^="section-"] .grid,
+  .settings-pages [id^="section-"] .grid-cols-2 {
+    grid-template-columns: 1fr !important; gap: 0.45rem !important;
+  }
+  .settings-pages .form-group { margin-bottom: 0.5rem !important; }
+  .settings-pages .form-label { font-size: 12px !important; font-weight: 600 !important; margin-bottom: 0.2rem !important; }
+  .settings-pages .form-input { min-height: 42px !important; font-size: 15px !important; border-radius: 9px !important; }
+  .settings-pages .surface-card { padding: 0.65rem !important; border-radius: 12px !important; margin-bottom: 0.45rem !important; }
+
+  /* Print settings layout on mobile */
+  .print-settings-layout { grid-template-columns: 1fr !important; gap: 0.65rem !important; margin-top: 0.4rem !important; }
+  .print-settings-preview-pane { position: static !important; max-height: none !important; margin-top: 0.7rem !important; padding: 0.6rem !important; }
+
+  /* Universal table & table-scroll overflow prevention */
+  .table-scroll, .main-content .table-scroll { overflow-x: visible !important; min-width: 0 !important; width: 100% !important; }
+  .table-scroll table, .main-content table, table.data-table, table.mod-table, table[style*="min-width"] { min-width: 0 !important; width: 100% !important; }
+
+  /* Client invoices inside expanded client card */
+  .client-invoices { padding: 0.4rem 0.5rem !important; }
+  .client-invoices .table-scroll { padding: 0 !important; }
+  .client-invoices table.data-table tr {
+    display: grid !important; grid-template-columns: 1fr 1fr !important; gap: 0.3rem !important;
+    padding: 0.55rem 0.7rem !important; margin-bottom: 0.45rem !important;
+    border: 1px solid var(--border, #e2e8f0) !important; border-radius: 12px !important;
+    background: var(--bg-card, #fff) !important;
+  }
+  .client-invoices table.data-table td { border: 0 !important; padding: 0.1rem 0 !important; font-size: 13.5px !important; }
+  .client-invoices table.data-table td:first-child { grid-column: 1 / 2; color: var(--text-secondary, #64748b); font-size: 12.5px !important; }
+  .client-invoices table.data-table td:nth-child(2) { grid-column: 2 / 3; text-align: right !important; justify-content: flex-end; }
+  .client-invoices table.data-table td:nth-child(3) { grid-column: 1 / 2; }
+  .client-invoices table.data-table td:nth-child(4) { grid-column: 2 / 3; text-align: right !important; font-size: 15px !important; font-weight: 800 !important; }
+  .client-invoices table.data-table td:nth-child(5) { grid-column: 1 / 3; margin-top: 0.2rem; }
+  .client-invoices table.data-table td:nth-child(6),
+  .client-invoices table.data-table td:last-child {
+    grid-column: 1 / 3; display: flex !important; justify-content: space-between !important;
+    border-top: 1px dashed var(--border, #e2e8f0) !important; padding-top: 0.35rem !important; margin-top: 0.2rem !important;
+  }
+  .client-invoices table.data-table td .table-actions { display: flex; justify-content: space-between; width: 100%; gap: 0.35rem; }
+  .client-invoices table.data-table td .table-actions button { flex: 1; min-height: 38px !important; border-radius: 8px; display: inline-flex; align-items: center; justify-content: center; }
+
+  /* Expense, Purchase, and Receipt cards */
+  .view-expenses table.mcards tr,
+  .view-purchases table.mcards tr,
+  .view-receipts table.mcards tr,
+  .view-recurring table.mcards tr {
+    display: flex !important; flex-direction: column !important; gap: 0.25rem !important;
+    padding: 0.55rem 0.7rem !important; border: 1px solid var(--border, #e2e8f0) !important;
+    border-radius: 12px !important; margin-bottom: 0.45rem !important; background: var(--bg-card, #fff) !important;
+  }
+  .view-expenses table.mcards td,
+  .view-purchases table.mcards td,
+  .view-receipts table.mcards td,
+  .view-recurring table.mcards td {
+    display: flex !important; justify-content: space-between !important; align-items: center !important;
+    padding: 0.1rem 0 !important; border: 0 !important; font-size: 13.5px !important;
+  }
+  .view-expenses table.mcards td:last-child,
+  .view-purchases table.mcards td:last-child,
+  .view-receipts table.mcards td:last-child,
+  .view-recurring table.mcards td:last-child {
+    border-top: 1px dashed var(--border, #e2e8f0) !important; padding-top: 0.3rem !important;
+    margin-top: 0.2rem !important; justify-content: flex-end !important; gap: 0.35rem;
+  }
 
   /* ---------- invoice editor ---------- */
-  :where(html.compact) .line-item-row{ gap: 0.4rem; margin-bottom: 0.5rem; padding-bottom: 0.5rem; }
-  :where(html.compact) .line-item-field{ min-width: 64px; }
-  :where(html.compact) .line-item-field input.form-input, :where(html.compact) .line-item-field select.form-input{ min-height: 38px; }
-  :where(html.compact) .line-item-field .form-label{ font-size: 10.5px; margin-bottom: 0.15rem; }
-  :where(html.compact) .editor-primary-actions{ gap: 0.35rem; padding: 0.4rem 0.5rem calc(0.4rem + var(--safe-b)); }
-  :where(html.compact) .editor-primary-actions .btn{ min-height: 44px; font-size: 12px !important; }
-  :where(html.compact) .editor-primary-actions .btn:first-child{ font-size: 14px !important; }
-  :where(html.compact) .mqa-open{ min-height: 46px !important; font-size: 15px !important; }
-  :where(html.compact) .mqa-item{ min-height: 52px; padding: 0.4rem 0.6rem; }
-  :where(html.compact) .mqa-tools .btn, :where(html.compact) .mqa-tools button{ min-height: 40px; }
+  .line-item-row { gap: 0.4rem; margin-bottom: 0.5rem; padding-bottom: 0.5rem; }
+  .line-item-field { min-width: 64px; }
+  .line-item-field input.form-input, .line-item-field select.form-input { min-height: 38px; }
+  .line-item-field .form-label { font-size: 10.5px; margin-bottom: 0.15rem; }
+  .editor-primary-actions { gap: 0.35rem; padding: 0.4rem 0.5rem calc(0.4rem + var(--safe-b)); }
+  .editor-primary-actions .btn { min-height: 44px; font-size: 12px !important; }
+  .editor-primary-actions .btn:first-child { font-size: 14px !important; }
+  .mqa-open { min-height: 46px !important; font-size: 15px !important; }
+  .mqa-item { min-height: 52px; padding: 0.4rem 0.6rem; }
+  .mqa-tools .btn, .mqa-tools button { min-height: 40px; }
 
   /* ---------- POS ---------- */
-  :where(html.compact) .pos-topbar{ padding: 0.35rem 0.5rem !important; gap: 0.3rem !important; }
-  :where(html.compact) .pos-cart-row{ padding: 0.4rem 0.3rem !important; font-size: 14px !important; }
-  :where(html.compact) .pos-checkout{ padding: 0.4rem 0.5rem calc(0.4rem + var(--safe-b)) !important; }
-  :where(html.compact) .pos-checkout .btn, :where(html.compact) .pos-checkout button{ min-height: 48px; font-size: 15px !important; }
+  .pos-topbar { padding: 0.35rem 0.5rem !important; gap: 0.3rem !important; }
+  .pos-cart-row { padding: 0.4rem 0.3rem !important; font-size: 14px !important; }
+  .pos-checkout { padding: 0.4rem 0.5rem calc(0.4rem + var(--safe-b)) !important; }
+  .pos-checkout .btn, .pos-checkout button { min-height: 48px; font-size: 15px !important; }
 
   /* ---------- parties ---------- */
-  :where(html.compact) .client-card-header{ padding: 0.6rem !important; gap: 0.5rem; }
-  :where(html.compact) .client-card-name{ font-size: 15px !important; }
-  :where(html.compact) .client-card-stats{ gap: 0.35rem !important; }
-  :where(html.compact) .client-stat{ padding: 0.3rem 0.4rem !important; border-radius: 8px; }
-  :where(html.compact) .client-stat-value{ font-size: 13px !important; }
+  .client-card-header { padding: 0.6rem !important; gap: 0.5rem; }
+  .client-card-name { font-size: 15px !important; }
+  .client-card-stats { gap: 0.35rem !important; }
+  .client-stat { padding: 0.3rem 0.4rem !important; border-radius: 8px; }
+  .client-stat-value { font-size: 13px !important; }
 
   /* long lists keep a slim, native-looking scrollbar-free feel */
-  :where(html.compact) .main-content{ scrollbar-width: none; }
-  :where(html.compact) .main-content::-webkit-scrollbar{ display: none; }
+  .main-content { scrollbar-width: none; }
+  .main-content::-webkit-scrollbar { display: none; }
 
   /* ---------- bills list: 3-line invoice cards ---------- */
-  :where(html.compact) #invoice-list table.mcards tr{ grid-template-columns: repeat(6, minmax(0, 1fr)); row-gap: 0.15rem; }
-  :where(html.compact) #invoice-list table.mcards td{ grid-column: span 2; }
-  :where(html.compact) #invoice-list table.mcards td:first-child:has(input[type="checkbox"]){ grid-column: auto; }
-  :where(html.compact) #invoice-list table.mcards td[data-label="Client"]{ grid-column: 1 / 5; grid-row: 1; font-weight: 700; font-size: 14.5px; }
-  :where(html.compact) #invoice-list table.mcards td[data-label="Amount"]{ grid-column: 5 / 7; grid-row: 1; align-items: flex-end; font-size: 15px; font-weight: 800; text-align: right !important; }
-  :where(html.compact) #invoice-list table.mcards td[data-label="Invoice No."]{ grid-column: 1 / 4; grid-row: 2; }
-  :where(html.compact) #invoice-list table.mcards td[data-label="Status"]{ grid-column: 4 / 7; grid-row: 2; align-items: flex-end; }
-  :where(html.compact) #invoice-list table.mcards td[data-label="Date"]{ grid-column: 1 / 3; grid-row: 3; }
-  :where(html.compact) #invoice-list table.mcards td[data-label="Type"]{ grid-column: 3 / 5; grid-row: 3; }
-  :where(html.compact) #invoice-list table.mcards td[data-label="Paid"]{ grid-column: 5 / 7; grid-row: 3; align-items: flex-end; }
-  :where(html.compact) #invoice-list table.mcards td[data-label="Client"]::before,
-  :where(html.compact) #invoice-list table.mcards td[data-label="Amount"]::before,
-  :where(html.compact) #invoice-list table.mcards td[data-label="Invoice No."]::before,
-  :where(html.compact) #invoice-list table.mcards td[data-label="Status"]::before{ content: none; }
-  :where(html.compact) #invoice-list table.mcards td:last-child:not(:first-child){ grid-column: 1 / -1; grid-row: 4; }
-  :where(html.compact) #invoice-list table.mcards td:last-child .flex, :where(html.compact) #invoice-list table.mcards td:last-child > div{ gap: 0.3rem; justify-content: space-between; width: 100%; }
-  :where(html.compact) #invoice-list table.mcards td:last-child button{ flex: 1; min-width: 0; min-height: 34px; padding: 0.2rem !important; }
-  :where(html.compact) #invoice-list .invoice-badge, :where(html.compact) #invoice-list .type-badge{ font-size: 11.5px; padding: 0.1rem 0.45rem; }
-  :where(html.compact) #invoice-list .status-select{ min-height: 30px !important; padding: 0.1rem 1.4rem 0.1rem 0.5rem !important; font-size: 12.5px !important; width: auto; }
+  #invoice-list table.mcards tr { grid-template-columns: repeat(6, minmax(0, 1fr)); row-gap: 0.15rem; }
+  #invoice-list table.mcards td { grid-column: span 2; }
+  #invoice-list table.mcards td:first-child:has(input[type="checkbox"]) { grid-column: auto; }
+  #invoice-list table.mcards td[data-label="Client"] { grid-column: 1 / 5; grid-row: 1; font-weight: 700; font-size: 14.5px; }
+  #invoice-list table.mcards td[data-label="Amount"] { grid-column: 5 / 7; grid-row: 1; align-items: flex-end; font-size: 15px; font-weight: 800; text-align: right !important; }
+  #invoice-list table.mcards td[data-label="Invoice No."] { grid-column: 1 / 4; grid-row: 2; }
+  #invoice-list table.mcards td[data-label="Status"] { grid-column: 4 / 7; grid-row: 2; align-items: flex-end; }
+  #invoice-list table.mcards td[data-label="Date"] { grid-column: 1 / 3; grid-row: 3; }
+  #invoice-list table.mcards td[data-label="Type"] { grid-column: 3 / 5; grid-row: 3; }
+  #invoice-list table.mcards td[data-label="Paid"] { grid-column: 5 / 7; grid-row: 3; align-items: flex-end; }
+  #invoice-list table.mcards td[data-label="Client"]::before,
+  #invoice-list table.mcards td[data-label="Amount"]::before,
+  #invoice-list table.mcards td[data-label="Invoice No."]::before,
+  #invoice-list table.mcards td[data-label="Status"]::before { content: none; }
+  #invoice-list table.mcards td:last-child:not(:first-child) { grid-column: 1 / -1; grid-row: 4; }
+  #invoice-list table.mcards td:last-child .flex, #invoice-list table.mcards td:last-child > div { gap: 0.3rem; justify-content: space-between; width: 100%; }
+  #invoice-list table.mcards td:last-child button { flex: 1; min-width: 0; min-height: 34px; padding: 0.2rem !important; }
+  #invoice-list .invoice-badge, #invoice-list .type-badge { font-size: 11.5px; padding: 0.1rem 0.45rem; }
+  #invoice-list .status-select { min-height: 30px !important; padding: 0.1rem 1.4rem 0.1rem 0.5rem !important; font-size: 12.5px !important; width: auto; }
 
   /* ---------- "Getting started" card: only what is still to do ---------- */
-  :where(html.compact) .mchecklist{ padding: 0.55rem 0.7rem !important; margin-bottom: 0.6rem !important; }
-  :where(html.compact) .mchecklist .mcl-head{ margin-bottom: 0.2rem !important; gap: 0.4rem !important; }
-  :where(html.compact) .mchecklist .section-title{ font-size: 0.92rem; }
-  :where(html.compact) .mchecklist .mcl-done{ display: none !important; }
-  :where(html.compact) .mchecklist .mcl-row{ padding: 0.4rem 0 !important; gap: 0.55rem !important; }
-  :where(html.compact) .mchecklist .mcl-row .btn{ min-height: 32px !important; padding: 0.2rem 0.6rem !important; font-size: 12px !important; }
-  :where(html.compact) .mchecklist .mcl-foot{ margin-top: 0.4rem !important; font-size: 12px !important; }
+  .mchecklist { padding: 0.55rem 0.7rem !important; margin-bottom: 0.6rem !important; }
+  .mchecklist .mcl-head { margin-bottom: 0.2rem !important; gap: 0.4rem !important; }
+  .mchecklist .section-title { font-size: 0.92rem; }
+  .mchecklist .mcl-done { display: none !important; }
+  .mchecklist .mcl-row { padding: 0.4rem 0 !important; gap: 0.55rem !important; }
+  .mchecklist .mcl-row .btn { min-height: 32px !important; padding: 0.2rem 0.6rem !important; font-size: 12px !important; }
+  .mchecklist .mcl-foot { margin-top: 0.4rem !important; font-size: 12px !important; }
 
   /* ---------- page header actions: one scrolling row, not a stack ---------- */
-  :where(html.compact) .page-header > div:nth-child(2){ flex: 1 1 100%; flex-wrap: nowrap !important; overflow-x: auto; gap: 0.35rem !important; scrollbar-width: none; padding-bottom: 1px; }
-  :where(html.compact) .page-header > div:nth-child(2)::-webkit-scrollbar{ display: none; }
-  :where(html.compact) .page-header > div:nth-child(2) > *{ flex: none; white-space: nowrap; }
-  :where(html.compact) .page-header > div:nth-child(2) .btn{ min-height: 34px; font-size: 12.5px !important; padding: 0.2rem 0.6rem !important; }
+  .page-header > div:nth-child(2) { flex: 1 1 100%; flex-wrap: nowrap !important; overflow-x: auto; gap: 0.35rem !important; scrollbar-width: none; padding-bottom: 1px; }
+  .page-header > div:nth-child(2)::-webkit-scrollbar { display: none; }
+  .page-header > div:nth-child(2) > * { flex: none; white-space: nowrap; }
+  .page-header > div:nth-child(2) .btn { min-height: 34px; font-size: 12.5px !important; padding: 0.2rem 0.6rem !important; }
 
   /* ---------- table cards: 3 short fields per line when a row has 5+ columns ---------- */
-  :where(html.compact) table.mcards tr:has(> td:nth-child(5)){ grid-template-columns: repeat(6, minmax(0, 1fr)); }
-  :where(html.compact) table.mcards tr:has(> td:nth-child(5)) > td{ grid-column: span 2; }
-  :where(html.compact) table.mcards tr:has(> td:nth-child(5)) > td:first-child:not(:has(input[type="checkbox"])){ grid-column: 1 / -1; }
-  :where(html.compact) table.mcards tr:has(> td:nth-child(5)) > td:last-child:not(:first-child){ grid-column: 1 / -1; }
+  table.mcards tr:has(> td:nth-child(5)) { grid-template-columns: repeat(6, minmax(0, 1fr)); }
+  table.mcards tr:has(> td:nth-child(5)) > td { grid-column: span 2; }
+  table.mcards tr:has(> td:nth-child(5)) > td:first-child:not(:has(input[type="checkbox"])) { grid-column: 1 / -1; }
+  table.mcards tr:has(> td:nth-child(5)) > td:last-child:not(:first-child) { grid-column: 1 / -1; }
 
   /* inner list headings (e.g. "Products & Services") */
-  :where(html.compact) .table-header{ padding: 0.5rem 0.2rem !important; }
+  .table-header { padding: 0.5rem 0.2rem !important; }
 
   /* ---------- invoice editor: toolbar + type chips on one scrolling line ---------- */
-  :where(html.compact) .editor-actions{ flex-wrap: nowrap !important; overflow-x: auto; scrollbar-width: none; gap: 0.35rem !important; }
-  :where(html.compact) .editor-actions::-webkit-scrollbar{ display: none; }
-  :where(html.compact) .editor-actions > *, :where(html.compact) .editor-actions .btn{ flex: none; white-space: nowrap; }
-  :where(html.compact) .editor-actions .btn{ min-height: 34px !important; font-size: 12.5px !important; padding: 0.2rem 0.6rem !important; }
-  :where(html.compact) .type-selector{ display: flex; flex-wrap: nowrap !important; overflow-x: auto; gap: 0.3rem !important; margin-top: 0.4rem !important; scrollbar-width: none; }
-  :where(html.compact) .type-selector::-webkit-scrollbar{ display: none; }
-  :where(html.compact) .type-chip{ flex: none; white-space: nowrap; min-height: 32px; padding: 0.2rem 0.7rem !important; font-size: 12.5px !important; }
-  :where(html.compact) .type-desc{ font-size: 12px !important; margin: 0.3rem 0 !important; }
-  :where(html.compact) .main-content .glass-panel.p-6, :where(html.compact) .main-content .glass-panel.mb-6{ margin-bottom: 0.55rem !important; }
+  .editor-actions { flex-wrap: nowrap !important; overflow-x: auto; scrollbar-width: none; gap: 0.35rem !important; }
+  .editor-actions::-webkit-scrollbar { display: none; }
+  .editor-actions > *, .editor-actions .btn { flex: none; white-space: nowrap; }
+  .editor-actions .btn { min-height: 34px !important; font-size: 12.5px !important; padding: 0.2rem 0.6rem !important; }
+  .type-selector { display: flex; flex-wrap: nowrap !important; overflow-x: auto; gap: 0.3rem !important; margin-top: 0.4rem !important; scrollbar-width: none; }
+  .type-selector::-webkit-scrollbar { display: none; }
+  .type-chip { flex: none; white-space: nowrap; min-height: 32px; padding: 0.2rem 0.7rem !important; font-size: 12.5px !important; }
+  .type-desc { font-size: 12px !important; margin: 0.3rem 0 !important; }
+  .main-content .glass-panel.p-6, .main-content .glass-panel.mb-6 { margin-bottom: 0.55rem !important; }
 
   /* tighter form rhythm (inline margins in the editor were adding ~40px between fields) */
-  :where(html.compact) .main-content .form-group{ margin-bottom: 0.45rem !important; }
-  :where(html.compact) .main-content .form-group > .form-label{ margin-bottom: 0.15rem !important; }
-  :where(html.compact) .main-content .form-grid, :where(html.compact) .main-content .grid-2{ gap: 0.4rem 0.5rem !important; }
+  .main-content .form-group { margin-bottom: 0.45rem !important; }
+  .main-content .form-group > .form-label { margin-bottom: 0.15rem !important; }
+  .main-content .form-grid, .main-content .grid-2 { gap: 0.4rem 0.5rem !important; }
 }
 
 /* ==========================================================================
@@ -770,134 +864,3 @@
 .bp-sign-img { max-height: 80px; max-width: 220px; display: block; background: #fff; border-radius: 6px; }
 .bp-sign-empty { display: flex; align-items: center; gap: 8px; color: var(--ph-muted); min-height: 60px; justify-content: center; border: 1px dashed var(--ph-line); border-radius: 8px; }
 .bp-pad { width: 100%; height: 200px; border: 1px dashed #94a3b8; border-radius: 12px; background: #fff; touch-action: none; display: block; }
-
-/* ---------- Phone POS (QuickPOS on <=768px) ---------- */
-.pp { --pp-line: var(--border, #e5e7eb); --pp-muted: var(--text-secondary, #64748b); width: 100%; max-width: 760px; margin: 0 auto; padding-bottom: 84px; color: var(--text-primary, #0f172a); }
-.pp-top { display: flex; gap: 8px; align-items: center; position: sticky; top: calc(var(--mtop-h, 56px) + env(safe-area-inset-top, 0px)); z-index: 20; background: var(--bg, #fff); padding: 4px 0 6px; }
-.pp-search { flex: 1; min-width: 0; display: flex; align-items: center; gap: 8px; height: 46px; padding: 0 12px; border: 1.5px solid rgba(var(--primary-rgb, 37,99,235), .45); border-radius: 12px; background: var(--card-bg, #fff); color: var(--pp-muted); }
-.pp-search input { flex: 1; min-width: 0; border: 0; outline: 0; background: none; font-size: 16px; color: var(--text-primary, #0f172a); }
-.pp-icon, .pp-top .ai-bill-btn { width: 46px; height: 46px; min-height: 46px !important; flex: none; padding: 0 !important; border-radius: 12px; display: inline-flex; align-items: center; justify-content: center; border: 1px solid var(--pp-line); background: var(--card-bg, #fff); color: var(--primary, #2563eb) !important; }
-.pp-icon { background: var(--primary, #2563eb); color: #fff !important; border-color: transparent; }
-.pp-sub { display: flex; align-items: center; justify-content: space-between; gap: 8px; font-size: 13px; color: var(--pp-muted); margin: 2px 0 8px; }
-.pp-gst { border: 1px solid var(--pp-line); background: var(--card-bg, #fff); border-radius: 999px; padding: 4px 12px; min-height: 32px; font-size: 13px; font-weight: 700; color: var(--pp-muted); }
-.pp-gst.on { background: rgba(var(--primary-rgb, 37,99,235), .1); color: var(--primary, #2563eb); border-color: rgba(var(--primary-rgb, 37,99,235), .35); }
-.pp-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; margin-bottom: 10px; }
-.pp-chips { display: flex; gap: 6px; overflow-x: auto; padding: 8px 4px 4px 0; margin-bottom: 8px; scrollbar-width: none; }
-.pp-pick { position: relative; display: flex; flex-direction: column; align-items: flex-start; justify-content: space-between; gap: 4px; min-height: 64px; padding: 8px 10px; border: 1px solid var(--pp-line); border-radius: 12px; background: var(--card-bg, #fff); text-align: left; cursor: pointer; }
-.pp-pick:active { background: rgba(var(--primary-rgb, 37,99,235), .08); }
-.pp-chips .pp-pick { min-height: 44px; flex: none; max-width: 160px; flex-direction: row; align-items: center; border-radius: 999px; padding: 6px 12px; }
-.pp-pick-name { font-size: 13px; font-weight: 600; line-height: 1.25; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; color: var(--text-primary, #0f172a); }
-.pp-chips .pp-pick-name { -webkit-line-clamp: 1; white-space: nowrap; text-overflow: ellipsis; display: block; max-width: 100px; }
-.pp-pick-price { font-size: 12.5px; font-weight: 700; color: var(--primary, #2563eb); }
-.pp-badge { position: absolute; top: -6px; right: -4px; min-width: 20px; height: 20px; border-radius: 10px; background: var(--primary, #2563eb); color: #fff; font-size: 11px; font-style: normal; font-weight: 700; display: flex; align-items: center; justify-content: center; padding: 0 5px; }
-.pp-results { border: 1px solid var(--pp-line); border-radius: 12px; overflow: hidden; margin-bottom: 10px; background: var(--card-bg, #fff); }
-.pp-result { width: 100%; display: flex; align-items: center; gap: 10px; min-height: 48px; padding: 6px 12px; border: 0; border-bottom: 1px solid var(--pp-line); background: none; text-align: left; color: var(--primary, #2563eb); }
-.pp-result:last-child { border-bottom: 0; }
-.pp-r-name { flex: 1; min-width: 0; display: flex; flex-direction: column; font-size: 14.5px; font-weight: 600; color: var(--text-primary, #0f172a); }
-.pp-r-name small { font-size: 12px; font-weight: 400; color: var(--pp-muted); }
-.pp-result b { font-size: 14px; color: var(--text-primary, #0f172a); }
-.pp-empty { text-align: center; color: var(--pp-muted); font-size: 14px; margin: 12px 0; }
-.pp-hint { margin-top: 24px; }
-.pp-cart { list-style: none; margin: 0; padding: 0; border-top: 1px solid var(--pp-line); }
-.pp-line { display: grid; grid-template-columns: minmax(0, 1fr) auto 32px; grid-template-areas: "main amt x" "main step x"; align-items: center; gap: 2px 8px; padding: 8px 0; border-bottom: 1px solid var(--pp-line); }
-.pp-line-main { grid-area: main; min-width: 0; display: flex; flex-direction: column; }
-.pp-line-name { font-size: 14.5px; font-weight: 600; overflow: hidden; text-overflow: ellipsis; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
-.pp-line-main small { font-size: 12.5px; color: var(--pp-muted); }
-.pp-line-amt { grid-area: amt; text-align: right; font-size: 14.5px; }
-.pp-step { grid-area: step; display: inline-flex; align-items: center; border: 1px solid var(--pp-line); border-radius: 10px; overflow: hidden; }
-.pp-step button { width: 40px; height: 40px; border: 0; background: rgba(var(--primary-rgb, 37,99,235), .07); color: var(--primary, #2563eb); display: flex; align-items: center; justify-content: center; }
-.pp-step span { min-width: 34px; text-align: center; font-weight: 700; font-size: 15px; }
-.pp-x { grid-area: x; width: 32px; height: 40px; border: 0; background: none; color: #dc2626; display: flex; align-items: center; justify-content: center; }
-.pp-bar { position: fixed; left: 0; right: 0; bottom: 0; z-index: 940; display: flex; align-items: center; gap: 12px; padding: 10px 12px calc(10px + var(--safe-b, 0px)); background: var(--card-bg, #fff); border-top: 1px solid var(--pp-line); box-shadow: 0 -4px 16px rgba(15,23,42,.08); }
-.pp-bar-sum { flex: 1; min-width: 0; display: flex; flex-direction: column; }
-.pp-bar-sum small { font-size: 12.5px; color: var(--pp-muted); }
-.pp-bar-sum b { font-size: 21px; line-height: 1.15; }
-.pp-pay { min-height: 52px; min-width: 150px; border: 0; border-radius: 14px; background: var(--primary, #2563eb); color: #fff !important; font-size: 17px; font-weight: 800; display: inline-flex; align-items: center; justify-content: center; gap: 8px; cursor: pointer; box-shadow: 0 4px 14px rgba(var(--primary-rgb, 37,99,235), .35); }
-.pp-pay:disabled { opacity: .45; box-shadow: none; }
-.pp-complete { width: 100%; margin-top: 12px; }
-.pp-sheet .msheet-body { padding-bottom: calc(12px + var(--safe-b, 0px)); }
-.pp-modes { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; margin-bottom: 10px; }
-.pp-modes button { min-height: 52px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; border: 1px solid var(--pp-line); border-radius: 12px; background: var(--card-bg, #fff); font-size: 13px; font-weight: 600; color: var(--pp-muted); }
-.pp-modes button.on { border-color: var(--primary, #2563eb); background: rgba(var(--primary-rgb, 37,99,235), .1); color: var(--primary, #2563eb); }
-.pp-tender, .pp-change { display: flex; justify-content: space-between; align-items: baseline; font-size: 14px; color: var(--pp-muted); min-height: 24px; }
-.pp-tender b { font-size: 24px; color: var(--text-primary, #0f172a); }
-.pp-change b { font-size: 17px; }
-.pp .pos, .pp-sheet .pos { color: #16a34a; } .pp .neg, .pp-sheet .neg { color: #dc2626; }
-.pp-notes { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 5px; margin: 8px 0; }
-.pp-notes button { min-width: 0; min-height: 40px; padding: 0 2px; white-space: nowrap; border-radius: 999px; border: 1px solid rgba(22,163,74,.4); background: rgba(22,163,74,.08); color: #15803d; font-weight: 700; font-size: 13px; }
-.pp-notes button:first-child { border-color: rgba(var(--primary-rgb, 37,99,235), .4); background: rgba(var(--primary-rgb, 37,99,235), .08); color: var(--primary, #2563eb); }
-.pp-keys { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; }
-.pp-keys button { min-height: 46px; border: 1px solid var(--pp-line); border-radius: 10px; background: var(--card-bg, #fff); font-size: 19px; font-weight: 600; display: flex; align-items: center; justify-content: center; color: var(--text-primary, #0f172a); }
-.pp-keys button:active { background: rgba(var(--primary-rgb, 37,99,235), .1); }
-.pp-upi { text-align: center; padding: 6px 0; }
-.pp-upi img { width: 180px; height: 180px; object-fit: contain; border: 1px solid var(--pp-line); border-radius: 12px; }
-.pp-upi p { margin: 6px 0 0; color: var(--pp-muted); font-size: 14px; }
-.pp-field { display: flex; flex-direction: column; gap: 4px; font-size: 13px; color: var(--pp-muted); }
-.pp-cust { margin-top: 10px; }
-.pp-cust small { font-size: 12.5px; color: var(--pp-muted); }
-.pp-cust-row { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; margin-top: 4px; }
-.pp-cust-row .form-input, .pp-field .form-input { font-size: 16px; min-height: 44px; }
-.pp-done { display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 6px 0 12px; }
-.pp-done b { font-size: 16px; }
-.pp-done-amt { font-size: 28px; font-weight: 800; }
-.pp-done-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
-.pp-done-actions .btn { min-height: 48px; justify-content: center; }
-
-/* ---------- Compact display (Settings > Display; default on phones) ----------
-   Denser rows and smaller gaps on every screen; tap targets stay >= 40px and
-   inputs stay 16px so iOS never zooms. "Comfortable" drops the html.compact
-   class and the base phone styles apply. */
-@media (max-width: 768px) {
-  :where(html.compact) .main-content input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="color"]),
-  :where(html.compact) .main-content select, :where(html.compact) .main-content textarea,
-  :where(html.compact) .msheet input, :where(html.compact) .msheet select, :where(html.compact) .modal-content input, :where(html.compact) .modal-content select { font-size: 16px !important; }
-  :where(html.compact) .main-content button.btn-sm, :where(html.compact) .main-content .btn.btn-sm,
-  :where(html.compact) .page-header .btn, :where(html.compact) .tabs > *, :where(html.compact) .tab-bar > *, :where(html.compact) .report-tabs > *,
-  :where(html.compact) .mseg > button, :where(html.compact) .mquickprint .btn { min-height: 40px !important; }
-  :where(html.compact) .icon-btn, :where(html.compact) .mod-icon-btn { min-width: 40px; min-height: 40px; }
-
-  /* utility spacing used across older screens and the invoice editor */
-  :where(html.compact) .main-content .p-6 { padding: 0.65rem !important; }
-  :where(html.compact) .main-content .p-4 { padding: 0.55rem !important; }
-  :where(html.compact) .main-content .mb-6 { margin-bottom: 0.6rem !important; }
-  :where(html.compact) .main-content .mb-4 { margin-bottom: 0.45rem !important; }
-  :where(html.compact) .main-content .mt-4 { margin-top: 0.45rem !important; }
-  :where(html.compact) .main-content .gap-4 { gap: 0.45rem !important; }
-  :where(html.compact) .main-content .grid { gap: 0.45rem; }
-  :where(html.compact) .main-content .glass-panel { margin-bottom: 0.5rem; }
-  :where(html.compact) .main-content .glass-panel + .glass-panel { margin-top: 0; }
-  :where(html.compact) .line-item-field { margin-bottom: 0.3rem; }
-  :where(html.compact) .form-group { margin-bottom: 0.45rem; }
-  :where(html.compact) .section-title { margin-bottom: 0.4rem; }
-
-  /* tables (reports, lists) */
-  :where(html.compact) .data-table th { padding: 0.4rem 0.5rem !important; font-size: 11.5px; }
-  :where(html.compact) .data-table td { padding: 0.4rem 0.5rem !important; }
-  :where(html.compact) table.mcards tr { margin-bottom: 0.35rem; padding: 0.4rem 0.6rem; }
-
-  /* Phase 4 modules + documents (store, CRM, accounts, payroll, docs) */
-  :where(html.compact) .mod-page { padding-bottom: 4.5rem; }
-  :where(html.compact) .mod-card { padding: 0.65rem; margin-bottom: 0.5rem; border-radius: 12px; }
-  :where(html.compact) .mod-list { gap: 0.35rem; }
-  :where(html.compact) .mod-row { padding: 0.45rem 0.6rem; gap: 0.55rem; min-height: 48px; border-radius: 10px; }
-  :where(html.compact) .mod-stat { padding: 0.5rem 0.6rem; }
-  :where(html.compact) .mod-stat b { font-size: 1.02rem; }
-  :where(html.compact) .mod-toolbar { gap: 0.35rem; margin-bottom: 0.45rem; }
-  :where(html.compact) .mod-form { gap: 0.45rem; }
-
-  /* our phone screens */
-  :where(html.compact) .ph-card { padding: 8px 2px; }
-  :where(html.compact) .ph-row { min-height: 52px; padding: 5px 2px; gap: 10px; }
-  :where(html.compact) .pm-row, :where(html.compact) .ps-row { min-height: 46px; padding: 3px 4px; }
-  :where(html.compact) .pi-card { padding: 9px 10px; }
-  :where(html.compact) .pp-line { padding: 5px 0; }
-  :where(html.compact) .pp-pick { min-height: 56px; padding: 6px 8px; }
-}
-.ps-density { flex-wrap: wrap; padding: 8px 2px; }
-.ps-density .ps-label { flex: 1 1 100%; display: flex; flex-direction: column; }
-.ps-seg { display: grid; grid-template-columns: 1fr 1fr; gap: 4px; width: 100%; padding: 3px; border-radius: 12px; background: var(--bg-secondary, #f1f5f9); }
-.ps-seg button { min-height: 40px; border: 0; border-radius: 9px; background: none; font-size: 14.5px; font-weight: 600; color: var(--text-secondary, #64748b); }
-.ps-seg button.on { background: var(--card-bg, #fff); color: var(--primary, #2563eb); box-shadow: 0 1px 4px rgba(15,23,42,.12); }
-.ps-density .ps-label { align-items: flex-start; text-align: left; }
-.ps-density .ps-help-text { display: block; background: none; padding: 0; margin-top: 2px; }
-.ps-head { padding: 14px 2px 4px; font-size: 12px; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; color: var(--text-secondary, #64748b); border-bottom: 1px solid var(--ph-line, #e5e7eb); }
