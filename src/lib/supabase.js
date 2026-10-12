@@ -5,12 +5,17 @@
 // ============================================================
 import { createClient } from '@supabase/supabase-js';
 
-const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || 'https://placeholder.supabase.co';
 // New Supabase API keys: the publishable key replaces the legacy anon JWT.
-const supabaseAnonKey = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY || import.meta.env.VITE_SUPABASE_ANON_KEY;
+const supabaseAnonKey = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY || import.meta.env.VITE_SUPABASE_ANON_KEY || 'placeholder-anon-key';
 
-if (!supabaseUrl || !supabaseAnonKey) {
-  console.error('❌ Missing Supabase env vars. Create .env file from .env.example');
+export const isSupabaseConfigured = Boolean(
+  import.meta.env.VITE_SUPABASE_URL && 
+  (import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY || import.meta.env.VITE_SUPABASE_ANON_KEY)
+);
+
+if (!isSupabaseConfigured) {
+  console.warn('⚠️ Missing Supabase env vars (VITE_SUPABASE_URL, VITE_SUPABASE_ANON_KEY). Running with fallback client.');
 }
 
 export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
